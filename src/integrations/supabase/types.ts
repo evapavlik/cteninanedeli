@@ -14,7 +14,95 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      ai_cache: {
+        Row: {
+          created_at: string
+          id: string
+          mode: string
+          model_used: string | null
+          profile_slug: string
+          result: Json
+          text_hash: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mode: string
+          model_used?: string | null
+          profile_slug: string
+          result: Json
+          text_hash: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mode?: string
+          model_used?: string | null
+          profile_slug?: string
+          result?: Json
+          text_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_cache_profile_slug_fkey"
+            columns: ["profile_slug"]
+            isOneToOne: false
+            referencedRelation: "theological_profiles"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
+      readings_cache: {
+        Row: {
+          id: string
+          markdown_content: string
+          scraped_at: string
+          sunday_title: string
+          url: string | null
+        }
+        Insert: {
+          id?: string
+          markdown_content: string
+          scraped_at?: string
+          sunday_title: string
+          url?: string | null
+        }
+        Update: {
+          id?: string
+          markdown_content?: string
+          scraped_at?: string
+          sunday_title?: string
+          url?: string | null
+        }
+        Relationships: []
+      }
+      theological_profiles: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

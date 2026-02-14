@@ -408,6 +408,31 @@ serve(async (req) => {
 
   try {
     const { text, mode } = await req.json();
+
+    // Validate text parameter
+    if (!text || typeof text !== 'string') {
+      return new Response(
+        JSON.stringify({ error: 'Text parameter is required and must be a string' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const MAX_TEXT_LENGTH = 50000;
+    if (text.length > MAX_TEXT_LENGTH) {
+      return new Response(
+        JSON.stringify({ error: `Text too long (max ${MAX_TEXT_LENGTH} characters)` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate mode parameter
+    if (mode && !['annotate', 'context'].includes(mode)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid mode parameter' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 

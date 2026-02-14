@@ -4,9 +4,12 @@ import { fetchCyklus, getCachedCyklus } from "@/lib/api/firecrawl";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Moon, Sun } from "lucide-react";
 import { LectorGuide } from "@/components/LectorGuide";
+import { SectionProgress } from "@/components/SectionProgress";
 import type { ReadingContextEntry } from "@/components/ReadingContext";
 import { toast } from "sonner";
 import ccshChalice from "@/assets/ccsh-chalice.svg";
+
+const AmbonMode = lazy(() => import("@/components/AmbonMode").then(m => ({ default: m.AmbonMode })));
 
 // Lazy-load heavy components (react-markdown, sheet, toolbar) to reduce initial JS
 const AnnotatedText = lazy(() => import("@/components/AnnotatedText").then(m => ({ default: m.AnnotatedText })));
@@ -86,6 +89,8 @@ const Index = () => {
   const [isAnnotating, setIsAnnotating] = useState(false);
   const [fontSize, setFontSize] = useState(21);
   const [lineHeight, setLineHeight] = useState(1.9);
+
+  const [isAmbonMode, setIsAmbonMode] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   
@@ -301,7 +306,11 @@ const Index = () => {
                 onOpenGuide={() => setIsGuideOpen(true)}
                 hasGuide={!!contextData}
                 isLoadingGuide={isLoadingContext}
+                onAmbon={() => setIsAmbonMode(true)}
               />
+
+              {/* Section progress indicator */}
+              <SectionProgress activeIndex={activeReadingIndex} total={3} />
 
               {/* Legend for annotations */}
               {annotatedMarkdown && (
@@ -324,6 +333,14 @@ const Index = () => {
                 fontSize={fontSize}
                 lineHeight={lineHeight}
               />
+
+              {/* Ambon fullscreen mode */}
+              {isAmbonMode && (
+                <AmbonMode
+                  markdown={displayMarkdown}
+                  onClose={() => setIsAmbonMode(false)}
+                />
+              )}
             </Suspense>
 
             {/* Ending ornament */}

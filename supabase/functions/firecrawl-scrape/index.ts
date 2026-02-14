@@ -26,9 +26,32 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Validate and restrict to allowed domains only
     let formattedUrl = url.trim();
+    if (formattedUrl.length > 500) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'URL too long' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     if (!formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) {
       formattedUrl = `https://${formattedUrl}`;
+    }
+
+    const ALLOWED_DOMAINS = ['ccsh.cz', 'www.ccsh.cz'];
+    try {
+      const urlObj = new URL(formattedUrl);
+      if (!ALLOWED_DOMAINS.includes(urlObj.hostname)) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Domain not allowed' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } catch {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid URL' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     console.log('Scraping URL:', formattedUrl);

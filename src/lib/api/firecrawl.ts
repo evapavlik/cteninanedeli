@@ -1,21 +1,33 @@
 import { supabase } from '@/integrations/supabase/client';
 
-function extractReadings(markdown: string): { sundayTitle: string; readings: string } {
-  // Extract sunday name/date - try multiple patterns
+export interface LiturgicalExtras {
+  tuzby: string | null;
+  modlitbaPredCtenim: string | null;
+  versKObetovani: string | null;
+  versKPozehnani: string | null;
+  modlitbaKPozehnani: string | null;
+  vhodnePisne: string | null;
+}
+
+function extractReadings(markdown: string): { sundayTitle: string; readings: string; liturgicalExtras: LiturgicalExtras } {
   const sundayMatch = markdown.match(/neděle\s+\d+\.\s*\w+/i) || markdown.match(/neděle[^\n]*/i);
   const sundayDate = sundayMatch ? sundayMatch[0].trim() : '';
 
   const sections: string[] = [];
 
-  // Generic function to extract a section by keyword
   function extractSection(keyword: string): string | null {
-    // Match #### header containing the keyword, then capture everything until next #### or end
     const regex = new RegExp(`####\\s*([^\\n]*${keyword}[^\\n]*)\\n+([\\s\\S]*?)(?=\\n####|\\n##\\s|$)`, 'i');
     const match = markdown.match(regex);
     if (match) {
       return `## ${match[1].trim()}\n\n${match[2].trim()}`;
     }
     return null;
+  }
+
+  function extractSectionBody(keyword: string): string | null {
+    const regex = new RegExp(`####\\s*[^\\n]*${keyword}[^\\n]*\\n+([\\s\\S]*?)(?=\\n####|\\n##\\s|$)`, 'i');
+    const match = markdown.match(regex);
+    return match ? match[1].trim() : null;
   }
 
   const first = extractSection('První čtení');
@@ -27,9 +39,19 @@ function extractReadings(markdown: string): { sundayTitle: string; readings: str
   const gospel = extractSection('Evangelium');
   if (gospel) sections.push(gospel);
 
+  const liturgicalExtras: LiturgicalExtras = {
+    tuzby: extractSectionBody('Tužby'),
+    modlitbaPredCtenim: extractSectionBody('Modlitba před čtením'),
+    versKObetovani: extractSectionBody('Verše k obětování|Verš k obětování'),
+    versKPozehnani: extractSectionBody('Verš k požehnání|Verše k požehnání'),
+    modlitbaKPozehnani: extractSectionBody('Modlitba k požehnání'),
+    vhodnePisne: extractSectionBody('Vhodné písně'),
+  };
+
   return {
     sundayTitle: sundayDate,
     readings: sections.join('\n\n---\n\n'),
+    liturgicalExtras,
   };
 }
 
@@ -38,12 +60,13 @@ const CACHE_KEY = 'ccsh-cyklus-cache';
 interface CacheEntry {
   markdown: string;
   sundayTitle: string;
+  liturgicalExtras?: LiturgicalExtras;
   timestamp: number;
 }
 
-function saveToCache(markdown: string, sundayTitle: string) {
+function saveToCache(markdown: string, sundayTitle: string, liturgicalExtras: LiturgicalExtras) {
   try {
-    const entry: CacheEntry = { markdown, sundayTitle, timestamp: Date.now() };
+    const entry: CacheEntry = { markdown, sundayTitle, liturgicalExtras, timestamp: Date.now() };
     localStorage.setItem(CACHE_KEY, JSON.stringify(entry));
   } catch { /* localStorage full or unavailable */ }
 }
@@ -58,13 +81,13 @@ function loadFromCache(): CacheEntry | null {
   }
 }
 
-export function getCachedCyklus(): { markdown: string; sundayTitle: string } | null {
+export function getCachedCyklus(): { markdown: string; sundayTitle: string; liturgicalExtras?: LiturgicalExtras } | null {
   const cached = loadFromCache();
   if (!cached) return null;
-  return { markdown: cached.markdown, sundayTitle: cached.sundayTitle };
+  return { markdown: cached.markdown, sundayTitle: cached.sundayTitle, liturgicalExtras: cached.liturgicalExtras };
 }
 
-export async function fetchCyklus(): Promise<{ success: boolean; markdown?: string; sundayTitle?: string; error?: string }> {
+export async function fetchCyklus(): Promise<{ success: boolean; markdown?: string; sundayTitle?: string; liturgicalExtras?: LiturgicalExtras; error?: string }> {
   const { data, error } = await supabase.functions.invoke('firecrawl-scrape', {
     body: { url: 'https://www.ccsh.cz/cyklus.html' },
   });
@@ -78,16 +101,15 @@ export async function fetchCyklus(): Promise<{ success: boolean; markdown?: stri
     return { success: false, error: 'No content received' };
   }
 
-  
-
-  const { sundayTitle, readings } = extractReadings(rawMarkdown);
+  const { sundayTitle, readings, liturgicalExtras } = extractReadings(rawMarkdown);
 
   const md = readings || rawMarkdown;
-  saveToCache(md, sundayTitle);
+  saveToCache(md, sundayTitle, liturgicalExtras);
 
   return { 
     success: true, 
     markdown: md,
     sundayTitle,
+    liturgicalExtras,
   };
 }

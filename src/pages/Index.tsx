@@ -2,11 +2,12 @@ import { useState, useEffect, useRef, useCallback } from "react";
 
 import { fetchCyklus } from "@/lib/api/firecrawl";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, BookOpen, Moon, Sun, Sunset } from "lucide-react";
+import { Loader2, Moon, Sun, Sunset } from "lucide-react";
 import { ReadingToolbar } from "@/components/ReadingToolbar";
 import { AnnotatedText } from "@/components/AnnotatedText";
 import { LectorGuide } from "@/components/LectorGuide";
 import { toast } from "sonner";
+import ccshLogo from "@/assets/ccsh-logo.png";
 
 const Index = () => {
   const [markdown, setMarkdown] = useState<string | null>(null);
@@ -195,12 +196,12 @@ const Index = () => {
 
         {/* Header */}
         <header className="mb-14 text-center md:mb-20">
-          <BookOpen className="mx-auto mb-5 h-8 w-8 text-muted-foreground md:h-9 md:w-9" strokeWidth={1} />
+          <img src={ccshLogo} alt="Logo Církve československé husitské" className="mx-auto mb-5 h-16 w-auto md:h-20 opacity-80" />
           <h1 className="mb-2 font-serif text-3xl font-semibold tracking-wide text-foreground md:text-4xl" style={{ fontVariant: 'small-caps' }}>
-            Nedělní čtení
+            Lektorník
           </h1>
           <p className="font-serif text-lg text-muted-foreground md:text-xl">
-            Kazatelský cyklus CČSH
+            Příprava na čtení – Kazatelský cyklus CČSH
           </p>
           {sundayTitle && (
             <p className="mt-5 font-serif text-xl font-medium text-foreground md:text-2xl">

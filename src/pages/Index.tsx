@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, BookOpen, Moon, Sun } from "lucide-react";
 import { ReadingToolbar } from "@/components/ReadingToolbar";
 import { AnnotatedText } from "@/components/AnnotatedText";
+import { LectorGuide } from "@/components/LectorGuide";
 import { toast } from "sonner";
 
 const Index = () => {
@@ -26,6 +27,8 @@ const Index = () => {
   const [speed, setSpeed] = useState(1.5);
   const [fontSize, setFontSize] = useState(21);
   const [lineHeight, setLineHeight] = useState(1.9);
+  const [isPlayingTTS, setIsPlayingTTS] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const animFrameRef = useRef<number>();
@@ -82,7 +85,6 @@ const Index = () => {
     if (!markdown || isAnnotating) return;
 
     if (annotatedMarkdown) {
-      // Toggle back to original
       setAnnotatedMarkdown(null);
       return;
     }
@@ -107,6 +109,56 @@ const Index = () => {
       setIsAnnotating(false);
     }
   }, [markdown, isAnnotating, annotatedMarkdown]);
+
+  // TTS via ElevenLabs
+  const handleTTS = useCallback(async () => {
+    if (!markdown) return;
+
+    if (isPlayingTTS && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+      setIsPlayingTTS(false);
+      return;
+    }
+
+    setIsPlayingTTS(true);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/text-to-speech`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ text: displayMarkdown || markdown }),
+        }
+      );
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Chyba při generování hlasu");
+      }
+
+      const data = await response.json();
+      const audioUrl = `data:audio/mpeg;base64,${data.audioContent}`;
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+      
+      audio.onended = () => {
+        setIsPlayingTTS(false);
+        audioRef.current = null;
+      };
+      
+      await audio.play();
+      toast.success("Přehrávám vzorový přednes");
+    } catch (e) {
+      console.error("TTS error:", e);
+      toast.error(e instanceof Error ? e.message : "Nepodařilo se přehrát přednes");
+      setIsPlayingTTS(false);
+    }
+  }, [markdown, annotatedMarkdown, isPlayingTTS]);
 
   const today = new Date();
   const formattedDate = today.toLocaleDateString("cs-CZ", {
@@ -167,6 +219,9 @@ const Index = () => {
           </div>
         )}
 
+        {/* Lector guide */}
+        <LectorGuide />
+
         {displayMarkdown && (
           <>
             <ReadingToolbar
@@ -181,6 +236,8 @@ const Index = () => {
               onFontSizeChange={setFontSize}
               lineHeight={lineHeight}
               onLineHeightChange={setLineHeight}
+              onTTS={handleTTS}
+              isPlayingTTS={isPlayingTTS}
             />
 
             {/* Legend for annotations */}

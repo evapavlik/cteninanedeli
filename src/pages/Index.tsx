@@ -306,7 +306,6 @@ const Index = () => {
                 onOpenGuide={() => setIsGuideOpen(true)}
                 hasGuide={!!contextData}
                 isLoadingGuide={isLoadingContext}
-                onAmbon={() => setIsAmbonMode(true)}
               />
 
               {/* Section progress indicator */}
@@ -334,13 +333,6 @@ const Index = () => {
                 lineHeight={lineHeight}
               />
 
-              {/* Ambon fullscreen mode */}
-              {isAmbonMode && (
-                <AmbonMode
-                  markdown={displayMarkdown}
-                  onClose={() => setIsAmbonMode(false)}
-                />
-              )}
             </Suspense>
 
             {/* Ending ornament */}

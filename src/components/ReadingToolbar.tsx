@@ -93,17 +93,7 @@ export function ReadingToolbar({
           </button>
         )}
 
-        {/* Ambon mode button */}
-        {onAmbon && (
-          <button
-            onClick={onAmbon}
-            className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 font-serif text-sm font-medium transition-colors border border-border bg-background text-foreground hover:bg-accent"
-            title="Režim pro přednes z ambonu – velké písmo, celá obrazovka"
-          >
-            <Maximize className="h-4 w-4" />
-            Ambon
-          </button>
-        )}
+        {/* Ambon mode button – temporarily disabled */}
       </div>
 
       {/* Typography settings */}

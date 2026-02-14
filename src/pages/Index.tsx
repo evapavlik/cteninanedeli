@@ -172,6 +172,11 @@ const Index = () => {
           <h1 className="mb-3 text-2xl font-normal tracking-wider text-foreground/80 md:text-3xl" style={{ fontFamily: "'Playfair Display SC', Georgia, serif", letterSpacing: '0.15em' }}>
             Liturgické čtení na neděli
           </h1>
+          <div className="mx-auto mt-1 mb-4 flex items-center justify-center gap-3 text-muted-foreground/50">
+            <span className="block h-px w-12 bg-current md:w-16" />
+            <span className="text-xs tracking-[0.3em]">✦</span>
+            <span className="block h-px w-12 bg-current md:w-16" />
+          </div>
           {sundayTitle && (
             <p className="mt-4 font-serif text-lg font-medium text-foreground md:text-xl">
               {sundayTitle}

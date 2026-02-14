@@ -6,6 +6,7 @@ import {
   Minus,
   Plus,
   BookOpen,
+  Maximize,
 } from "lucide-react";
 
 interface ReadingToolbarProps {
@@ -19,6 +20,7 @@ interface ReadingToolbarProps {
   onOpenGuide?: () => void;
   hasGuide?: boolean;
   isLoadingGuide?: boolean;
+  onAmbon?: () => void;
 }
 
 export function ReadingToolbar({
@@ -32,6 +34,7 @@ export function ReadingToolbar({
   onOpenGuide,
   hasGuide,
   isLoadingGuide,
+  onAmbon,
 }: ReadingToolbarProps) {
   const [showSettings, setShowSettings] = useState(false);
 
@@ -87,6 +90,18 @@ export function ReadingToolbar({
               <BookOpen className="h-4 w-4" />
             )}
             Průvodce
+          </button>
+        )}
+
+        {/* Ambon mode button */}
+        {onAmbon && (
+          <button
+            onClick={onAmbon}
+            className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 font-serif text-sm font-medium transition-colors border border-border bg-background text-foreground hover:bg-accent"
+            title="Režim pro přednes z ambonu – velké písmo, celá obrazovka"
+          >
+            <Maximize className="h-4 w-4" />
+            Ambon
           </button>
         )}
       </div>

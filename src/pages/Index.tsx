@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 
 import { fetchCyklus } from "@/lib/api/firecrawl";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Moon, Sun, Sunset } from "lucide-react";
+import { Loader2, Moon, Sun } from "lucide-react";
 import { ReadingToolbar } from "@/components/ReadingToolbar";
 import { AnnotatedText } from "@/components/AnnotatedText";
 import { LectorGuide } from "@/components/LectorGuide";
@@ -15,9 +15,9 @@ const Index = () => {
   const [sundayTitle, setSundayTitle] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [theme, setTheme] = useState<"light" | "sepia" | "dark">(() => {
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
     if (typeof window !== "undefined") {
-      return (localStorage.getItem("theme") as "light" | "sepia" | "dark") || "light";
+      return (localStorage.getItem("theme") as "light" | "dark") || "light";
     }
     return "light";
   });
@@ -30,17 +30,17 @@ const Index = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    document.documentElement.classList.remove("dark", "sepia");
-    if (theme !== "light") document.documentElement.classList.add(theme);
+    document.documentElement.classList.remove("dark");
+    if (theme === "dark") document.documentElement.classList.add("dark");
     localStorage.setItem("theme", theme);
   }, [theme]);
 
-  const cycleTheme = () => {
-    setTheme((t) => (t === "light" ? "sepia" : t === "sepia" ? "dark" : "light"));
+  const toggleTheme = () => {
+    setTheme((t) => (t === "light" ? "dark" : "light"));
   };
 
-  const themeIcon = theme === "light" ? <Moon className="h-5 w-5" /> : theme === "sepia" ? <Sun className="h-5 w-5" /> : <Sunset className="h-5 w-5" />;
-  const themeLabel = theme === "light" ? "Sépiový režim" : theme === "sepia" ? "Světlý režim" : "Sépiový režim";
+  const themeIcon = theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />;
+  const themeLabel = theme === "light" ? "Noční režim" : "Denní režim";
 
   // Auto-fetch on mount
   useEffect(() => {
@@ -97,7 +97,7 @@ const Index = () => {
         {/* Dark mode toggle */}
         <div className="flex justify-end mb-6">
           <button
-            onClick={cycleTheme}
+            onClick={toggleTheme}
             className="p-2 rounded-full text-foreground/60 hover:text-foreground transition-colors"
             aria-label={themeLabel}
             title={themeLabel}

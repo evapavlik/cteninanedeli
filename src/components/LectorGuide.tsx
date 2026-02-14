@@ -36,10 +36,10 @@ export function LectorGuide() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="mb-10 rounded-xl border border-border bg-card/80 overflow-hidden">
+    <div className="mb-10 rounded-xl border border-border bg-card overflow-hidden">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-accent/50 transition-colors"
+        className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-accent/30 transition-colors"
       >
         <div className="flex items-center gap-3">
           <BookOpen className="h-5 w-5 text-primary shrink-0" strokeWidth={1.5} />
@@ -47,43 +47,45 @@ export function LectorGuide() {
             <p className="font-serif text-base font-semibold text-foreground">
               Jak se připravit na přednes
             </p>
-            <p className="font-serif text-sm text-muted-foreground">
+            <p className="font-serif text-sm text-foreground/60">
               7 praktických tipů pro lektory
             </p>
           </div>
         </div>
         {isOpen ? (
-          <ChevronUp className="h-5 w-5 text-muted-foreground shrink-0" />
+          <ChevronUp className="h-5 w-5 text-foreground/50 shrink-0" />
         ) : (
-          <ChevronDown className="h-5 w-5 text-muted-foreground shrink-0" />
+          <ChevronDown className="h-5 w-5 text-foreground/50 shrink-0" />
         )}
       </button>
 
       {isOpen && (
-        <div className="px-5 pb-5 space-y-5 border-t border-border pt-5">
-          <p className="font-serif text-base text-muted-foreground italic leading-relaxed">
-            „Služba lektora vyžaduje interpretační schopnost a dovednost. Nejde jen o to přečíst text – jde o to nechat Boží slovo promluvit skrze svůj hlas."
-          </p>
-          <p className="font-sans text-xs text-muted-foreground">
-            — inspirováno projektem Příprava lektorů Božího slova (kulturaslova.cz)
-          </p>
+        <div className="px-5 pb-6 space-y-5 border-t border-border pt-5">
+          <blockquote className="border-l-2 border-foreground/15 pl-4">
+            <p className="font-serif text-[1.05rem] text-foreground/80 italic leading-relaxed">
+              „Služba lektora vyžaduje interpretační schopnost a dovednost. Nejde jen o to přečíst text – jde o to nechat Boží slovo promluvit skrze svůj hlas."
+            </p>
+            <footer className="font-sans text-xs text-foreground/50 mt-2">
+              — inspirováno projektem Příprava lektorů Božího slova (kulturaslova.cz)
+            </footer>
+          </blockquote>
 
-          <div className="space-y-4 mt-4">
+          <div className="space-y-5 mt-4">
             {tips.map((tip, i) => (
               <div key={i}>
-                <h3 className="font-serif text-sm font-semibold text-foreground mb-1">
+                <h3 className="font-serif text-[1.05rem] font-semibold text-foreground mb-1.5">
                   {tip.title}
                 </h3>
-                <p className="font-serif text-sm text-muted-foreground leading-relaxed">
+                <p className="font-serif text-[1.05rem] text-foreground/80 leading-relaxed">
                   {tip.body}
                 </p>
               </div>
             ))}
           </div>
 
-          <div className="mt-4 pt-4 border-t border-border">
-            <p className="font-serif text-sm text-muted-foreground leading-relaxed">
-              💡 <strong>Tato aplikace ti pomůže</strong>: Použij tlačítko
+          <div className="mt-5 pt-5 border-t border-border">
+            <p className="font-serif text-[1.05rem] text-foreground/80 leading-relaxed">
+              💡 <strong className="text-foreground">Tato aplikace ti pomůže</strong>: Použij tlačítko
               „Značky pro přednes" k automatickému vyznačení pauz a důrazů v textu.
             </p>
           </div>

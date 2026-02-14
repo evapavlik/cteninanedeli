@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
-import { fetchCyklus, getCachedCyklus, type LiturgicalExtras } from "@/lib/api/firecrawl";
+import { fetchCyklus, getCachedCyklus } from "@/lib/api/firecrawl";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Moon, Sun } from "lucide-react";
 import { ReadingToolbar } from "@/components/ReadingToolbar";
@@ -78,7 +78,6 @@ const Index = () => {
   const [isLoadingContext, setIsLoadingContext] = useState(false);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [activeReadingIndex, setActiveReadingIndex] = useState(0);
-  const [liturgicalExtras, setLiturgicalExtras] = useState<LiturgicalExtras | undefined>(cached?.liturgicalExtras);
 
   // Toolbar state
   const [isAnnotating, setIsAnnotating] = useState(false);
@@ -110,7 +109,6 @@ const Index = () => {
       if (result.success && result.markdown) {
         setMarkdown(result.markdown);
         setSundayTitle(result.sundayTitle || "");
-        if (result.liturgicalExtras) setLiturgicalExtras(result.liturgicalExtras);
       } else if (!markdown) {
         setError(result.error || "Nepodařilo se načíst čtení.");
       }
@@ -285,7 +283,6 @@ const Index = () => {
                 open={isGuideOpen}
                 onOpenChange={setIsGuideOpen}
                 initialIndex={activeReadingIndex}
-                liturgicalExtras={liturgicalExtras}
               />
             )}
 

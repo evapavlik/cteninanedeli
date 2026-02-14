@@ -5,8 +5,6 @@ import {
   Loader2,
   Minus,
   Plus,
-  Volume2,
-  Square,
 } from "lucide-react";
 
 interface ReadingToolbarProps {
@@ -17,8 +15,6 @@ interface ReadingToolbarProps {
   onFontSizeChange: (size: number) => void;
   lineHeight: number;
   onLineHeightChange: (height: number) => void;
-  onTTS: () => void;
-  isPlayingTTS: boolean;
 }
 
 export function ReadingToolbar({
@@ -29,8 +25,6 @@ export function ReadingToolbar({
   onFontSizeChange,
   lineHeight,
   onLineHeightChange,
-  onTTS,
-  isPlayingTTS,
 }: ReadingToolbarProps) {
   const [showSettings, setShowSettings] = useState(false);
 
@@ -71,23 +65,6 @@ export function ReadingToolbar({
         >
           <Type className="h-4 w-4" />
           Zobrazení
-        </button>
-
-        {/* TTS */}
-        <button
-          onClick={onTTS}
-          className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 font-serif text-sm font-medium transition-colors ${
-            isPlayingTTS
-              ? "bg-primary text-primary-foreground"
-              : "border border-border bg-background text-foreground hover:bg-accent"
-          }`}
-        >
-          {isPlayingTTS ? (
-            <Square className="h-4 w-4" />
-          ) : (
-            <Volume2 className="h-4 w-4" />
-          )}
-          {isPlayingTTS ? "Zastavit" : "Vzorový přednes"}
         </button>
       </div>
 

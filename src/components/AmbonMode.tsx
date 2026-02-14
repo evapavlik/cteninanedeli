@@ -28,13 +28,21 @@ export function AmbonMode({ markdown, onClose }: AmbonModeProps) {
     hideTimer.current = setTimeout(() => setShowControls(false), 3000);
   }, []);
 
-  // Fullscreen on mount
+  // Fullscreen + Wake Lock on mount
   useEffect(() => {
     const el = document.documentElement;
     if (el.requestFullscreen && !document.fullscreenElement) {
       el.requestFullscreen().catch(() => {});
     }
     resetHideTimer();
+
+    // Prevent screen from sleeping
+    let wakeLock: WakeLockSentinel | null = null;
+    if ("wakeLock" in navigator) {
+      (navigator as any).wakeLock.request("screen").then((lock: WakeLockSentinel) => {
+        wakeLock = lock;
+      }).catch(() => {});
+    }
 
     const handleFsChange = () => {
       if (!document.fullscreenElement) onClose();
@@ -58,6 +66,7 @@ export function AmbonMode({ markdown, onClose }: AmbonModeProps) {
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
       if (animRef.current) cancelAnimationFrame(animRef.current);
       if (hideTimer.current) clearTimeout(hideTimer.current);
+      if (wakeLock) wakeLock.release().catch(() => {});
     };
   }, [onClose, resetHideTimer]);
 

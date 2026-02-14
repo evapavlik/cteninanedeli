@@ -26,8 +26,6 @@ const Index = () => {
   const [isAnnotating, setIsAnnotating] = useState(false);
   const [fontSize, setFontSize] = useState(21);
   const [lineHeight, setLineHeight] = useState(1.9);
-  const [isPlayingTTS, setIsPlayingTTS] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -91,56 +89,6 @@ const Index = () => {
     }
   }, [markdown, isAnnotating, annotatedMarkdown]);
 
-  // TTS via ElevenLabs
-  const handleTTS = useCallback(async () => {
-    if (!markdown) return;
-
-    if (isPlayingTTS && audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-      setIsPlayingTTS(false);
-      return;
-    }
-
-    setIsPlayingTTS(true);
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/text-to-speech`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ text: displayMarkdown || markdown }),
-        }
-      );
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || "Chyba při generování hlasu");
-      }
-
-      const data = await response.json();
-      const audioUrl = `data:audio/mpeg;base64,${data.audioContent}`;
-      const audio = new Audio(audioUrl);
-      audioRef.current = audio;
-      
-      audio.onended = () => {
-        setIsPlayingTTS(false);
-        audioRef.current = null;
-      };
-      
-      await audio.play();
-      toast.success("Přehrávám vzorový přednes");
-    } catch (e) {
-      console.error("TTS error:", e);
-      toast.error(e instanceof Error ? e.message : "Nepodařilo se přehrát přednes");
-      setIsPlayingTTS(false);
-    }
-  }, [markdown, annotatedMarkdown, isPlayingTTS]);
-
   const today = new Date();
   const formattedDate = today.toLocaleDateString("cs-CZ", {
     weekday: "long",
@@ -174,11 +122,11 @@ const Index = () => {
           </h1>
           <div className="mx-auto mt-2 mb-5 flex items-center justify-center gap-2 text-muted-foreground/40">
             <span className="block h-px w-8 bg-current" />
-            <span className="text-[0.6rem] tracking-[0.2em]">❧</span>
-            <span className="block h-px w-5 bg-current" />
-            <span className="text-[0.5rem]">✦</span>
-            <span className="block h-px w-5 bg-current" />
-            <span className="text-[0.6rem] tracking-[0.2em] scale-x-[-1] inline-block">❧</span>
+            <span className="text-[0.6rem]">❧</span>
+            <svg className="w-16 h-3" viewBox="0 0 64 12" fill="none" stroke="currentColor" strokeWidth="0.8">
+              <path d="M0,6 Q8,0 16,6 T32,6 T48,6 T64,6" />
+            </svg>
+            <span className="text-[0.6rem] scale-x-[-1] inline-block">❧</span>
             <span className="block h-px w-8 bg-current" />
           </div>
           {sundayTitle && (
@@ -220,8 +168,6 @@ const Index = () => {
               onFontSizeChange={setFontSize}
               lineHeight={lineHeight}
               onLineHeightChange={setLineHeight}
-              onTTS={handleTTS}
-              isPlayingTTS={isPlayingTTS}
             />
 
             {/* Legend for annotations */}
@@ -242,11 +188,15 @@ const Index = () => {
             />
 
             {/* Book-style ending ornament */}
-            <div className="mt-16 mb-8 flex flex-col items-center gap-2 text-muted-foreground/30">
+            <div className="mt-16 mb-8 flex flex-col items-center gap-3 text-muted-foreground/30">
               <div className="flex items-center gap-2">
-                <span className="block h-px w-10 bg-current" />
-                <span className="text-xs">✝</span>
-                <span className="block h-px w-10 bg-current" />
+                <span className="block h-px w-8 bg-current" />
+                <span className="text-[0.6rem]">❧</span>
+                <svg className="w-16 h-3" viewBox="0 0 64 12" fill="none" stroke="currentColor" strokeWidth="0.8">
+                  <path d="M0,6 Q8,0 16,6 T32,6 T48,6 T64,6" />
+                </svg>
+                <span className="text-[0.6rem] scale-x-[-1] inline-block">❧</span>
+                <span className="block h-px w-8 bg-current" />
               </div>
               <p className="font-serif text-xs italic tracking-widest text-muted-foreground/40">
                 Soli Deo gloria

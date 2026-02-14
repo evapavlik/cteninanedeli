@@ -5,6 +5,7 @@ import {
   Loader2,
   Minus,
   Plus,
+  BookOpen,
 } from "lucide-react";
 
 interface ReadingToolbarProps {
@@ -15,6 +16,9 @@ interface ReadingToolbarProps {
   onFontSizeChange: (size: number) => void;
   lineHeight: number;
   onLineHeightChange: (height: number) => void;
+  onOpenGuide?: () => void;
+  hasGuide?: boolean;
+  isLoadingGuide?: boolean;
 }
 
 export function ReadingToolbar({
@@ -25,6 +29,9 @@ export function ReadingToolbar({
   onFontSizeChange,
   lineHeight,
   onLineHeightChange,
+  onOpenGuide,
+  hasGuide,
+  isLoadingGuide,
 }: ReadingToolbarProps) {
   const [showSettings, setShowSettings] = useState(false);
 
@@ -66,6 +73,22 @@ export function ReadingToolbar({
           <Type className="h-4 w-4" />
           Zobrazení
         </button>
+
+        {/* Guide button */}
+        {(hasGuide || isLoadingGuide) && (
+          <button
+            onClick={onOpenGuide}
+            disabled={isLoadingGuide || !hasGuide}
+            className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 font-serif text-sm font-medium transition-colors border border-border bg-background text-foreground hover:bg-accent disabled:opacity-50"
+          >
+            {isLoadingGuide ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <BookOpen className="h-4 w-4" />
+            )}
+            Průvodce
+          </button>
+        )}
       </div>
 
       {/* Typography settings */}

@@ -27,6 +27,7 @@ const Index = () => {
   // Context panel state
   const [contextData, setContextData] = useState<ReadingContextEntry[] | null>(null);
   const [isLoadingContext, setIsLoadingContext] = useState(false);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
 
   // Toolbar state
   const [isAnnotating, setIsAnnotating] = useState(false);
@@ -175,14 +176,7 @@ const Index = () => {
 
         {displayMarkdown && (
           <>
-            {/* Context panel */}
-            {isLoadingContext && (
-              <div className="mb-8 flex items-center justify-center gap-3 py-6">
-                <Loader2 className="h-5 w-5 animate-spin text-primary/60" />
-                <span className="font-sans text-sm text-muted-foreground">Připravuji průvodce ke čtení…</span>
-              </div>
-            )}
-            {contextData && <ReadingContext readings={contextData} />}
+            {contextData && <ReadingContext readings={contextData} open={isGuideOpen} onOpenChange={setIsGuideOpen} />}
 
             <ReadingToolbar
               onAnnotate={handleAnnotate}
@@ -192,6 +186,9 @@ const Index = () => {
               onFontSizeChange={setFontSize}
               lineHeight={lineHeight}
               onLineHeightChange={setLineHeight}
+              onOpenGuide={() => setIsGuideOpen(true)}
+              hasGuide={!!contextData}
+              isLoadingGuide={isLoadingContext}
             />
 
             {/* Legend for annotations */}

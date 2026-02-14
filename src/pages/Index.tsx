@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Button } from "@/components/ui/button";
+
 import { fetchCyklus } from "@/lib/api/firecrawl";
 import { Loader2, BookOpen, Moon, Sun } from "lucide-react";
 
@@ -22,18 +22,22 @@ const Index = () => {
     localStorage.setItem("theme", dark ? "dark" : "light");
   }, [dark]);
 
-  const handleFetch = async () => {
-    setLoading(true);
-    setError(null);
-    const result = await fetchCyklus();
-    if (result.success && result.markdown) {
-      setMarkdown(result.markdown);
-      setSundayTitle(result.sundayTitle || "");
-    } else {
-      setError(result.error || "Nepodařilo se načíst čtení.");
-    }
-    setLoading(false);
-  };
+  // Auto-fetch on mount
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      const result = await fetchCyklus();
+      if (result.success && result.markdown) {
+        setMarkdown(result.markdown);
+        setSundayTitle(result.sundayTitle || "");
+      } else {
+        setError(result.error || "Nepodařilo se načíst čtení.");
+      }
+      setLoading(false);
+    };
+    load();
+  }, []);
 
   const today = new Date();
   const formattedDate = today.toLocaleDateString("cs-CZ", {
@@ -76,19 +80,10 @@ const Index = () => {
           </p>
         </header>
 
-        {/* Content */}
-        {!markdown && !loading && (
+        {/* Error */}
+        {error && !loading && (
           <div className="text-center">
-            <Button
-              onClick={handleFetch}
-              variant="outline"
-              className="h-16 rounded-none border-foreground px-10 font-serif text-lg tracking-wide text-foreground hover:bg-foreground hover:text-background md:h-14 md:text-base"
-            >
-              Načíst nedělní čtení
-            </Button>
-            {error && (
-              <p className="mt-6 font-serif text-base text-destructive">{error}</p>
-            )}
+            <p className="font-serif text-base text-destructive">{error}</p>
           </div>
         )}
 

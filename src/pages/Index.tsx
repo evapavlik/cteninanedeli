@@ -6,6 +6,7 @@ import { Loader2, Moon, Sun } from "lucide-react";
 import { ReadingToolbar } from "@/components/ReadingToolbar";
 import { AnnotatedText } from "@/components/AnnotatedText";
 import { LectorGuide } from "@/components/LectorGuide";
+import { ReadingContext, type ReadingContextEntry } from "@/components/ReadingContext";
 import { toast } from "sonner";
 import ccshChalice from "@/assets/ccsh-chalice.svg";
 
@@ -22,6 +23,10 @@ const Index = () => {
     }
     return "light";
   });
+
+  // Context panel state
+  const [contextData, setContextData] = useState<ReadingContextEntry[] | null>(null);
+  const [isLoadingContext, setIsLoadingContext] = useState(false);
 
   // Toolbar state
   const [isAnnotating, setIsAnnotating] = useState(false);
@@ -53,13 +58,36 @@ const Index = () => {
         setMarkdown(result.markdown);
         setSundayTitle(result.sundayTitle || "");
       } else if (!markdown) {
-        // Only show error if we have no cached data
         setError(result.error || "Nepodařilo se načíst čtení.");
       }
       setLoading(false);
     };
     load();
   }, []);
+
+  // Fetch context when markdown is available (auto-generate)
+  useEffect(() => {
+    if (!markdown || contextData) return;
+
+    const fetchContext = async () => {
+      setIsLoadingContext(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("annotate-reading", {
+          body: { text: markdown, mode: "context" },
+        });
+        if (error) throw error;
+        if (data?.context?.readings) {
+          setContextData(data.context.readings);
+        }
+      } catch (e) {
+        console.error("Context fetch error:", e);
+        // Silent fail – context is a nice-to-have
+      } finally {
+        setIsLoadingContext(false);
+      }
+    };
+    fetchContext();
+  }, [markdown]);
 
   // Annotate via AI
   const handleAnnotate = useCallback(async () => {
@@ -147,6 +175,15 @@ const Index = () => {
 
         {displayMarkdown && (
           <>
+            {/* Context panel */}
+            {isLoadingContext && (
+              <div className="mb-8 flex items-center justify-center gap-3 py-6">
+                <Loader2 className="h-5 w-5 animate-spin text-primary/60" />
+                <span className="font-sans text-sm text-muted-foreground">Připravuji průvodce ke čtení…</span>
+              </div>
+            )}
+            {contextData && <ReadingContext readings={contextData} />}
+
             <ReadingToolbar
               onAnnotate={handleAnnotate}
               isAnnotating={isAnnotating}

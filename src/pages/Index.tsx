@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import ccshChalice from "@/assets/ccsh-chalice.svg";
 
 const CONTEXT_CACHE_KEY = "ccsh-context-cache";
+const ANNOTATE_CACHE_KEY = "ccsh-annotate-cache";
 
 function saveContextToCache(sundayTitle: string, readings: ReadingContextEntry[]) {
   try {
@@ -32,10 +33,33 @@ function loadContextFromCache(sundayTitle: string): ReadingContextEntry[] | null
   }
 }
 
+function saveAnnotateToCache(sundayTitle: string, annotated: string) {
+  try {
+    localStorage.setItem(ANNOTATE_CACHE_KEY, JSON.stringify({ sundayTitle, annotated, timestamp: Date.now() }));
+  } catch { /* ignore */ }
+}
+
+function loadAnnotateFromCache(sundayTitle: string): string | null {
+  try {
+    const raw = localStorage.getItem(ANNOTATE_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed.sundayTitle === sundayTitle && parsed.annotated) {
+      return parsed.annotated;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 const Index = () => {
   const cached = getCachedCyklus();
   const [markdown, setMarkdown] = useState<string | null>(cached?.markdown || null);
-  const [annotatedMarkdown, setAnnotatedMarkdown] = useState<string | null>(null);
+  const [annotatedMarkdown, setAnnotatedMarkdown] = useState<string | null>(() => {
+    if (cached?.sundayTitle) return loadAnnotateFromCache(cached.sundayTitle);
+    return null;
+  });
   const [sundayTitle, setSundayTitle] = useState<string>(cached?.sundayTitle || "");
   const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState<string | null>(null);
@@ -184,6 +208,7 @@ const Index = () => {
       if (error) throw error;
       if (data?.annotated) {
         setAnnotatedMarkdown(data.annotated);
+        if (sundayTitle) saveAnnotateToCache(sundayTitle, data.annotated);
         toast.success("Značky pro přednes přidány");
       } else {
         throw new Error("Prázdná odpověď");

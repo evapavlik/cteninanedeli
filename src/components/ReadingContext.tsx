@@ -51,7 +51,11 @@ export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0 
             Průvodce ke čtení
           </SheetTitle>
           <p className="text-center font-sans text-[0.65rem] text-muted-foreground/60 italic">
-            Vygenerováno pomocí AI – slouží jako orientační pomůcka
+            Vygenerováno pomocí AI · tonalita dle{" "}
+            <span className="underline decoration-dotted" title="Základy víry Církve československé husitské, schválené VI. řádným sněmem 1971, revidované VIII. sněmem 2014">
+              Základů víry CČSH
+            </span>{" "}
+            (1971/2014)
           </p>
         </SheetHeader>
 

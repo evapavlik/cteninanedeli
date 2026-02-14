@@ -50,6 +50,9 @@ export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0 
           <SheetTitle className="text-center font-serif text-lg font-medium text-foreground/80">
             Průvodce ke čtení
           </SheetTitle>
+          <p className="text-center font-sans text-[0.65rem] text-muted-foreground/60 italic">
+            Vygenerováno pomocí AI – slouží jako orientační pomůcka
+          </p>
         </SheetHeader>
 
         <div className="space-y-3">

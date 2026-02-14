@@ -78,7 +78,7 @@ export async function fetchCyklus(): Promise<{ success: boolean; markdown?: stri
     return { success: false, error: 'No content received' };
   }
 
-  console.log('Raw markdown preview:', rawMarkdown.substring(0, 500));
+  
 
   const { sundayTitle, readings } = extractReadings(rawMarkdown);
 

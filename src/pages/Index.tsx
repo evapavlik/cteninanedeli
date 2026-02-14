@@ -85,7 +85,7 @@ const Index = () => {
   const [lineHeight, setLineHeight] = useState(1.9);
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const articleRef = useRef<HTMLElement | null>(null);
+  
 
   useEffect(() => {
     document.documentElement.classList.remove("dark");
@@ -301,12 +301,17 @@ const Index = () => {
 
             {/* Legend for annotations */}
             {annotatedMarkdown && (
-              <div className="mb-8 flex flex-wrap justify-center gap-4 font-sans text-xs text-muted-foreground">
-                <span><span className="text-amber-600 dark:text-amber-400 font-medium">‖</span> pauza</span>
-                <span><span className="text-red-600 dark:text-red-400 font-medium">‖‖</span> dlouhá pauza</span>
-                <span><span className="text-blue-600 dark:text-blue-400 font-medium">▼</span> pomalu</span>
-                <span><span className="text-green-600 dark:text-green-400 font-medium">▲</span> normálně</span>
-                <span><strong>tučně</strong> = důraz</span>
+              <div className="mb-8 space-y-2">
+                <div className="flex flex-wrap justify-center gap-4 font-sans text-xs text-muted-foreground">
+                  <span><span className="text-amber-600 dark:text-amber-400 font-medium">‖</span> pauza</span>
+                  <span><span className="text-red-600 dark:text-red-400 font-medium">‖‖</span> dlouhá pauza</span>
+                  <span><span className="text-blue-600 dark:text-blue-400 font-medium">▼</span> pomalu</span>
+                  <span><span className="text-green-600 dark:text-green-400 font-medium">▲</span> normálně</span>
+                  <span><strong>tučně</strong> = důraz</span>
+                </div>
+                <p className="text-center font-sans text-[0.65rem] text-muted-foreground/60 italic">
+                  ✦ Značky byly vygenerovány pomocí AI – slouží jako vodítko, ne jako závazný předpis
+                </p>
               </div>
             )}
 

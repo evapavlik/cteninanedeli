@@ -1,7 +1,5 @@
 import { useState } from "react";
 import {
-  Play,
-  Pause,
   Type,
   Sparkles,
   Loader2,
@@ -10,16 +8,11 @@ import {
   Volume2,
   Square,
 } from "lucide-react";
-import { Slider } from "@/components/ui/slider";
 
 interface ReadingToolbarProps {
   onAnnotate: () => void;
   isAnnotating: boolean;
   isAnnotated: boolean;
-  teleprompterActive: boolean;
-  onTeleprompterToggle: () => void;
-  speed: number;
-  onSpeedChange: (speed: number) => void;
   fontSize: number;
   onFontSizeChange: (size: number) => void;
   lineHeight: number;
@@ -32,10 +25,6 @@ export function ReadingToolbar({
   onAnnotate,
   isAnnotating,
   isAnnotated,
-  teleprompterActive,
-  onTeleprompterToggle,
-  speed,
-  onSpeedChange,
   fontSize,
   onFontSizeChange,
   lineHeight,
@@ -71,23 +60,6 @@ export function ReadingToolbar({
             : "Značky pro přednes"}
         </button>
 
-        {/* Teleprompter */}
-        <button
-          onClick={onTeleprompterToggle}
-          className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 font-serif text-sm font-medium transition-colors ${
-            teleprompterActive
-              ? "bg-primary text-primary-foreground"
-              : "border border-border bg-background text-foreground hover:bg-accent"
-          }`}
-        >
-          {teleprompterActive ? (
-            <Pause className="h-4 w-4" />
-          ) : (
-            <Play className="h-4 w-4" />
-          )}
-          Teleprompter
-        </button>
-
         {/* Typography settings toggle */}
         <button
           onClick={() => setShowSettings(!showSettings)}
@@ -118,26 +90,6 @@ export function ReadingToolbar({
           {isPlayingTTS ? "Zastavit" : "Vzorový přednes"}
         </button>
       </div>
-
-      {/* Speed slider (visible when teleprompter is active) */}
-      {teleprompterActive && (
-        <div className="mt-4 flex items-center gap-3 px-2">
-          <span className="font-serif text-xs text-muted-foreground whitespace-nowrap">
-            Pomalu
-          </span>
-          <Slider
-            value={[speed]}
-            onValueChange={(v) => onSpeedChange(v[0])}
-            min={0.5}
-            max={5}
-            step={0.25}
-            className="flex-1"
-          />
-          <span className="font-serif text-xs text-muted-foreground whitespace-nowrap">
-            Rychle
-          </span>
-        </div>
-      )}
 
       {/* Typography settings */}
       {showSettings && (

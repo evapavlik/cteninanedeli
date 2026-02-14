@@ -89,14 +89,6 @@ const Index = () => {
     }
   }, [markdown, isAnnotating, annotatedMarkdown]);
 
-  const today = new Date();
-  const formattedDate = today.toLocaleDateString("cs-CZ", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-
   const displayMarkdown = annotatedMarkdown || markdown;
 
   return (
@@ -118,25 +110,18 @@ const Index = () => {
         <header className="mb-14 text-center md:mb-20">
           <img src={ccshChalice} alt="Kalich CČSH" className="mx-auto mb-6 h-14 w-auto md:h-16" style={{ filter: 'var(--chalice-filter, none)' }} />
           <h1 className="mb-3 text-2xl font-normal tracking-wider text-foreground/80 md:text-3xl" style={{ fontFamily: "'Playfair Display SC', Georgia, serif", letterSpacing: '0.15em' }}>
-            Liturgické čtení na neděli
+            Čtení textů na neděli
           </h1>
-          <div className="mx-auto mt-2 mb-5 flex items-center justify-center gap-2 text-muted-foreground/40">
-            <span className="block h-px w-8 bg-current" />
-            <span className="text-[0.6rem]">❧</span>
-            <svg className="w-16 h-3" viewBox="0 0 64 12" fill="none" stroke="currentColor" strokeWidth="0.8">
-              <path d="M0,6 Q8,0 16,6 T32,6 T48,6 T64,6" />
-            </svg>
-            <span className="text-[0.6rem] scale-x-[-1] inline-block">❧</span>
-            <span className="block h-px w-8 bg-current" />
+          <div className="mx-auto mt-2 mb-1 flex items-center justify-center gap-3 text-muted-foreground/35">
+            <span className="block h-px w-12 bg-current" />
+            <span className="text-[0.55rem]">✦</span>
+            <span className="block h-px w-12 bg-current" />
           </div>
           {sundayTitle && (
-            <p className="mt-4 font-serif text-lg font-medium text-foreground md:text-xl">
+            <p className="mt-5 font-serif text-lg font-medium text-foreground md:text-xl">
               {sundayTitle}
             </p>
           )}
-          <p className="mt-2 text-sm text-muted-foreground capitalize md:text-base">
-            {formattedDate}
-          </p>
         </header>
 
         {/* Error */}
@@ -187,20 +172,11 @@ const Index = () => {
               lineHeight={lineHeight}
             />
 
-            {/* Book-style ending ornament */}
-            <div className="mt-16 mb-8 flex flex-col items-center gap-3 text-muted-foreground/30">
-              <div className="flex items-center gap-2">
-                <span className="block h-px w-8 bg-current" />
-                <span className="text-[0.6rem]">❧</span>
-                <svg className="w-16 h-3" viewBox="0 0 64 12" fill="none" stroke="currentColor" strokeWidth="0.8">
-                  <path d="M0,6 Q8,0 16,6 T32,6 T48,6 T64,6" />
-                </svg>
-                <span className="text-[0.6rem] scale-x-[-1] inline-block">❧</span>
-                <span className="block h-px w-8 bg-current" />
-              </div>
-              <p className="font-serif text-xs italic tracking-widest text-muted-foreground/40">
-                Soli Deo gloria
-              </p>
+            {/* Ending ornament */}
+            <div className="mt-16 mb-8 flex items-center justify-center gap-3 text-muted-foreground/30">
+              <span className="block h-px w-12 bg-current" />
+              <span className="text-[0.55rem]">✦</span>
+              <span className="block h-px w-12 bg-current" />
             </div>
           </>
         )}

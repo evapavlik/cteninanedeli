@@ -1,14 +1,17 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
 
 import { fetchCyklus, getCachedCyklus } from "@/lib/api/firecrawl";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Moon, Sun } from "lucide-react";
-import { ReadingToolbar } from "@/components/ReadingToolbar";
-import { AnnotatedText } from "@/components/AnnotatedText";
 import { LectorGuide } from "@/components/LectorGuide";
-import { ReadingContext, type ReadingContextEntry } from "@/components/ReadingContext";
+import type { ReadingContextEntry } from "@/components/ReadingContext";
 import { toast } from "sonner";
 import ccshChalice from "@/assets/ccsh-chalice.svg";
+
+// Lazy-load heavy components (react-markdown, sheet, toolbar) to reduce initial JS
+const AnnotatedText = lazy(() => import("@/components/AnnotatedText").then(m => ({ default: m.AnnotatedText })));
+const ReadingToolbar = lazy(() => import("@/components/ReadingToolbar").then(m => ({ default: m.ReadingToolbar })));
+const ReadingContext = lazy(() => import("@/components/ReadingContext").then(m => ({ default: m.ReadingContext })));
 
 const CONTEXT_CACHE_KEY = "ccsh-context-cache";
 const ANNOTATE_CACHE_KEY = "ccsh-annotate-cache";
@@ -277,49 +280,51 @@ const Index = () => {
 
         {displayMarkdown && (
           <>
-            {contextData && (
-              <ReadingContext
-                readings={contextData}
-                open={isGuideOpen}
-                onOpenChange={setIsGuideOpen}
-                initialIndex={activeReadingIndex}
+            <Suspense fallback={null}>
+              {contextData && (
+                <ReadingContext
+                  readings={contextData}
+                  open={isGuideOpen}
+                  onOpenChange={setIsGuideOpen}
+                  initialIndex={activeReadingIndex}
+                />
+              )}
+
+              <ReadingToolbar
+                onAnnotate={handleAnnotate}
+                isAnnotating={isAnnotating}
+                isAnnotated={!!annotatedMarkdown}
+                fontSize={fontSize}
+                onFontSizeChange={setFontSize}
+                lineHeight={lineHeight}
+                onLineHeightChange={setLineHeight}
+                onOpenGuide={() => setIsGuideOpen(true)}
+                hasGuide={!!contextData}
+                isLoadingGuide={isLoadingContext}
               />
-            )}
 
-            <ReadingToolbar
-              onAnnotate={handleAnnotate}
-              isAnnotating={isAnnotating}
-              isAnnotated={!!annotatedMarkdown}
-              fontSize={fontSize}
-              onFontSizeChange={setFontSize}
-              lineHeight={lineHeight}
-              onLineHeightChange={setLineHeight}
-              onOpenGuide={() => setIsGuideOpen(true)}
-              hasGuide={!!contextData}
-              isLoadingGuide={isLoadingContext}
-            />
-
-            {/* Legend for annotations */}
-            {annotatedMarkdown && (
-              <div className="mb-8 space-y-2">
-                <div className="flex flex-wrap justify-center gap-4 font-sans text-xs text-muted-foreground">
-                  <span><span className="text-amber-600 dark:text-amber-400 font-medium">‖</span> pauza</span>
-                  <span><span className="text-red-600 dark:text-red-400 font-medium">‖‖</span> dlouhá pauza</span>
-                  <span><span className="text-blue-600 dark:text-blue-400 font-medium">▼</span> pomalu</span>
-                  <span><span className="text-green-600 dark:text-green-400 font-medium">▲</span> normálně</span>
-                  <span><strong>tučně</strong> = důraz</span>
+              {/* Legend for annotations */}
+              {annotatedMarkdown && (
+                <div className="mb-8 space-y-2">
+                  <div className="flex flex-wrap justify-center gap-4 font-sans text-xs text-muted-foreground">
+                    <span><span className="text-amber-600 dark:text-amber-400 font-medium">‖</span> pauza</span>
+                    <span><span className="text-red-600 dark:text-red-400 font-medium">‖‖</span> dlouhá pauza</span>
+                    <span><span className="text-blue-600 dark:text-blue-400 font-medium">▼</span> pomalu</span>
+                    <span><span className="text-green-600 dark:text-green-400 font-medium">▲</span> normálně</span>
+                    <span><strong>tučně</strong> = důraz</span>
+                  </div>
+                  <p className="text-center font-sans text-[0.65rem] text-muted-foreground/60 italic">
+                    ✦ Značky byly vygenerovány pomocí AI – slouží jako vodítko, ne jako závazný předpis
+                  </p>
                 </div>
-                <p className="text-center font-sans text-[0.65rem] text-muted-foreground/60 italic">
-                  ✦ Značky byly vygenerovány pomocí AI – slouží jako vodítko, ne jako závazný předpis
-                </p>
-              </div>
-            )}
+              )}
 
-            <AnnotatedText
-              markdown={displayMarkdown}
-              fontSize={fontSize}
-              lineHeight={lineHeight}
-            />
+              <AnnotatedText
+                markdown={displayMarkdown}
+                fontSize={fontSize}
+                lineHeight={lineHeight}
+              />
+            </Suspense>
 
             {/* Ending ornament */}
             <div className="mt-16 mb-8 flex items-center justify-center gap-3 text-muted-foreground/30">

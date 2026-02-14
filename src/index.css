@@ -53,6 +53,7 @@ All colors MUST be HSL.
     --sidebar-border: 220 13% 91%;
 
     --sidebar-ring: 217.2 91.2% 59.8%;
+    --chalice-filter: none;
   }
 
   .dark {
@@ -91,6 +92,7 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    --chalice-filter: invert(1);
   }
 
   .sepia {
@@ -129,6 +131,7 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 38 50% 80%;
     --sidebar-border: 30 20% 18%;
     --sidebar-ring: 35 40% 50%;
+    --chalice-filter: invert(0.85) sepia(0.3);
   }
 }
 

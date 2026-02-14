@@ -31,6 +31,37 @@ function extractReadings(markdown: string): { sundayTitle: string; readings: str
   };
 }
 
+const CACHE_KEY = 'ccsh-cyklus-cache';
+
+interface CacheEntry {
+  markdown: string;
+  sundayTitle: string;
+  timestamp: number;
+}
+
+function saveToCache(markdown: string, sundayTitle: string) {
+  try {
+    const entry: CacheEntry = { markdown, sundayTitle, timestamp: Date.now() };
+    localStorage.setItem(CACHE_KEY, JSON.stringify(entry));
+  } catch { /* localStorage full or unavailable */ }
+}
+
+function loadFromCache(): CacheEntry | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as CacheEntry;
+  } catch {
+    return null;
+  }
+}
+
+export function getCachedCyklus(): { markdown: string; sundayTitle: string } | null {
+  const cached = loadFromCache();
+  if (!cached) return null;
+  return { markdown: cached.markdown, sundayTitle: cached.sundayTitle };
+}
+
 export async function fetchCyklus(): Promise<{ success: boolean; markdown?: string; sundayTitle?: string; error?: string }> {
   const { data, error } = await supabase.functions.invoke('firecrawl-scrape', {
     body: { url: 'https://www.ccsh.cz/cyklus.html' },
@@ -49,14 +80,12 @@ export async function fetchCyklus(): Promise<{ success: boolean; markdown?: stri
 
   const { sundayTitle, readings } = extractReadings(rawMarkdown);
 
-  if (!readings) {
-    // Return full markdown as fallback
-    return { success: true, markdown: rawMarkdown, sundayTitle };
-  }
+  const md = readings || rawMarkdown;
+  saveToCache(md, sundayTitle);
 
   return { 
     success: true, 
-    markdown: readings,
+    markdown: md,
     sundayTitle,
   };
 }

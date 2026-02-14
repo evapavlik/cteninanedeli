@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
-import { fetchCyklus } from "@/lib/api/firecrawl";
+import { fetchCyklus, getCachedCyklus } from "@/lib/api/firecrawl";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Moon, Sun } from "lucide-react";
 import { ReadingToolbar } from "@/components/ReadingToolbar";
@@ -10,10 +10,11 @@ import { toast } from "sonner";
 import ccshChalice from "@/assets/ccsh-chalice.svg";
 
 const Index = () => {
-  const [markdown, setMarkdown] = useState<string | null>(null);
+  const cached = getCachedCyklus();
+  const [markdown, setMarkdown] = useState<string | null>(cached?.markdown || null);
   const [annotatedMarkdown, setAnnotatedMarkdown] = useState<string | null>(null);
-  const [sundayTitle, setSundayTitle] = useState<string>("");
-  const [loading, setLoading] = useState(false);
+  const [sundayTitle, setSundayTitle] = useState<string>(cached?.sundayTitle || "");
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     if (typeof window !== "undefined") {
@@ -42,16 +43,17 @@ const Index = () => {
   const themeIcon = theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />;
   const themeLabel = theme === "light" ? "Noční režim" : "Denní režim";
 
-  // Auto-fetch on mount
+  // Auto-fetch on mount (background refresh if cached)
   useEffect(() => {
     const load = async () => {
-      setLoading(true);
+      if (!markdown) setLoading(true);
       setError(null);
       const result = await fetchCyklus();
       if (result.success && result.markdown) {
         setMarkdown(result.markdown);
         setSundayTitle(result.sundayTitle || "");
-      } else {
+      } else if (!markdown) {
+        // Only show error if we have no cached data
         setError(result.error || "Nepodařilo se načíst čtení.");
       }
       setLoading(false);

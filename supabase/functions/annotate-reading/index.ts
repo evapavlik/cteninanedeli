@@ -125,37 +125,224 @@ ot.83: Písmo svaté je „norma normans" – nejvyšší norma, pramen učení 
 ot.84: Tradice je „norma normata" – norma podřízená Bibli. Obsahuje na Bibli založená nauková a bohoslužebná vyjádření církve vzniklá během věků.
 ot.85: Na věrném uchovávání, předávání a aktualizaci biblické zvěsti záleží apoštolskost církve.
 ot.86: Na stálé očistě církevní tradice pod normou Ducha sv. záleží reformační charakter církve.
-ot.99: Víra je přijetí osobního vztahu s Bohem prostřednictvím Ježíše Krista v Duchu svatém.
-ot.100: Náboženská zkušenost je osobní zkušenost s Bohem v lidském srdci.
+ot.95: Úkolem teologie a věrouky je pečovat o čistotu a věrnost církve a zkoumat, zda se v ní věrně hlásá Slovo Boží.
+ot.96: Zvěst církve je nesena vírou církve.
+ot.97: Víra církve je stručně vyjádřena ve vyznání víry.
+ot.98: Vyznání víry je odpovědný hlas církve o tom, jak porozuměla Božímu Slovu, a proto pravidlo, podle něhož má být v církvi Boží Slovo hlásáno.
+ot.99: Zjevení v náboženské zkušenosti je Bůh sám, který vstoupil do osobního obecenství s námi v našich srdcích.
+ot.100: Víra je důvěra v odpuštění hříchů a naděje života věčného v poslušné oddanosti neviditelnému Bohu, který nás se sebou smířil v Ježíši Kristu.
 
-===== ČÁST III: O VÍŘE (ot. 101-245) – klíčové otázky =====
+===== ČÁST III: O VÍŘE (ot. 100-232) – úplné otázky =====
 
-ot.112: Vědecké poznání světa a jeho vývoje víru v Boha Stvořitele neruší, nýbrž naopak této víře odpovídá na otázku, jak byl svět stvořen a jak v něm Bůh tvoří. CČS(H) od svého počátku uznává autonomii moderního vědeckého bádání.
-ot.134: Ježíš vycházel z rodiny Josefa a Marie. Současně Písmo hovoří o Ježíšově původu v Otci (J 1,1).
+ot.101: Pravá víra se nazývá vírou ospravedlňující.
+ot.102: Ospravedlňující víra se projevuje svobodou od hříchu, pravou láskou a jejími skutky.
+ot.103: Obsah naší víry je vyjádřen ve Vyznání víry.
+ot.105: První článek zní: Věříme v Boha jednoho, Ducha věčného a Tvůrce všeho, Otce Ježíše Krista i Otce našeho, jenž od věčnosti vládne královstvím duší našich.
+ot.106: Věříme v živého a osobního Boha Abrahamova, Izákova a Jákobova, jenž mluvil skrze proroky a zjevil se v Ježíši Kristu.
+ot.107: Boha nazýváme živým proto, že je Pán a Stvořitel, který svobodně a svrchovaně vstupuje do života člověka.
+ot.108: Boha nazýváme osobním proto, že je moudrá, sebe vědomá a sebe určující svatá vůle, že slyší a vyslýchá modlitby a slitovává se.
+ot.109: Názvy Otec, Syn a Duch vyjadřují trojjediný život jednoho a téhož Boha, který se zjevuje v Slovu čili Synu jako Otec a vstupuje do obecenství s námi jako Duch svatý.
+ot.110: Slovy „Ducha věčného a Tvůrce všeho" vyznáváme Boha jako neviditelného Stvořitele, jenž stvořil svět z ničeho a dále v něm tvoří.
+ot.111: Starozákonnímu podání o způsobu stvoření rozumíme jako starověkému vyjádření víry ve Stvořitele pomocí názorů a představ o světě, které věda překonala.
+ot.112: Vědecké poznání světa a jeho vývoje víru ve Stvořitele neruší, nýbrž naopak této víře odpovídá na otázku, jak byl svět stvořen a jak v něm Bůh tvoří.
+ot.113: Stvoření světa Bohem je neviditelným pozadím vývoje a vývoj světa je viditelným popředím stvoření.
+ot.114: Slovy „Otce Ježíše Krista i Otce našeho" vyznáváme víru v Boha dokonale sjednoceného s Ježíšem Kristem, v němž i nás k sobě připoutává svazkem synovské poslušnosti, důvěry a lásky.
+ot.115: Slovy „jenž od věčnosti vládne královstvím duší našich" vyznáváme, že království Boží je pro nás připraveno od věčnosti u Boha.
+ot.116: Království Boží čili nebeské je Boží vláda uskutečňující se v třech stupních.
+ot.117: První stupeň Božího království záleží v tom, že Bůh od stvoření ovládá svou mocí vše, kromě svobody člověka.
+ot.118: Druhý stupeň záleží v tom, že skrze Ježíše Krista Bůh svou láskou vládne i ve svobodné a odpovědné poslušnosti a důvěře věřících.
+ot.119: Třetí stupeň záleží v plném a všem zjevném budoucím vítězství Ježíše Krista a ve věčné Boží vládě v slávě.
+ot.120: Druhý článek zní: Věříme v Ježíše Krista, Syna Božího, Světlo ze Světla, Život ze Života, jenž od Otce přišel, životem svým zlo světa i smrti přemohl, aby získal nám království Boží věčné.
+ot.121: Naše víra v Ježíše Krista je poslušná důvěra v něho jako Spasitele, v němž Bůh pro nás učinil vše a je s námi k naší spáse.
+ot.122: Slovo „Kristus" znamená Duchem obdařeného mesiášského Krále, Spasitele, zaslíbeného skrze proroky.
+ot.123: Naše víra v Ježíše jako Syna Božího je poslušná důvěra v něho jako prvorozeného bratra a Pána našeho.
+ot.124: Bůh se stal naším Pánem v našem prvorozeném bratru proto, aby se nám přiblížil, nás se ujal a svou slitovnou láskou navěky spasil.
+ot.125: Ježíš Kristus je naším bratrem ve svém pravém a plném lidství.
+ot.126: Ježíšovo prvorozenství záleží v tom, že Bůh je s ním od počátku dokonale sjednocen.
+ot.127: Ježíš Kristus je náš Pán tím, že Bůh v dokonalé jednotě s ním se nám v něm zjevuje, odpuštěním vin ze hříchu vytrhuje, nám vládne a k sobě nás na věky připoutává.
+ot.128: Nejsme rovni Ježíši Kristu, protože v nás není dokonalé jednoty s Bohem.
+ot.129: Dokonalé jednoty s Bohem doufáme dosáhnout z milosti v království Božím v slávě skrze Ježíše Krista.
+ot.130: Od tohoto cíle nás odděluje hranice smrti, vzkříšení a konečného soudu.
+ot.131: Jednotu Boha s Ježíšem Kristem rozumově pochopit a pojmově vyjádřit nemůžeme, protože je to skutečnost budoucího věku (eschatologická).
+ot.132: Jednotu Boha s Ježíšem Kristem můžeme naznačovat jen obrazně.
+ot.133: V našem Vyznání víry naznačujeme jednotu Boha s Ježíšem Kristem obrazy: Syn Boží, Světlo ze Světla, Život ze Života, jenž od Otce přišel.
+ot.134: O Ježíšově lidském původu soudíme, že Ježíš byl synem Josefovým a Mariiným.
 ot.135: Ježíšovo početí z Ducha svatého a narození z Marie jsou znamením nového počátku v hříšném lidstvu, vycházejícího čistě z iniciativy Boží.
-ot.148-150: Víra učedníků ve zmrtvýchvstání nebyla založena na víceznačném faktu prázdného hrobu, nýbrž na osobním setkání se Vzkříšeným – zkušenosti nového, eschatologického druhu. Vzkříšením dochází mocí Boží lásky k transformaci „těla fyzického" v „tělo duchovní" (1 K 15,42-45).
-ot.184: Vzkříšení se děje hned po smrti. V Kristu se smrt stává přechodem z časnosti do věčnosti a setkáním s Bohem tváří v tvář (1 K 13,12). Nikdo a nic v celém tvorstvu nemůže nás odloučit od lásky Boží, která je v Kristu Ježíši (Ř 8,38-39).
+ot.148-150: Víra učedníků ve zmrtvýchvstání nebyla založena na prázdném hrobu, nýbrž na osobním setkání se Vzkříšeným. Vzkříšením dochází k transformaci „těla fyzického" v „tělo duchovní" (1 K 15,42-45).
+ot.152: Vzkříšený a oslavený Ježíš Kristus zůstává člověkem v dokonalé jednotě s Bohem.
+ot.153: Lidství vzkříšeného Ježíše Krista je oslavené a duchovní.
+ot.154: Ježíš pro sebe jako budoucího oslaveného Pána užíval názvu Syn člověka.
+ot.156: Třetí článek zní: Věříme v Ducha Božího, jenž od věčnosti do věčnosti vše oživuje, v Ježíši Kristu se zjevil, skrze proroky a otce naše mluvil a v nás chce přebývat.
+ot.157: Duch svatý čili Boží je Bůh sám, který mluvil skrze proroky, zjevil se v Ježíši Kristu a promlouval také skrze naše otce.
+ot.158: Zvláštním znakem Boha jako Ducha svatého je, že od věčnosti do věčnosti vše oživuje a v nás chce přebývat.
+ot.159: Přebývání Ducha svatého v nás je osobní přítomnost Boha, který vstoupil s námi do obecenství v našich srdcích.
+ot.160: Dílem Ducha svatého v nás je osvícení mysli, otevření srdce, přivlastnění smíření v Kristu, vlití lásky, spojení v jednotu víry, proměnění pokáním v dítky Boží, obdarování duchovními dary a poslání ke svědectví.
+ot.161: Naši otcové jsou všichni svědkové, kteří nám předali pochodeň víry, zvláště otcové české i další reformace.
+ot.162: Čtvrtý článek zní: Věříme v Život věčný, Dobra, Pravdy a Krásy, tak jako jsme přesvědčeni o smrti zla i zlých.
+ot.163: Životem věčným rozumíme účast na životě Božím v Ježíši Kristu, která začíná již nyní skrze víru láskou účinkující.
+ot.164: Naděje věčného života je víra v život věčný s Kristem v budoucí slávě.
+ot.165: Obsah života věčného naznačujeme pojmy Dobra, Pravdy a Krásy.
+ot.167: Poměr Boha a člověka ve věčné slávě naznačujeme obrazem patření Bohu „tváří v tvář" (1 K 13,12).
+ot.168: Chceme vyjádřit naději v milost dokonalé jednoty Boha se spasenými lidmi po vzkříšení.
+ot.169: Tato jednota neznamená proměnu lidství v božství, nýbrž plnou účast oslaveného lidství na životě Božím.
+ot.170: Svou naději života věčného zakládáme na Ježíši Kristu.
+ot.171: K naší víře v život věčný se pojí přesvědčení o smrti zla i zlých.
+ot.172: Smrt zla i zlých nastane konečným soudem a nastolením Božího království v slávě.
+ot.173: Konečný Boží soud plyne z Boží svatosti a z lidské odpovědnosti.
+ot.174: Bůh neúčtuje s hříchem a zlem hned proto, že je milostivý, dlouho čekající na obrácení hříšníka.
+ot.175: Důkazem milostivé Boží trpělivosti je trvání lidských dějin a našeho života.
+ot.176: Jen Otec nebeský ví, kdy nastane konec lhůty.
+ot.177: Pro každého z nás končí tato lhůta smrtí.
+ot.178: Naše neznalost dne a hodiny smrti nás nabádá k pokání a návratu k Bohu.
+ot.179: Tělesná smrt je ukončení a uzavření časného života ke konečnému soudu.
+ot.180: Po smrti život je, ale nezáleží v pokračování, nýbrž v duchovním obnovení, dovršení a zvěčnění života pozemského.
+ot.181: Duchovní obnovení, dovršení a zvěčnění pozemského života se děje vzkříšením.
+ot.182: Vzkříšení je duchovní obnovení, dovršení a zvěčnění pozemského života ukončeného smrtí.
+ot.183: Vzkříšení se týká každého člověka.
+ot.184: Vzkříšení se děje hned po smrti.
+ot.185: Údělem nekajících a zatvrzelých hříšníků po smrti je zoufalství odloučenosti od Boha i od lidí.
+ot.186: Údělem kajících a spasených hříšníků po smrti je blaženost v Bohu s Kristem v obecenství spasených.
+ot.189: Budeme souzeni za celý svůj život.
+ot.190: Smrt zla znamená konec hříchu a všeho zla, i smrti.
+ot.191: Smrt zlých čili věčná smrt je obrazný název pro věčný úděl zatvrzelých hříšníků.
+ot.192: Věčná smrt záleží v odsouzení a zavržení hříšného života k věčné temnotě v odloučení od Boha.
+ot.193: Před věčnou smrtí zachraňuje Bůh v Ježíši Kristu.
+ot.194: K záchraně před věčnou smrtí je třeba ospravedlňující víry láskou účinkující.
+ot.195: Potřeba ospravedlňující víry nás zavazuje k horlivému hlásání evangelia všem lidem.
+ot.196: O těch, kdo evangelium bez vlastní viny nepoznali, máme naději, že budou souzeni podle možností, které jim byly dány.
+ot.197: Věčný život v slávě je oslavení a povýšení lidského života ospravedlněného v Kristu k věčnému obecenství s Bohem.
+ot.198: Ty, jimž je zaslíbeno blaho věčného života, nazývá Ježíš Kristus blahoslavenými.
+ot.199: Zaslíbení věčného života se týká také hmotného světa.
 
-===== ČÁST IV: O BOŽÍM PŘIKÁZÁNÍ (ot. 246-300) – klíčové body =====
+===== O PŮVODU A HŘÍCHU ČLOVĚKA (ot. 204-232) =====
 
-Desatero jako základ mravního života. Dvojpřikázání lásky: „Miluj Hospodina, Boha svého, celým svým srdcem, celou svou duší a celou svou myslí" a „Miluj svého bližního jako sám sebe" (Mt 22,37-39). Zápas o spravedlivý řád společnosti podle vůle Boží. Solidarita s trpícími a chudými.
+ot.204: Člověk je stvořen Bohem jako tělesně-duchovní bytost.
+ot.205: Člověk jako Boží obraz je bytost odpovědná, obdařená rozumem a svobodou.
+ot.208: Hřích je svévolné porušení Boží vůle a řádu.
+ot.209: Člověk se hříchem oddálil od Boha.
+ot.215: Bůh stvořil člověka, aby byl jeho obrazem, jako muže a ženu.
+ot.217: Ráj je obecenství s Bohem, harmonie, nevinnost a blaženost, pro něž byl člověk stvořen.
+ot.218: Prvotní hřích je odvrat člověka od Boha k sobě samému.
+ot.219: Podstatou prvotního hříchu je touha po bohorovnosti.
+ot.220: Následkem hříchu je vzdálenost od Boha.
+ot.222: Tuto vzdálenost může překonat jediný Bůh sám svou láskou trpící našimi hříchy.
+ot.223: Trpící Boží láska překonala vzdálenost mezi námi a Bohem v Ježíši Kristu.
+ot.224: Odpuštění vin je Boží ujištění člověka ve víře, že jeho viny jsou v Ježíši Kristu zahlazeny.
+ot.225: Had v ráji zobrazuje temnou moc pokušení – satana nebo ďábla.
+ot.226: Vyhnání z ráje je hříchem způsobené odloučení od Boha a zmaření harmonie.
+ot.227: Do obecenství s Bohem nás opět přivádí Ježíš Kristus.
+ot.228: Spása v Ježíši Kristu nás nezbavuje časných následků našich hříchů.
+ot.229: Obecenství s Bohem v Kristu není totožné s tím, které jsme ztratili, protože se nám dostává spásy ze hříchu.
+ot.230: V Kristu dosahujeme svého určení od Boha, ale již jen jako hříšníci.
+ot.231: Tím nejsme ochuzeni, nýbrž obohaceni, protože teprve jako hříšníci poznáváme hlubiny Boží lásky.
+ot.232: K našemu určení od stvoření patří, aby v nás přebýval Duch svatý, abychom byli šťastni, žili v Boží Pravdě a života věčného dosáhli.
 
-===== ČÁST V: O MODLITBĚ (ot. 301-306) =====
+===== ČÁST IV: O BOŽÍM PŘIKÁZÁNÍ (ot. 233-273) – úplné otázky =====
 
-Modlitba Páně jako vzor. Modlitba je rozhovor s Bohem – oslava, prosba, díkůvzdání, přímluvná modlitba. Ježíšovo učení o modlitbě: „Vy se modlete takto: Otče náš…" (Mt 6,9-13).
+ot.233: Božím přikázáním rozumíme zákon života daný Bohem ve smlouvě Božímu lidu.
+ot.234: Boží smlouvou rozumíme Starou smlouvu danou Bohem lidu izraelskému a Novou smlouvu danou nám v Ježíši Kristu.
+ot.235: Boží přikázání Staré smlouvy jsou vyjádřena v Desateru.
+ot.236: Nová smlouva v Ježíši Kristu není zrušením přikázání Desatera, nýbrž jejich naplněním.
+ot.237: Desatero ve zkrácené podobě: 1. Nebudeš mít jiného boha mimo mne. 2. Nezobrazíš si Boha zpodobením. 3. Nezneužiješ jméno Hospodina. 4. Pamatuj na den odpočinku. 5. Cti otce i matku. 6. Nezabiješ. 7. Nesesmilníš. 8. Nepokradeš. 9. Nevydáš křivé svědectví. 10. Nebudeš dychtit po ničem, co patří tvému bližnímu.
+ot.238: Smysl a význam Desatera se nám plně otvírá v Ježíši Kristu.
+ot.240: V prvním přikázání nás Bůh oslovuje jako svatý Pán a Vysvoboditel z hříchu a přikazuje, abychom ho ctili a poslouchali.
+ot.241: Boží svatost znamená, že Pánu Bohu nemůže být nikdo a nic rovno.
+ot.243: V druhém přikázání nám Bůh zakazuje zhotovovat si zpodobení Boha a klanět se jim.
+ot.244: Hřích z druhého přikázání se nazývá modloslužbou.
+ot.245: Do modloslužby patří služba mamonu, prokazování bohopocty obrazům, sochám, ostatkům, živlům chleba a vína při večeři Páně i knize Písma svatého.
+ot.246: Úcta k Písmu se stává modloslužbou, když místo Boha jsou za božské považovány kniha a text Písma.
+ot.248: V třetím přikázání nám Bůh zakazuje brát nadarmo jeho jméno.
+ot.249: Písmo rozumí Božím jménem Boha samého v jeho zjevení, zvláště v Ježíši Kristu.
+ot.251: Ve čtvrtém přikázání nám Bůh ukládá pracovat ve všední dny, ale v den Páně obnovovat svazky s ním v obecenství církve.
+ot.252: Čtvrté přikázání nezakazuje všechnu činnost, ale předpokládá činy nutné k zachování zdraví a dobra bližnímu.
+ot.253: Pán Ježíš čtvrté přikázání nezrušil, nýbrž ukázal správné chápání a plnění.
+ot.255: V pátém přikázání nám Bůh poroučí ctít rodiče, které nám dal, aby nás naučil vděčnosti, odpovědnosti, úctě a lásce.
+ot.258: V šestém přikázání si Bůh vyhrazuje život každého člověka a prohlašuje za hřích vraždu, sebevraždu a válku.
+ot.260: V sedmém přikázání nám Bůh zakazuje všeliké smilstvo mimo odpovědný a věrný svazek manželský.
+ot.262: V osmém přikázání nám Bůh zakazuje osvojovat si, mařit a zcizovat životní prostředky a plody práce bližních.
+ot.263: Osmé přikázání se netýká pouze jednotlivců, nýbrž také nespravedlivých společenských řádů umožňujících vykořisťování.
+ot.265: V devátém přikázání nám Bůh zakazuje pomlouvat, osočovat a lživě svědčit proti bližnímu.
+ot.267: V desátém přikázání nám Bůh zakazuje závist a hříšnou žádostivost.
+ot.268: Smysl celého Desatera je křesťanská láska k Bohu a k bližnímu.
+ot.269: Křesťanská láska se projevuje odpovědnou účastí v zápase proti zlu a skutky milosrdenství.
+ot.270: Ježíš Kristus naplňuje Desatero tak, že hříšníkům dává pravou lásku a uschopňuje je plnit Boží přikázání.
+ot.271: Láska nečiní Desatero zbytečným, nýbrž nutným.
+ot.272: Skutky pravé lásky jsou možné z ospravedlňující víry.
+ot.273: Při konečném soudu rozhodnou skutky lásky z ospravedlňující víry.
 
-===== ČÁST VI: O SVÁTOSTECH (ot. 307-400) – klíčové otázky =====
+===== ČÁST V: O MODLITBĚ (ot. 274-306) – úplné otázky =====
 
-ot.307: Svátosti jsou jednání církve, jimiž se obecenství věřících v Duchu svatém účastní na milosti Božího slova.
-ot.312: Křest: Duch svatý přivtěluje křtěnce jednou provždy k Boží církvi a osvojuje mu milost Kristova křtu, kříže a vzkříšení.
-ot.320: Biřmování: Duch svatý oživuje a upevňuje víru pokřtěného a činí z něho uvědomělého úda Boží církve.
-ot.322: Večeře Páně je svátostný hod lásky, v němž je se svou obcí neviditelně přítomen její ukřižovaný a vzkříšený Pán, aby ji slovem Písma svatého spravoval, Duchem svatým posvěcoval a láskou sjednocoval, a tak k sobě připoutával k věčnému obecenství v království Božím.
-ot.330-332: Chléb a kalich s vínem jsou znamením a potvrzením Kristovy svátostné přítomnosti ve společenství církve slavící večeři Páně. Kristus je při večeři Páně přítomen v moci Ducha svatého těm, kdo v něho věří. Přijímání pod obojí způsobou – dědictví husitské reformace.
-ot.337: Manželství: Svátost, v níž se muž a žena v lásce navždy spojují a jsou Duchem svatým posvěcováni, aby byli společně Božím obrazem v Kristu.
-ot.339: Útěcha nemocných: Těžce nemocný je Duchem svatým posilován a potěšován ve víře v život věčný v Ježíši Kristu.
-ot.342-345: Obecné kněžství všech pokřtěných i svátostné kněžství mají základ v kněžství Kristově. „Kněžství Boží církve záleží v milosti vyvolení k obětnímu obecenství v jediné pravé oběti Ježíše Krista." Pravým knězem Božího lidu je Kristus sám. Od roku 1947 přijímají kněžské svěcení i ženy.
+ot.274: Modlitba je otevření srdce Bohu myšlenkou a slovem díků, oslavy a prosby.
+ot.275: Důvěru ve vyslyšení čerpáme z důvěry v Boha i z ujištění Spasitele.
+ot.276: Nevyslyšená modlitba je znamením naší hříšnosti, zkouškou víry a školou poznávání Boží vůle.
+ot.277: Máme se modlit vytrvale, trpělivě, pokorně a odevzdaně do vůle Boží.
+ot.278: Vzorem modliteb je Otčenáš – modlitba, které nás naučil Spasitel.
+ot.279: Modlitba Páně zní: Otče náš, který jsi v nebesích, posvěť se jméno tvé. Přijď království tvé. Buď vůle tvá jako v nebi tak i na zemi. Chléb náš vezdejší dej nám dnes a odpusť nám naše viny, jako i my odpouštíme našim viníkům. A neuveď nás v pokušení, ale zbav nás od zlého. Neboť tvé je království i moc i sláva na věky. Amen.
+ot.281: Oslovení „Otče náš, který jsi v nebesích" vyjadřuje naši důvěru k Bohu Otci.
+ot.282: Nebesa jsou skrytá Boží všudypřítomnost, plná Božího světla a slávy.
+ot.284: Posvěcení Božího jména se děje, když Boha uznáváme jako svatého a vzdáváme mu čest.
+ot.285: Posvěcení Božího jména se dokonává, když Boha dobrovolně posloucháme a milujeme.
+ot.287: Druhou prosbou prosíme o příchod Božího království v plnosti.
+ot.289: Třetí prosba je doplněním prosby druhé i výrazem odevzdanosti do Boží vůle.
+ot.291: Čtvrtou prosbou prosíme o dostatek pokrmu, v jehož přijímání chce být s námi přítomen náš Pán.
+ot.292: Svůj vezdejší chléb máme přijímat s díkůčiněním a modlitbou, ve víře v přítomnost Pána jako chleba života.
+ot.293: Křesťanský poměr k vezdejšímu chlebu nás zavazuje k ochotě ke společenství hmotných darů a k pilné a poctivé práci.
+ot.295: Pátou prosbou vyznáváme Bohu své hříchy a prosíme o odpuštění.
+ot.297: Doplňkem páté prosby vyjadřujeme svůj závazek Bohu za jeho odpuštění.
+ot.299: Šestou prosbou prosíme, aby nás Bůh ušetřil příležitostí lákajících ke hříchu.
+ot.300: Šestou prosbou vyslovujeme víru, že Otec vládne i nad pokušením.
+ot.301: Sedmá prosba zní: Ale zbav nás od zlého.
+ot.302: Sedmou prosbou prosíme, aby nás Bůh vysvobodil z moci zla.
+ot.303: Sedmou prosbou vyslovujeme víru, že v Ježíši Kristu poražená moc zla je pod vládou Otce.
+ot.304: Závěr Otčenáše: Neboť tvé jest království, i moc i sláva na věky. Amen.
+ot.305: Závěr Otčenáše vyjadřuje pokoru, poddanost a podřízenost Bohu jako jedinému Pánu.
+ot.306: Slovo „amen" vyjadřuje naši důvěru v Boha, odevzdanost do jeho vůle i touhu po splnění proseb.
+
+===== ČÁST VI: O SVÁTOSTECH (ot. 307-345) – úplné otázky =====
+
+ot.307: Svátost je jednání, jímž se obecenství věřících v Duchu svatém činně podílí na milosti Božího Slova přítomného skrze slyšené svědectví Písma a svátostné úkony.
+ot.308: Svátost se liší od kázání tím, že je obecenstvím, děje se v činné účasti věřících a podílíme se na ní více smysly.
+ot.309: Svátost se od kázání neliší svým obsahem, jímž je Slovo Boží.
+ot.310: Význam svátosti je v tom, že Boží Slovo je teprve ve svátosti činně, viditelně a veřejně přijímáno, spojujíc údy církve v obecenství v Kristu.
+ot.311: Společným účelem kázání i svátosti je, aby Slovo Boží vstoupilo do srdcí, mocí Ducha sv. probudilo víru, dalo jistotu spásy a proměnilo život.
+ot.312: Křest je svátost první duchovní obrody, v níž Duch svatý přivtěluje křtěnce jednou provždy k Boží církvi a osvojuje mu milost Kristova křtu, kříže a vzkříšení.
+ot.313: Zevní úkon křtu záleží v lití vody na temeno hlavy a ve výroku: „N., křtím tě ve jméno Otce i Syna i Ducha svatého."
+ot.314: K prožití křestní obrody je třeba víry.
+ot.315: Křest nemluvňat má smysl, protože Duch svatý nepůsobí jen ve vědomí, ale i v podvědomí a nevědomí lidí.
+ot.316: Dospělý prožívá obrodu při křtu, nedospělý až ve svátosti biřmování.
+ot.317: Křest nemluvňat není proti Boží vůli, neboť Bůh, který je stvořil, chce je také spasit.
+ot.318: Rodiče jsou při křtu přítomni, aby Bohu za dítko děkovali a slíbili péči o jeho život v Kristu.
+ot.319: Křest zavazuje církev, rodiče a kmotry k svědomité péči o víru pokřtěného.
+ot.320: Biřmování je svátost, v níž Duch svatý oživuje a upevňuje víru pokřtěného a činí z něho uvědomělého úda Boží církve.
+ot.321: Zevní úkon biřmování záleží v kladení rukou a žehnání křížem se slovy: „Přijmi pečeť darů Ducha svatého. Amen."
+ot.322: Večeře Páně je svátostný hod lásky, v němž je se svou obcí neviditelně přítomen její ukřižovaný, vzkříšený a oslavený Pán, aby ji slovem Písma svatého spravoval, Duchem svatým posvěcoval a láskou sjednocoval.
+ot.323: Zevní úkon večeře Páně záleží v obětování, zpřítomnění, lámání chleba a přijímání chleba s vínem.
+ot.324: Úkon obětování je pozvedání chleba a kalicha jakožto znamení Ježíšova těla a krve a díkůvzdání.
+ot.325: Úkon zpřítomnění je liturgické znázornění poslední večeře Páně s použitím chleba a kalicha.
+ot.326: Úkon lámání chleba je liturgické znázornění a zpřítomnění Ježíšovy oběti za nás.
+ot.327: Přijímání chleba s vínem je svátostné znamení, pod nímž obec z milosti Ducha svatého vírou přijímá neviditelně přítomného Krista.
+ot.328: Večeře Páně je středem pravidelných bohoslužeb podle liturgie.
+ot.329: Při pravidelných bohoslužbách přijímá za shromážděnou obec kněz, přijímání celou obcí je vázáno na svátost pokání se zpovědí (dnes věřící přistupují k večeři Páně každou neděli).
+ot.330: Ježíš Kristus je při společné večeři Páně přítomen obci jako hlava svého těla zvlášť významným způsobem.
+ot.331: Ježíš Kristus je při večeři Páně přítomen v moci Ducha svatého těm, kdo v něho věří.
+ot.332: Ježíš Kristus není přítomen v chlebě a víně, ale přichází do našich srdcí skrze svátostnou zvěst.
+ot.333: Svátost pokání je jednání, kterým se věřící obec připravuje ke svátosti večeře Páně zpytováním svědomí, lítostí, smířením a předsevzetím nového života.
+ot.334: Zevní úkon pokání záleží v otázkách duchovního, přiznání hříchů, vyznání lítosti a modlitbě za odpuštění.
+ot.335: Soukromá zpověď je možná jako součást svátosti pokání a v některých případech je nutná.
+ot.336: Duchovní je po zpovědi vázán zpovědním tajemstvím.
+ot.337: Manželství je svátost, v níž se muž a žena v lásce navždy spojují a jsou Duchem svatým posvěcováni, aby byli Božím obrazem v Kristu a základem rodiny.
+ot.338: Zevní úkon manželství záleží v slibu manželské lásky, věrnosti a oddanosti a společném pití z kalicha.
+ot.339: Útěcha nemocných je svátost, v níž těžce nemocný je Duchem svatým posilován a potěšován ve víře v život věčný v Ježíši Kristu.
+ot.340: Zevní úkon útěchy nemocných záleží v čtení Písma, modlitbách a znamenání nemocného křížem.
+ot.341: K útěše nemocných se připojují svátost pokání a svátost večeře Páně.
+ot.342: Svěcení kněžstva je svátost, v níž Boží církev přenáší služby svého kněžství na osoby způsobilé a Duch svatý přistupuje ke svěcenci.
+ot.343: Zevní úkon svěcení záleží ve vzkládání rukou a slovy: „Osvěcuj a posiluj tě Bůh Duchem svým svatým, amen."
+ot.344: Kněžství Boží církve záleží v milosti vyvolení k obětnímu obecenství v jediné pravé oběti Ježíše Krista.
+ot.345: Přenesení služeb kněžství na svěcence znamená pověření k péči o obětní obecenství obce – konáním bohoslužeb, hlásáním Slova Božího, vysluhováním svátostí a pastýřskou službou.
+ot.346: Přenesením služeb na svěcence kněžství Boží církve nepomíjí, nýbrž se dále uskutečňuje.
 
 Celkem CČSH podržela sedm svátostí: křest, biřmování, pokání, večeři Páně, manželství, útěchu nemocných, kněžské svěcení.
+CČSH uchovává tři podoby svátostného kněžství: jáhenskou, kněžskou a biskupskou. Pravým knězem Božího lidu je Kristus sám. Od roku 1947 přijímají kněžské svěcení i ženy.
 
 ===== STRUČNÝ KOMENTÁŘ K ZÁKLADŮM VÍRY (sněm 2014) =====
 

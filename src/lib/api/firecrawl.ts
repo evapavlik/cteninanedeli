@@ -18,12 +18,14 @@ function extractReadings(markdown: string): { sundayTitle: string; readings: str
     return null;
   }
 
-  // Only first and second reading - NO evangelium
   const first = extractSection('První čtení');
   if (first) sections.push(first);
 
   const second = extractSection('Druhé čtení');
   if (second) sections.push(second);
+
+  const gospel = extractSection('Evangelium');
+  if (gospel) sections.push(gospel);
 
   return {
     sundayTitle: sundayDate,

@@ -146,8 +146,8 @@ All colors MUST be HSL.
 
 .prose-reading h2 {
   font-size: 1.5rem;
-  font-variant: small-caps;
-  text-transform: lowercase;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   border-bottom: none;
   position: relative;
   padding-bottom: 0.75rem;

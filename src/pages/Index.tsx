@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 
 import { fetchCyklus } from "@/lib/api/firecrawl";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, BookOpen, Moon, Sun } from "lucide-react";
+import { Loader2, BookOpen, Moon, Sun, Sunset } from "lucide-react";
 import { ReadingToolbar } from "@/components/ReadingToolbar";
 import { AnnotatedText } from "@/components/AnnotatedText";
 import { LectorGuide } from "@/components/LectorGuide";
@@ -14,11 +14,11 @@ const Index = () => {
   const [sundayTitle, setSundayTitle] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [dark, setDark] = useState(() => {
+  const [theme, setTheme] = useState<"light" | "sepia" | "dark">(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("theme") === "dark";
+      return (localStorage.getItem("theme") as "light" | "sepia" | "dark") || "light";
     }
-    return false;
+    return "light";
   });
 
   // Toolbar state
@@ -34,9 +34,17 @@ const Index = () => {
   const animFrameRef = useRef<number>();
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", dark);
-    localStorage.setItem("theme", dark ? "dark" : "light");
-  }, [dark]);
+    document.documentElement.classList.remove("dark", "sepia");
+    if (theme !== "light") document.documentElement.classList.add(theme);
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
+  const cycleTheme = () => {
+    setTheme((t) => (t === "light" ? "sepia" : t === "sepia" ? "dark" : "light"));
+  };
+
+  const themeIcon = theme === "light" ? <Moon className="h-5 w-5" /> : theme === "sepia" ? <Sun className="h-5 w-5" /> : <Sunset className="h-5 w-5" />;
+  const themeLabel = theme === "light" ? "Sépiový režim" : theme === "sepia" ? "Světlý režim" : "Sépiový režim";
 
   // Auto-fetch on mount
   useEffect(() => {
@@ -176,11 +184,12 @@ const Index = () => {
         {/* Dark mode toggle */}
         <div className="flex justify-end mb-6">
           <button
-            onClick={() => setDark(!dark)}
+            onClick={cycleTheme}
             className="p-2 rounded-full text-foreground/60 hover:text-foreground transition-colors"
-            aria-label={dark ? "Přepnout na světlý režim" : "Přepnout na tmavý režim"}
+            aria-label={themeLabel}
+            title={themeLabel}
           >
-            {dark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            {themeIcon}
           </button>
         </div>
 

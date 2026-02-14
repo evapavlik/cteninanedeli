@@ -227,7 +227,7 @@ const Index = () => {
   const displayMarkdown = annotatedMarkdown || markdown;
 
   return (
-    <div className="min-h-screen bg-background" ref={scrollRef}>
+    <main className="min-h-screen bg-background" ref={scrollRef}>
       <div className="mx-auto max-w-2xl px-5 py-10 md:px-6 md:py-20">
         {/* Dark mode toggle */}
         <div className="flex justify-end mb-6">
@@ -335,7 +335,7 @@ const Index = () => {
           </>
         )}
       </div>
-    </div>
+    </main>
   );
 };
 

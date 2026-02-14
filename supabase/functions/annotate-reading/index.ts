@@ -20,16 +20,12 @@ serve(async (req) => {
     const isContext = mode === "context";
 
     const systemPrompt = isContext
-      ? `Jsi expert na liturgiku a biblické texty v Církvi československé husitské.
-Tvým úkolem je pro zadaný biblický text (jedno nebo více čtení) vytvořit stručný kontextový průvodce.
+      ? `Jsi expert na liturgické předčítání v Církvi československé husitské.
+Pro zadaná biblická čtení vytvoř stručnou pomůcku pro lektora.
 
-Vrať JSON objekt s polem "readings", kde každý prvek odpovídá jednomu čtení a má tyto klíče:
+Vrať JSON objekt s polem "readings", kde každý prvek má:
 - "title": název čtení (např. "První čtení – Iz 58,7-10")
-- "intro": 1-2 věty, které může lektor říct shromáždění PŘED čtením, aby zasadil text do kontextu
-- "characters": pole klíčových postav [{name, description}] – kdo je kdo v textu (max 4)
-- "historical_context": 2-3 věty o historickém pozadí – kdy, kde, proč text vznikl, komu byl určen
-- "main_message": 1 věta shrnující jádro/poselství textu
-- "tone": jaký emocionální charakter má mít přednes (např. "slavnostní a povzbudivý", "naléhavý a varovný")
+- "tone": 1 věta popisující doporučený tón přednesu (např. "Slavnostní a povzbudivý, s důrazem na Boží příslib.")
 
 Vrať POUZE validní JSON, žádný markdown ani komentáře.`
       : `Jsi expert na liturgické předčítání (lektorování) v Církvi československé husitské.

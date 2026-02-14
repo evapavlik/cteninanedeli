@@ -7,6 +7,27 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Simple in-memory rate limiter (per isolate)
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_MAX = 20; // max requests per window
+const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  entry.count++;
+  return entry.count <= RATE_LIMIT_MAX;
+}
+
+function getClientIp(req: Request): string {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("cf-connecting-ip") || "unknown";
+}
+
 // Fallback theological profile (used only if DB is empty – seeds the DB on first run)
 const CCSH_THEOLOGICAL_PROFILE_FALLBACK = `
 ZÁKLADY VÍRY CÍRKVE ČESKOSLOVENSKÉ HUSITSKÉ – ÚPLNÝ VÝTAH
@@ -406,6 +427,15 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Rate limiting
+  const clientIp = getClientIp(req);
+  if (!checkRateLimit(clientIp)) {
+    return new Response(
+      JSON.stringify({ error: "Příliš mnoho požadavků, zkuste to později." }),
+      { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
   try {
     const { text, mode } = await req.json();
 
@@ -609,7 +639,7 @@ Výstup: "**Hospodin** řekl **Mojžíšovi**: [pauza] Jdi k **faraónovi** a ř
   } catch (e) {
     console.error("annotate error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
+      JSON.stringify({ error: "Došlo k chybě při zpracování požadavku" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

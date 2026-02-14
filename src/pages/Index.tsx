@@ -7,7 +7,7 @@ import { ReadingToolbar } from "@/components/ReadingToolbar";
 import { AnnotatedText } from "@/components/AnnotatedText";
 import { LectorGuide } from "@/components/LectorGuide";
 import { toast } from "sonner";
-
+import ccshChalice from "@/assets/ccsh-chalice.svg";
 
 const Index = () => {
   const [markdown, setMarkdown] = useState<string | null>(null);
@@ -196,17 +196,7 @@ const Index = () => {
 
         {/* Header */}
         <header className="mb-14 text-center md:mb-20">
-          {/* Hussite chalice icon */}
-          <svg className="mx-auto mb-5 h-10 w-10 text-foreground/70 md:h-12 md:w-12" viewBox="0 0 64 64" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20 8h24v4H20V8z" />
-            <path d="M22 12h20v2c0 8-4 14-10 18-6-4-10-10-10-18v-2z" />
-            <path d="M29 32h6v10h-6z" />
-            <path d="M22 42h20v4H22z" />
-            <path d="M18 46h28v3H18z" />
-          </svg>
-          <h1 className="mb-2 font-serif text-3xl font-semibold tracking-wide text-foreground md:text-4xl" style={{ fontVariant: 'small-caps' }}>
-            Lektorník
-          </h1>
+          <img src={ccshChalice} alt="Kalich CČSH" className="mx-auto mb-6 h-16 w-auto md:h-20 dark:invert sepia:invert" style={{ filter: 'var(--chalice-filter, none)' }} />
           <p className="font-serif text-base text-muted-foreground md:text-lg">
             Příprava na liturgické čtení
           </p>

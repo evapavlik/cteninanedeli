@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -6,11 +7,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Komplexní teologický profil CČSH na základě:
-// - "Základy víry CČSH" (VI. řádný sněm 1971, rev. VII. sněm 1994, VIII. sněm 2014)
-// - "Stručný komentář k Základům víry CČSH" (VIII. sněm 2014)
-// - Stránka "Naše víra" na ccsh.cz (texty patriarchy Tomáše Butty)
-const CCSH_THEOLOGICAL_PROFILE = `
+// Fallback theological profile (used only if DB is empty – seeds the DB on first run)
+const CCSH_THEOLOGICAL_PROFILE_FALLBACK = `
 ZÁKLADY VÍRY CÍRKVE ČESKOSLOVENSKÉ HUSITSKÉ – ÚPLNÝ VÝTAH
 ================================================================
 Zdroj: "Základy víry CČSH" (sněm 1971, rev. 1994, 2014), "Stručný komentář" (sněm 2014).
@@ -394,6 +392,15 @@ TERMINOLOGIE CČSH:
 
 Výklady formuluj s důrazem na: praktický dopad evangelia do života, obecenství v Kristu, zpřítomnění Božího slova, reformační otevřenost, naději, svobodu svědomí a osobní setkání s Kristem.`;
 
+// Simple hash function for cache key
+async function hashText(text: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(text);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("").substring(0, 32);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -404,11 +411,62 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    // Two modes: "annotate" (default) and "context"
-    const isContext = mode === "context";
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
+    const isContext = mode === "context";
+    const profileSlug = "ccsh";
+
+    // 1. Load theological profile from DB (fallback to hardcoded)
+    let theologicalProfile = CCSH_THEOLOGICAL_PROFILE_FALLBACK;
+    const { data: profileRow } = await supabase
+      .from("theological_profiles")
+      .select("content")
+      .eq("slug", profileSlug)
+      .maybeSingle();
+
+    if (profileRow?.content && profileRow.content.length > 500) {
+      theologicalProfile = profileRow.content;
+      console.log("Using theological profile from DB");
+    } else {
+      // Seed DB with fallback profile
+      console.log("Seeding theological profile into DB");
+      await supabase
+        .from("theological_profiles")
+        .upsert(
+          { slug: profileSlug, name: "Církev československá husitská", content: CCSH_THEOLOGICAL_PROFILE_FALLBACK },
+          { onConflict: "slug" }
+        );
+    }
+
+    // 2. Check AI cache
+    const textHash = await hashText(text);
+    const cacheMode = isContext ? "context" : "annotate";
+
+    const { data: cached } = await supabase
+      .from("ai_cache")
+      .select("result")
+      .eq("text_hash", textHash)
+      .eq("mode", cacheMode)
+      .eq("profile_slug", profileSlug)
+      .maybeSingle();
+
+    if (cached) {
+      console.log("Returning cached AI result for mode:", cacheMode);
+      if (isContext) {
+        return new Response(JSON.stringify({ context: cached.result }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ annotated: cached.result.annotated }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // 3. Generate via AI
     const systemPrompt = isContext
-      ? `${CCSH_THEOLOGICAL_PROFILE}
+      ? `${theologicalProfile}
 
 Tvým úkolem je pro zadaný biblický text (jedno nebo více čtení) vytvořit stručný kontextový průvodce v duchu teologie CČSH.
 
@@ -421,7 +479,7 @@ Vrať JSON objekt s polem "readings", kde každý prvek odpovídá jednomu čten
 - "tone": jaký emocionální charakter má mít přednes (např. "slavnostní a povzbudivý", "naléhavý a varovný")
 
 Vrať POUZE validní JSON, žádný markdown ani komentáře.`
-      : `${CCSH_THEOLOGICAL_PROFILE}
+      : `${theologicalProfile}
 
 Jsi expert na liturgické předčítání (lektorování) v Církvi československé husitské.
 Tvým úkolem je anotovat biblický text značkami pro přednes:
@@ -493,6 +551,14 @@ Výstup: "**Hospodin** řekl **Mojžíšovi**: [pauza] Jdi k **faraónovi** a ř
     if (isContext) {
       try {
         const parsed = JSON.parse(content);
+
+        // Save to AI cache
+        await supabase.from("ai_cache").upsert(
+          { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: parsed, model_used: "google/gemini-3-flash-preview" },
+          { onConflict: "text_hash,mode,profile_slug" }
+        );
+        console.log("Cached context result");
+
         return new Response(JSON.stringify({ context: parsed }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -504,6 +570,13 @@ Výstup: "**Hospodin** řekl **Mojžíšovi**: [pauza] Jdi k **faraónovi** a ř
         );
       }
     }
+
+    // Save annotate result to AI cache
+    await supabase.from("ai_cache").upsert(
+      { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: { annotated: content }, model_used: "google/gemini-3-flash-preview" },
+      { onConflict: "text_hash,mode,profile_slug" }
+    );
+    console.log("Cached annotate result");
 
     return new Response(JSON.stringify({ annotated: content }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

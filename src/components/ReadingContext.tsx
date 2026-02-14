@@ -47,10 +47,10 @@ export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0 
         className="max-h-[85vh] overflow-y-auto rounded-t-2xl px-5 pb-8 pt-5"
       >
         <SheetHeader className="mb-5">
-          <SheetTitle className="text-center font-serif text-xl font-medium text-foreground/80">
+          <SheetTitle className="text-center font-serif text-xl font-medium text-foreground">
             Průvodce ke čtení
           </SheetTitle>
-          <p className="text-center font-sans text-xs text-muted-foreground/60 italic">
+          <p className="text-center font-sans text-xs text-muted-foreground italic">
             Vygenerováno pomocí AI · tonalita dle{" "}
             <span className="underline decoration-dotted" title="Základy víry Církve československé husitské, schválené VI. řádným sněmem 1971, revidované VIII. sněmem 2014">
               Základů víry CČSH
@@ -65,13 +65,13 @@ export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0 
             return (
               <div
                 key={idx}
-                className="rounded-xl border border-border/60 bg-card/50 overflow-hidden transition-all"
+                className="rounded-xl border border-border bg-card overflow-hidden transition-all"
               >
                 <button
                   onClick={() => setExpandedIndex(isOpen ? null : idx)}
                   className="w-full flex items-center justify-between px-4 py-3.5 text-left hover:bg-accent/30 transition-colors"
                 >
-                  <span className="font-serif text-base font-medium text-foreground/80">
+                  <span className="font-serif text-base font-medium text-foreground">
                     {reading.title}
                   </span>
                   {isOpen ? (
@@ -87,10 +87,10 @@ export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0 
                     <div className="flex gap-3">
                       <BookOpen className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                       <div className="min-w-0">
-                        <p className="font-sans text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                        <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
                           Úvod pro shromáždění
                         </p>
-                        <p className="font-serif text-foreground/80 italic text-[1.05rem] leading-relaxed">
+                        <p className="font-serif text-foreground italic text-[1.05rem] leading-relaxed">
                           „{reading.intro}"
                         </p>
                       </div>
@@ -101,12 +101,12 @@ export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0 
                       <div className="flex gap-3">
                         <Users className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                         <div className="min-w-0">
-                          <p className="font-sans text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                          <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
                             Klíčové postavy
                           </p>
                           <ul className="space-y-1">
                             {reading.characters.map((c, ci) => (
-                              <li key={ci} className="text-foreground/80 text-[1.05rem] leading-relaxed">
+                              <li key={ci} className="text-foreground text-[1.05rem] leading-relaxed">
                                 <strong className="text-foreground">{c.name}</strong>
                                 {" — "}
                                 {c.description}
@@ -121,10 +121,10 @@ export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0 
                     <div className="flex gap-3">
                       <Landmark className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                       <div className="min-w-0">
-                        <p className="font-sans text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                        <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
                           Historický kontext
                         </p>
-                        <p className="text-foreground/80 text-[1.05rem] leading-relaxed">{reading.historical_context}</p>
+                        <p className="text-foreground text-[1.05rem] leading-relaxed">{reading.historical_context}</p>
                       </div>
                     </div>
 
@@ -132,10 +132,10 @@ export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0 
                     <div className="flex gap-3">
                       <MessageCircle className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                       <div className="min-w-0">
-                        <p className="font-sans text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                        <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
                           Hlavní poselství
                         </p>
-                        <p className="text-foreground/80 font-medium text-[1.05rem] leading-relaxed">{reading.main_message}</p>
+                        <p className="text-foreground font-medium text-[1.05rem] leading-relaxed">{reading.main_message}</p>
                       </div>
                     </div>
 
@@ -143,10 +143,10 @@ export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0 
                     <div className="flex gap-3">
                       <Palette className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                       <div className="min-w-0">
-                        <p className="font-sans text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                        <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
                           Tón přednesu
                         </p>
-                        <p className="text-foreground/80 text-[1.05rem] leading-relaxed">{reading.tone}</p>
+                        <p className="text-foreground text-[1.05rem] leading-relaxed">{reading.tone}</p>
                       </div>
                     </div>
                   </div>

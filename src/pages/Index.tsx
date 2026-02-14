@@ -24,15 +24,12 @@ const Index = () => {
 
   // Toolbar state
   const [isAnnotating, setIsAnnotating] = useState(false);
-  const [teleprompterActive, setTeleprompterActive] = useState(false);
-  const [speed, setSpeed] = useState(1.5);
   const [fontSize, setFontSize] = useState(21);
   const [lineHeight, setLineHeight] = useState(1.9);
   const [isPlayingTTS, setIsPlayingTTS] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const animFrameRef = useRef<number>();
 
   useEffect(() => {
     document.documentElement.classList.remove("dark", "sepia");
@@ -63,31 +60,6 @@ const Index = () => {
     };
     load();
   }, []);
-
-  // Teleprompter auto-scroll
-  useEffect(() => {
-    if (!teleprompterActive) {
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-      return;
-    }
-
-    let lastTime: number | null = null;
-
-    const scroll = (timestamp: number) => {
-      if (lastTime !== null) {
-        const delta = timestamp - lastTime;
-        window.scrollBy(0, (speed * delta) / 50);
-      }
-      lastTime = timestamp;
-      animFrameRef.current = requestAnimationFrame(scroll);
-    };
-
-    animFrameRef.current = requestAnimationFrame(scroll);
-
-    return () => {
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-    };
-  }, [teleprompterActive, speed]);
 
   // Annotate via AI
   const handleAnnotate = useCallback(async () => {
@@ -196,12 +168,12 @@ const Index = () => {
 
         {/* Header */}
         <header className="mb-14 text-center md:mb-20">
-          <img src={ccshChalice} alt="Kalich CČSH" className="mx-auto mb-6 h-16 w-auto md:h-20 dark:invert sepia:invert" style={{ filter: 'var(--chalice-filter, none)' }} />
-          <p className="font-serif text-base text-muted-foreground md:text-lg">
-            Příprava na liturgické čtení
-          </p>
+          <img src={ccshChalice} alt="Kalich CČSH" className="mx-auto mb-6 h-14 w-auto md:h-16" style={{ filter: 'var(--chalice-filter, none)' }} />
+          <h1 className="mb-3 text-2xl font-normal tracking-wider text-foreground/80 md:text-3xl" style={{ fontFamily: "'Playfair Display SC', Georgia, serif", letterSpacing: '0.15em' }}>
+            Liturgické čtení na neděli
+          </h1>
           {sundayTitle && (
-            <p className="mt-5 font-serif text-xl font-medium text-foreground md:text-2xl">
+            <p className="mt-4 font-serif text-lg font-medium text-foreground md:text-xl">
               {sundayTitle}
             </p>
           )}
@@ -235,10 +207,6 @@ const Index = () => {
               onAnnotate={handleAnnotate}
               isAnnotating={isAnnotating}
               isAnnotated={!!annotatedMarkdown}
-              teleprompterActive={teleprompterActive}
-              onTeleprompterToggle={() => setTeleprompterActive(!teleprompterActive)}
-              speed={speed}
-              onSpeedChange={setSpeed}
               fontSize={fontSize}
               onFontSizeChange={setFontSize}
               lineHeight={lineHeight}

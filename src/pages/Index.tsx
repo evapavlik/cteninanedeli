@@ -172,10 +172,14 @@ const Index = () => {
           <h1 className="mb-3 text-2xl font-normal tracking-wider text-foreground/80 md:text-3xl" style={{ fontFamily: "'Playfair Display SC', Georgia, serif", letterSpacing: '0.15em' }}>
             Liturgické čtení na neděli
           </h1>
-          <div className="mx-auto mt-1 mb-4 flex items-center justify-center gap-3 text-muted-foreground/50">
-            <span className="block h-px w-12 bg-current md:w-16" />
-            <span className="text-xs tracking-[0.3em]">✦</span>
-            <span className="block h-px w-12 bg-current md:w-16" />
+          <div className="mx-auto mt-2 mb-5 flex items-center justify-center gap-2 text-muted-foreground/40">
+            <span className="block h-px w-8 bg-current" />
+            <span className="text-[0.6rem] tracking-[0.2em]">❧</span>
+            <span className="block h-px w-5 bg-current" />
+            <span className="text-[0.5rem]">✦</span>
+            <span className="block h-px w-5 bg-current" />
+            <span className="text-[0.6rem] tracking-[0.2em] scale-x-[-1] inline-block">❧</span>
+            <span className="block h-px w-8 bg-current" />
           </div>
           {sundayTitle && (
             <p className="mt-4 font-serif text-lg font-medium text-foreground md:text-xl">
@@ -236,6 +240,18 @@ const Index = () => {
               fontSize={fontSize}
               lineHeight={lineHeight}
             />
+
+            {/* Book-style ending ornament */}
+            <div className="mt-16 mb-8 flex flex-col items-center gap-2 text-muted-foreground/30">
+              <div className="flex items-center gap-2">
+                <span className="block h-px w-10 bg-current" />
+                <span className="text-xs">✝</span>
+                <span className="block h-px w-10 bg-current" />
+              </div>
+              <p className="font-serif text-xs italic tracking-widest text-muted-foreground/40">
+                Soli Deo gloria
+              </p>
+            </div>
           </>
         )}
       </div>

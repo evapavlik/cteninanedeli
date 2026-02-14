@@ -83,10 +83,8 @@ export function LectorGuide() {
 
           <div className="mt-4 pt-4 border-t border-border">
             <p className="font-serif text-sm text-muted-foreground leading-relaxed">
-              💡 <strong>Tato aplikace ti pomůže</strong>: Použij funkci
-              „Značky pro přednes" k automatickému vyznačení pauz a důrazů.
-              Teleprompter ti umožní nacvičit si plynulé čtení. A vzorový přednes
-              ti ukáže, jak by text mohl znít.
+              💡 <strong>Tato aplikace ti pomůže</strong>: Použij tlačítko
+              „Značky pro přednes" k automatickému vyznačení pauz a důrazů v textu.
             </p>
           </div>
         </div>

@@ -62,20 +62,20 @@ const Index = () => {
         </div>
 
         {/* Header */}
-        <header className="mb-12 text-center md:mb-16">
-          <BookOpen className="mx-auto mb-5 h-9 w-9 text-foreground/60 md:h-10 md:w-10" strokeWidth={1} />
-          <h1 className="mb-2 font-serif text-3xl font-light tracking-tight text-foreground md:text-4xl">
+        <header className="mb-14 text-center md:mb-20">
+          <BookOpen className="mx-auto mb-5 h-8 w-8 text-muted-foreground md:h-9 md:w-9" strokeWidth={1} />
+          <h1 className="mb-2 font-serif text-3xl font-semibold tracking-wide text-foreground md:text-4xl" style={{ fontVariant: 'small-caps' }}>
             Nedělní čtení
           </h1>
-          <p className="font-serif text-lg text-muted-foreground italic md:text-xl">
+          <p className="font-serif text-lg text-muted-foreground md:text-xl">
             Kazatelský cyklus CČSH
           </p>
           {sundayTitle && (
-            <p className="mt-4 font-serif text-xl font-medium text-foreground md:text-2xl">
+            <p className="mt-5 font-serif text-xl font-medium text-foreground md:text-2xl">
               {sundayTitle}
             </p>
           )}
-          <p className="mt-3 text-base text-muted-foreground capitalize md:text-lg">
+          <p className="mt-2 text-base text-muted-foreground capitalize md:text-lg">
             {formattedDate}
           </p>
         </header>

@@ -1,46 +1,29 @@
 import { supabase } from '@/integrations/supabase/client';
 
 function extractReadings(markdown: string): { sundayTitle: string; readings: string } {
-  // Extract sunday name/date
-  const sundayMatch = markdown.match(/neděle \d+\.\s*\w+/i);
-  const sundayDate = sundayMatch ? sundayMatch[0] : '';
+  // Extract sunday name/date - try multiple patterns
+  const sundayMatch = markdown.match(/neděle\s+\d+\.\s*\w+/i) || markdown.match(/neděle[^\n]*/i);
+  const sundayDate = sundayMatch ? sundayMatch[0].trim() : '';
 
-  // Split by h4 headers (#### )
   const sections: string[] = [];
 
-  // First reading - capture header with reference + following paragraph(s) until next ####
-  const firstMatch = markdown.match(/####\s*(První čtení z Písma[^\n]*)\n\n([\s\S]*?)(?=\n####)/);
-  if (firstMatch) {
-    sections.push(`## ${firstMatch[1]}\n\n${firstMatch[2].trim()}`);
-  }
-
-  // Second reading (epištola)
-  const secondMatch = markdown.match(/####\s*(Druhé čtení z Písma[^\n]*)\n\n([\s\S]*?)(?=\n####)/);
-  if (secondMatch) {
-    sections.push(`## ${secondMatch[1]}\n\n${secondMatch[2].trim()}`);
-  }
-
-  // Evangelium
-  const evangeliumMatch = markdown.match(/####\s*(Evangelium[^\n]*)\n\n([\s\S]*?)(?=\n####)/);
-  if (evangeliumMatch) {
-    sections.push(`## ${evangeliumMatch[1]}\n\n${evangeliumMatch[2].trim()}`);
-  }
-
-  // Fallback: if no sections matched, try a looser approach
-  if (sections.length === 0) {
-    // Try matching any #### header containing these keywords
-    const patterns = [
-      { label: 'První čtení', regex: /####[^\n]*(První čtení[^\n]*)\n+([\s\S]*?)(?=####|$)/i },
-      { label: 'Druhé čtení', regex: /####[^\n]*(Druhé čtení[^\n]*)\n+([\s\S]*?)(?=####|$)/i },
-      { label: 'Evangelium', regex: /####[^\n]*(Evangelium[^\n]*)\n+([\s\S]*?)(?=####|$)/i },
-    ];
-    for (const p of patterns) {
-      const m = markdown.match(p.regex);
-      if (m) {
-        sections.push(`## ${m[1].trim()}\n\n${m[2].trim()}`);
-      }
+  // Generic function to extract a section by keyword
+  function extractSection(keyword: string): string | null {
+    // Match #### header containing the keyword, then capture everything until next #### or end
+    const regex = new RegExp(`####\\s*([^\\n]*${keyword}[^\\n]*)\\n+([\\s\\S]*?)(?=\\n####|\\n##\\s|$)`, 'i');
+    const match = markdown.match(regex);
+    if (match) {
+      return `## ${match[1].trim()}\n\n${match[2].trim()}`;
     }
+    return null;
   }
+
+  // Only first and second reading - NO evangelium
+  const first = extractSection('První čtení');
+  if (first) sections.push(first);
+
+  const second = extractSection('Druhé čtení');
+  if (second) sections.push(second);
 
   return {
     sundayTitle: sundayDate,

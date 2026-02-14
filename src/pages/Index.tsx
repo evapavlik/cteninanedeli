@@ -1,15 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { fetchCyklus } from "@/lib/api/firecrawl";
-import { Loader2, BookOpen } from "lucide-react";
+import { Loader2, BookOpen, Moon, Sun } from "lucide-react";
 
 const Index = () => {
   const [markdown, setMarkdown] = useState<string | null>(null);
   const [sundayTitle, setSundayTitle] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dark, setDark] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("theme") === "dark";
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+    localStorage.setItem("theme", dark ? "dark" : "light");
+  }, [dark]);
 
   const handleFetch = async () => {
     setLoading(true);
@@ -35,6 +46,17 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-2xl px-5 py-10 md:px-6 md:py-20">
+        {/* Dark mode toggle */}
+        <div className="flex justify-end mb-6">
+          <button
+            onClick={() => setDark(!dark)}
+            className="p-2 rounded-full text-foreground/60 hover:text-foreground transition-colors"
+            aria-label={dark ? "Přepnout na světlý režim" : "Přepnout na tmavý režim"}
+          >
+            {dark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </button>
+        </div>
+
         {/* Header */}
         <header className="mb-12 text-center md:mb-16">
           <BookOpen className="mx-auto mb-5 h-9 w-9 text-foreground/60 md:h-10 md:w-10" strokeWidth={1} />

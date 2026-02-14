@@ -1,5 +1,5 @@
 import { BookOpen, Users, Landmark, MessageCircle, Palette, ChevronDown, ChevronUp } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Sheet,
   SheetContent,
@@ -25,10 +25,18 @@ interface ReadingContextProps {
   readings: ReadingContextEntry[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialIndex?: number;
 }
 
-export function ReadingContext({ readings, open, onOpenChange }: ReadingContextProps) {
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(0);
+export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0 }: ReadingContextProps) {
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(initialIndex);
+
+  // Sync expanded index when sheet opens with a new initialIndex
+  useEffect(() => {
+    if (open) {
+      setExpandedIndex(initialIndex);
+    }
+  }, [open, initialIndex]);
 
   if (!readings || readings.length === 0) return null;
 

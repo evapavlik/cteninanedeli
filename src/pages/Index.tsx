@@ -10,6 +10,28 @@ import { ReadingContext, type ReadingContextEntry } from "@/components/ReadingCo
 import { toast } from "sonner";
 import ccshChalice from "@/assets/ccsh-chalice.svg";
 
+const CONTEXT_CACHE_KEY = "ccsh-context-cache";
+
+function saveContextToCache(sundayTitle: string, readings: ReadingContextEntry[]) {
+  try {
+    localStorage.setItem(CONTEXT_CACHE_KEY, JSON.stringify({ sundayTitle, readings, timestamp: Date.now() }));
+  } catch { /* ignore */ }
+}
+
+function loadContextFromCache(sundayTitle: string): ReadingContextEntry[] | null {
+  try {
+    const raw = localStorage.getItem(CONTEXT_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed.sundayTitle === sundayTitle && parsed.readings) {
+      return parsed.readings;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 const Index = () => {
   const cached = getCachedCyklus();
   const [markdown, setMarkdown] = useState<string | null>(cached?.markdown || null);
@@ -25,9 +47,13 @@ const Index = () => {
   });
 
   // Context panel state
-  const [contextData, setContextData] = useState<ReadingContextEntry[] | null>(null);
+  const [contextData, setContextData] = useState<ReadingContextEntry[] | null>(() => {
+    if (cached?.sundayTitle) return loadContextFromCache(cached.sundayTitle);
+    return null;
+  });
   const [isLoadingContext, setIsLoadingContext] = useState(false);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
+  const [activeReadingIndex, setActiveReadingIndex] = useState(0);
 
   // Toolbar state
   const [isAnnotating, setIsAnnotating] = useState(false);
@@ -35,6 +61,7 @@ const Index = () => {
   const [lineHeight, setLineHeight] = useState(1.9);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const articleRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     document.documentElement.classList.remove("dark");
@@ -66,9 +93,17 @@ const Index = () => {
     load();
   }, []);
 
-  // Fetch context when markdown is available (auto-generate)
+  // Fetch context when markdown is available (use cache first)
   useEffect(() => {
     if (!markdown || contextData) return;
+
+    if (sundayTitle) {
+      const cachedContext = loadContextFromCache(sundayTitle);
+      if (cachedContext) {
+        setContextData(cachedContext);
+        return;
+      }
+    }
 
     const fetchContext = async () => {
       setIsLoadingContext(true);
@@ -79,16 +114,57 @@ const Index = () => {
         if (error) throw error;
         if (data?.context?.readings) {
           setContextData(data.context.readings);
+          if (sundayTitle) {
+            saveContextToCache(sundayTitle, data.context.readings);
+          }
         }
       } catch (e) {
         console.error("Context fetch error:", e);
-        // Silent fail – context is a nice-to-have
       } finally {
         setIsLoadingContext(false);
       }
     };
     fetchContext();
-  }, [markdown]);
+  }, [markdown, sundayTitle]);
+
+  // Track which reading heading is currently in view via IntersectionObserver
+  useEffect(() => {
+    const displayMd = annotatedMarkdown || markdown;
+    if (!displayMd) return;
+
+    const observeHeadings = () => {
+      const article = document.querySelector(".prose-reading");
+      if (!article) return undefined;
+
+      const headings = article.querySelectorAll("h2");
+      if (headings.length === 0) return undefined;
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (entry.isIntersecting) {
+              const idx = Array.from(headings).indexOf(entry.target as HTMLHeadingElement);
+              if (idx >= 0) setActiveReadingIndex(idx);
+            }
+          }
+        },
+        { rootMargin: "-10% 0px -70% 0px", threshold: 0 }
+      );
+
+      headings.forEach((h) => observer.observe(h));
+      return () => observer.disconnect();
+    };
+
+    // Small delay to let markdown render
+    let cleanup: (() => void) | undefined;
+    const timer = setTimeout(() => {
+      cleanup = observeHeadings();
+    }, 300);
+    return () => {
+      clearTimeout(timer);
+      cleanup?.();
+    };
+  }, [markdown, annotatedMarkdown]);
 
   // Annotate via AI
   const handleAnnotate = useCallback(async () => {
@@ -176,7 +252,14 @@ const Index = () => {
 
         {displayMarkdown && (
           <>
-            {contextData && <ReadingContext readings={contextData} open={isGuideOpen} onOpenChange={setIsGuideOpen} />}
+            {contextData && (
+              <ReadingContext
+                readings={contextData}
+                open={isGuideOpen}
+                onOpenChange={setIsGuideOpen}
+                initialIndex={activeReadingIndex}
+              />
+            )}
 
             <ReadingToolbar
               onAnnotate={handleAnnotate}

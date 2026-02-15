@@ -232,7 +232,7 @@ const Index = () => {
 
   return (
     <main className="min-h-screen bg-background" ref={scrollRef}>
-      <div className="mx-auto max-w-2xl px-5 py-10 md:px-6 md:py-20">
+      <div className="mx-auto max-w-2xl px-5 py-10 md:px-6 md:py-20" style={{ minHeight: 'calc(100vh - 140px)' }}>
         {/* Dark mode toggle */}
         <div className="flex justify-end mb-6">
           <button
@@ -247,7 +247,7 @@ const Index = () => {
 
         {/* Header */}
         <header className="mb-14 text-center md:mb-20">
-          <img src={ccshChalice} alt="Kalich CČSH" width="20" height="56" className="mx-auto mb-6 h-14 w-auto md:h-16" style={{ filter: 'var(--chalice-filter, none)' }} />
+          <img src={ccshChalice} alt="Kalich CČSH" width="20" height="56" className="mx-auto mb-6 h-14 w-auto md:h-16" style={{ filter: 'var(--chalice-filter, none)' }} fetchPriority="high" decoding="sync" />
           <h1 className="mb-3 text-2xl font-normal tracking-wider text-foreground/80 md:text-3xl" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", letterSpacing: '0.12em', textTransform: 'uppercase' }}>
             Čtení textů na neděli
           </h1>
@@ -271,7 +271,7 @@ const Index = () => {
         )}
 
         {loading && (
-          <div className="flex flex-col items-center gap-4 py-16">
+          <div className="flex flex-col items-center gap-4 py-16" style={{ minHeight: '50vh' }}>
             <Loader2 className="h-7 w-7 animate-spin text-foreground/40" />
             <p className="font-serif text-base text-muted-foreground md:text-lg">
               Stahuji aktuální čtení…

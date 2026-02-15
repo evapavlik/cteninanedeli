@@ -1,4 +1,4 @@
-import { BookOpen, Users, Landmark, MessageCircle, Palette, ChevronDown, ChevronUp } from "lucide-react";
+import { BookOpen, Users, Landmark, MessageCircle, Palette, ChevronDown, ChevronUp, ScrollText } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
   Sheet,
@@ -12,6 +12,12 @@ export interface ReadingCharacter {
   description: string;
 }
 
+export interface ZVCitation {
+  question_number: number;
+  text: string;
+  relevance: string;
+}
+
 export interface ReadingContextEntry {
   title: string;
   intro: string;
@@ -19,6 +25,7 @@ export interface ReadingContextEntry {
   historical_context: string;
   main_message: string;
   tone: string;
+  citations?: ZVCitation[];
 }
 
 interface ReadingContextProps {
@@ -149,6 +156,28 @@ export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0 
                         <p className="text-foreground text-[1.05rem] leading-relaxed">{reading.tone}</p>
                       </div>
                     </div>
+
+                    {/* Základy víry citations */}
+                    {reading.citations && reading.citations.length > 0 && (
+                      <div className="flex gap-3">
+                        <ScrollText className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
+                            Základy víry CČSH
+                          </p>
+                          <ul className="space-y-2">
+                            {reading.citations.map((c, ci) => (
+                              <li key={ci} className="text-foreground text-[1.05rem] leading-relaxed">
+                                <strong className="text-foreground">Otázka {c.question_number}</strong>
+                                {" — "}
+                                <span className="italic">„{c.text}"</span>
+                                <p className="text-sm text-muted-foreground mt-0.5">{c.relevance}</p>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

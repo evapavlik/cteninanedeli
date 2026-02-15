@@ -532,6 +532,7 @@ Vrať JSON objekt s polem "readings", kde každý prvek odpovídá jednomu čten
 - "historical_context": 2-3 věty o historickém pozadí – kdy, kde, proč text vznikl, komu byl určen
 - "main_message": 1 věta shrnující jádro/poselství textu z perspektivy CČSH – zdůrazni Ducha Kristova, obecenství, zpřítomnění Božího slova a praktický dopad do života věřícího
 - "tone": jaký emocionální charakter má mít přednes (např. "slavnostní a povzbudivý", "naléhavý a varovný")
+- "citations": pole 0-2 relevantních citací ze Základů víry CČSH, které se tematicky vztahují k danému čtení. Každá citace má tvar {"question_number": "ot.XY", "text": "plné znění otázky/odpovědi", "relevance": "1 věta proč je tato citace relevantní pro dané čtení"}. Vyber JEN citace, které opravdu osvětlují téma čtení – raději žádnou než nepřesnou. Preferuj citace, které pomohou lektorovi/posluchači hlouběji porozumět poselství textu.
 
 Vrať POUZE validní JSON, žádný markdown ani komentáře.`
       : `${theologicalProfile}

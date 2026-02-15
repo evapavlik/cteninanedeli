@@ -39,7 +39,7 @@ export function ReadingToolbar({
   const [showSettings, setShowSettings] = useState(false);
 
   return (
-    <div className="sticky top-0 z-10 mb-8 rounded-xl border border-border bg-card/95 p-4 backdrop-blur-sm shadow-sm">
+    <div className="mb-2 rounded-xl border border-border bg-card/95 p-3 backdrop-blur-sm shadow-sm">
       {/* Main controls row */}
       <div className="flex flex-wrap items-center justify-center gap-3">
         {/* Annotate */}

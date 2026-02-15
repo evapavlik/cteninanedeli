@@ -7,10 +7,8 @@ const mockReadings: ReadingContextEntry[] = [
   {
     title: "Ex 24,12-18",
     intro: "Test intro",
-    characters: [{ name: "Mojžíš", description: "Vůdce" }],
-    historical_context: "Po exodu",
-    main_message: "Smlouva",
-    tone: "slavnostní",
+    context: "Mojžíš vystupuje na horu Sinaj, aby přijal Boží zákon.",
+    delivery: "Čtěte slavnostně a s důrazem na Boží přítomnost.",
   },
 ];
 
@@ -19,7 +17,6 @@ describe("AI labels", () => {
     const { container } = render(
       <ReadingContext readings={mockReadings} open={true} onOpenChange={() => {}} />
     );
-    const aiText = container.querySelector('p');
     const allText = container.textContent || '';
     expect(allText).toContain("Vygenerováno pomocí AI");
   });

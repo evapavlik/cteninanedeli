@@ -1,4 +1,4 @@
-import { BookOpen, Users, Landmark, MessageCircle, Palette, BookMarked, ChevronDown, ChevronUp } from "lucide-react";
+import { BookOpen, Lightbulb, Mic, ChevronDown, ChevronUp } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
   Sheet,
@@ -7,6 +7,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 
+// Legacy fields kept as optional for backward compatibility with cached data
 export interface ReadingCharacter {
   name: string;
   description: string;
@@ -21,10 +22,14 @@ export interface ReadingCitation {
 export interface ReadingContextEntry {
   title: string;
   intro: string;
-  characters: ReadingCharacter[];
-  historical_context: string;
-  main_message: string;
-  tone: string;
+  // New consolidated fields
+  context?: string;
+  delivery?: string;
+  // Legacy fields (kept for backward compat with old cache)
+  characters?: ReadingCharacter[];
+  historical_context?: string;
+  main_message?: string;
+  tone?: string;
   citations?: ReadingCitation[];
 }
 
@@ -69,6 +74,11 @@ export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0 
         <div className="space-y-3">
           {readings.map((reading, idx) => {
             const isOpen = expandedIndex === idx;
+
+            // Build legacy context fallback from old fields
+            const contextText = reading.context || buildLegacyContext(reading);
+            const deliveryText = reading.delivery || buildLegacyDelivery(reading);
+
             return (
               <div
                 key={idx}
@@ -90,7 +100,7 @@ export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0 
 
                 {isOpen && (
                   <div className="px-4 pb-5 space-y-4 text-base leading-relaxed">
-                    {/* Intro */}
+                    {/* 1. Úvod pro shromáždění */}
                     <div className="flex gap-3">
                       <BookOpen className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                       <div className="min-w-0">
@@ -103,91 +113,65 @@ export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0 
                       </div>
                     </div>
 
-                    {/* Characters */}
-                    {reading.characters && reading.characters.length > 0 && (
+                    {/* 2. Kontext */}
+                    {contextText && (
                       <div className="flex gap-3">
-                        <Users className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                        <Lightbulb className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                         <div className="min-w-0">
                           <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
-                            Klíčové postavy
+                            Kontext
                           </p>
-                          <ul className="space-y-1">
-                            {reading.characters.map((c, ci) => (
-                              <li key={ci} className="text-foreground text-[1.05rem] leading-relaxed">
-                                <strong className="text-foreground">{c.name}</strong>
-                                {" — "}
-                                {c.description}
-                              </li>
-                            ))}
-                          </ul>
+                          <p className="text-foreground text-[1.05rem] leading-relaxed">
+                            {contextText}
+                          </p>
                         </div>
                       </div>
                     )}
 
-                    {/* Historical context */}
-                    <div className="flex gap-3">
-                      <Landmark className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                      <div className="min-w-0">
-                        <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
-                          Historický kontext
-                        </p>
-                        <p className="text-foreground text-[1.05rem] leading-relaxed">{reading.historical_context}</p>
-                      </div>
-                    </div>
-
-                    {/* Main message */}
-                    <div className="flex gap-3">
-                      <MessageCircle className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                      <div className="min-w-0">
-                        <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
-                          Hlavní poselství
-                        </p>
-                        <p className="text-foreground font-medium text-[1.05rem] leading-relaxed">{reading.main_message}</p>
-                      </div>
-                    </div>
-
-                    {/* Tone */}
+                    {/* 3. Přednes */}
+                    {deliveryText && (
                       <div className="flex gap-3">
-                        <Palette className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                        <Mic className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                         <div className="min-w-0">
                           <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
-                            Tón přednesu
+                            Přednes
                           </p>
-                          <p className="text-foreground text-[1.05rem] leading-relaxed">{reading.tone}</p>
+                          <p className="text-foreground text-[1.05rem] leading-relaxed whitespace-pre-line">
+                            {deliveryText}
+                          </p>
                         </div>
                       </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
 
-                      {/* Citations from Základy víry */}
-                      {reading.citations && reading.citations.length > 0 && (
-                        <div className="flex gap-3">
-                          <BookMarked className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                          <div className="min-w-0">
-                            <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
-                              Ze Základů víry CČSH
-                            </p>
-                            <div className="space-y-3">
-                              {reading.citations.map((citation, ci) => (
-                                <blockquote key={ci} className="border-l-2 border-primary/30 pl-3.5">
-                                  <p className="font-serif text-[1.05rem] text-foreground leading-relaxed">
-                                    <span className="font-bold text-primary/70">{citation.question_number}:</span>{" "}
-                                    {citation.text}
-                                  </p>
-                                  <p className="font-sans text-xs text-foreground/50 mt-1 italic">
-                                    {citation.relevance}
-                                  </p>
-                                </blockquote>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </SheetContent>
-      </Sheet>
-    );
+/** Fallback: build context paragraph from legacy fields */
+function buildLegacyContext(r: ReadingContextEntry): string {
+  const parts: string[] = [];
+  if (r.characters && r.characters.length > 0) {
+    parts.push(r.characters.map(c => `${c.name} – ${c.description}`).join("; ") + ".");
   }
+  if (r.historical_context) parts.push(r.historical_context);
+  if (r.main_message) parts.push(r.main_message);
+  return parts.join(" ");
+}
+
+/** Fallback: build delivery text from legacy fields */
+function buildLegacyDelivery(r: ReadingContextEntry): string {
+  const parts: string[] = [];
+  if (r.tone) parts.push(r.tone);
+  if (r.citations && r.citations.length > 0) {
+    for (const c of r.citations) {
+      parts.push(`${c.question_number}: ${c.text} – ${c.relevance}`);
+    }
+  }
+  return parts.join("\n\n");
+}

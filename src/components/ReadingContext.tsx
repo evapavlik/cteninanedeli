@@ -168,8 +168,6 @@ export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0 
                           <ul className="space-y-2">
                             {reading.citations.map((c, ci) => (
                               <li key={ci} className="text-foreground text-[1.05rem] leading-relaxed">
-                                <strong className="text-foreground">Otázka {c.question_number}</strong>
-                                {" — "}
                                 <span className="italic">„{c.text}"</span>
                                 <p className="text-sm text-muted-foreground mt-0.5">{c.relevance}</p>
                               </li>

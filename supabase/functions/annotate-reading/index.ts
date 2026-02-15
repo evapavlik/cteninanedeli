@@ -523,13 +523,15 @@ serve(async (req) => {
     const systemPrompt = isContext
       ? `${theologicalProfile}
 
-Tvým úkolem je pro zadaný biblický text (jedno nebo více čtení) vytvořit stručný kontextový průvodce v duchu teologie CČSH. Buď maximálně stručný – lektor potřebuje rychlý přehled, ne esej.
+Tvým úkolem je pro zadaný biblický text (jedno nebo více čtení) vytvořit stručný kontextový průvodce v duchu teologie CČSH.
 
 Vrať JSON objekt s polem "readings", kde každý prvek odpovídá jednomu čtení a má tyto klíče:
 - "title": název čtení (např. "První čtení – Iz 58,7-10")
 - "intro": 1-2 věty, které může lektor říct shromáždění PŘED čtením, aby zasadil text do kontextu. Formuluj v duchu husitské teologie – zdůrazni Kristův odkaz, reformační tradici, obecenství a aktuálnost poselství pro dnešek.
-- "context": jeden plynulý odstavec (3-4 věty), který stručně shrne: kdo jsou klíčové postavy textu, jaké je historické pozadí (kdy, kde, proč text vznikl) a jaké je hlavní poselství z perspektivy CČSH. Nepoužívej odrážky ani podnadpisy – piš jako souvislý text.
-- "delivery": stručný popis tónu přednesu (1 věta, např. "Čtěte slavnostně a povzbudivě, s důrazem na zaslíbení.") následovaný 0-2 relevantními citacemi ze Základů víry CČSH ve formátu: "ot.XY: plné znění – [proč je relevantní]". Vyber JEN citace, které opravdu osvětlují téma čtení – raději žádnou než nepřesnou.
+- "characters": pole klíčových postav [{name, description}] – kdo je kdo v textu (max 4)
+- "historical_context": 2-3 věty o historickém pozadí – kdy, kde, proč text vznikl, komu byl určen
+- "main_message": 1 věta shrnující jádro/poselství textu z perspektivy CČSH – zdůrazni Ducha Kristova, obecenství, zpřítomnění Božího slova a praktický dopad do života věřícího
+- "tone": jaký emocionální charakter má mít přednes (např. "slavnostní a povzbudivý", "naléhavý a varovný")
 
 Vrať POUZE validní JSON, žádný markdown ani komentáře.`
       : `${theologicalProfile}

@@ -10,26 +10,32 @@ interface SectionProgressProps {
   /** Total number of reading sections (h2 headings) */
   total: number;
   labels?: string[];
+  onSelect?: (index: number) => void;
 }
 
-export function SectionProgress({ activeIndex, total, labels }: SectionProgressProps) {
+export function SectionProgress({ activeIndex, total, labels, onSelect }: SectionProgressProps) {
   if (total <= 0) return null;
 
   const defaultLabels = ["První čtení", "Druhé čtení", "Evangelium"];
   const displayLabels = labels?.length ? labels : defaultLabels.slice(0, total);
 
   return (
-    <div className="sticky top-[4.5rem] z-[9] mb-6">
+    <div className="mb-10">
       <div className="flex items-center justify-center gap-1.5">
         {displayLabels.map((label, i) => (
           <button
             key={i}
             onClick={() => {
-              // Scroll to the corresponding h2
+              // Scroll to the corresponding h2, accounting for sticky header
               const article = document.querySelector(".prose-reading");
               if (!article) return;
               const headings = article.querySelectorAll("h2");
-              headings[i]?.scrollIntoView({ behavior: "smooth", block: "start" });
+              const heading = headings[i];
+              if (!heading) return;
+              const headerOffset = 120; // sticky toolbar + tabs height
+              const elementPosition = heading.getBoundingClientRect().top + window.scrollY;
+              window.scrollTo({ top: elementPosition - headerOffset, behavior: "smooth" });
+              onSelect?.(i);
             }}
             className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 font-serif text-xs transition-all duration-300 ${
               i === activeIndex

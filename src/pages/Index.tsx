@@ -181,7 +181,7 @@ const Index = () => {
             }
           }
         },
-        { rootMargin: "-10% 0px -70% 0px", threshold: 0 }
+        { rootMargin: "-120px 0px -60% 0px", threshold: 0 }
       );
 
       headings.forEach((h) => observer.observe(h));
@@ -296,21 +296,23 @@ const Index = () => {
                 />
               )}
 
-              <ReadingToolbar
-                onAnnotate={handleAnnotate}
-                isAnnotating={isAnnotating}
-                isAnnotated={!!annotatedMarkdown}
-                fontSize={fontSize}
-                onFontSizeChange={setFontSize}
-                lineHeight={lineHeight}
-                onLineHeightChange={setLineHeight}
-                onOpenGuide={() => setIsGuideOpen(true)}
-                hasGuide={!!contextData}
-                isLoadingGuide={isLoadingContext}
-              />
+              <div className="sticky top-0 z-10 bg-background pb-3">
+                <ReadingToolbar
+                  onAnnotate={handleAnnotate}
+                  isAnnotating={isAnnotating}
+                  isAnnotated={!!annotatedMarkdown}
+                  fontSize={fontSize}
+                  onFontSizeChange={setFontSize}
+                  lineHeight={lineHeight}
+                  onLineHeightChange={setLineHeight}
+                  onOpenGuide={() => setIsGuideOpen(true)}
+                  hasGuide={!!contextData}
+                  isLoadingGuide={isLoadingContext}
+                />
 
-              {/* Section progress indicator */}
-              <SectionProgress activeIndex={activeReadingIndex} total={3} />
+                {/* Section progress indicator */}
+                <SectionProgress activeIndex={activeReadingIndex} total={3} onSelect={setActiveReadingIndex} />
+              </div>
 
               {/* Legend for annotations */}
               {annotatedMarkdown && (

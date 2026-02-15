@@ -280,7 +280,9 @@ const Index = () => {
         )}
 
         {/* Lector guide */}
-        <LectorGuide />
+        <Suspense fallback={null}>
+          <LectorGuide />
+        </Suspense>
 
         {displayMarkdown && (
           <>

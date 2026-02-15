@@ -352,14 +352,13 @@ const Index = () => {
       <footer className="border-t border-border mt-12 py-8 text-center font-serif text-sm text-muted-foreground">
         <p>Vytvořeno s láskou k poznání.</p>
         <p className="mt-1">
-          Našli jste chybu? Napište na{" "}
+          Našli jste chybu? Napište mi na{" "}
           <a
             href="mailto:eva.pavlik@gmail.com?subject=%C4%8Cten%C3%AD%20na%20ned%C4%9Bli"
             className="underline underline-offset-2 hover:text-foreground transition-colors"
           >
-            eva.pavlik@gmail.com
-          </a>{" "}
-          s předmětem <span className="italic">Čtení na neděli</span>.
+            email
+          </a>.
         </p>
       </footer>
     </main>

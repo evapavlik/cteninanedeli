@@ -52,6 +52,53 @@ export type Database = {
           },
         ]
       }
+      corpus_documents: {
+        Row: {
+          category: string
+          content: string
+          created_at: string
+          id: string
+          is_active: boolean
+          profile_slug: string
+          sort_order: number
+          summary: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          content: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          profile_slug: string
+          sort_order?: number
+          summary?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          profile_slug?: string
+          sort_order?: number
+          summary?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "corpus_documents_profile_slug_fkey"
+            columns: ["profile_slug"]
+            isOneToOne: false
+            referencedRelation: "theological_profiles"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
       readings_cache: {
         Row: {
           id: string

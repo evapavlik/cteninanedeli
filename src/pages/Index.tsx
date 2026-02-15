@@ -16,12 +16,13 @@ const AnnotatedText = lazy(() => import("@/components/AnnotatedText").then(m => 
 const ReadingToolbar = lazy(() => import("@/components/ReadingToolbar").then(m => ({ default: m.ReadingToolbar })));
 const ReadingContext = lazy(() => import("@/components/ReadingContext").then(m => ({ default: m.ReadingContext })));
 
+const CONTEXT_CACHE_VERSION = 2; // bump to invalidate old cache (v2: added citations)
 const CONTEXT_CACHE_KEY = "ccsh-context-cache";
 const ANNOTATE_CACHE_KEY = "ccsh-annotate-cache";
 
 function saveContextToCache(sundayTitle: string, readings: ReadingContextEntry[]) {
   try {
-    localStorage.setItem(CONTEXT_CACHE_KEY, JSON.stringify({ sundayTitle, readings, timestamp: Date.now() }));
+    localStorage.setItem(CONTEXT_CACHE_KEY, JSON.stringify({ sundayTitle, readings, timestamp: Date.now(), version: CONTEXT_CACHE_VERSION }));
   } catch { /* ignore */ }
 }
 
@@ -30,7 +31,7 @@ function loadContextFromCache(sundayTitle: string): ReadingContextEntry[] | null
     const raw = localStorage.getItem(CONTEXT_CACHE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (parsed.sundayTitle === sundayTitle && parsed.readings) {
+    if (parsed.sundayTitle === sundayTitle && parsed.readings && parsed.version === CONTEXT_CACHE_VERSION) {
       return parsed.readings;
     }
     return null;

@@ -1,4 +1,4 @@
-import { BookOpen, Users, Landmark, MessageCircle, Palette, ChevronDown, ChevronUp } from "lucide-react";
+import { BookOpen, Users, Landmark, MessageCircle, Palette, BookMarked, ChevronDown, ChevronUp } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
   Sheet,
@@ -12,6 +12,12 @@ export interface ReadingCharacter {
   description: string;
 }
 
+export interface ReadingCitation {
+  question_number: string;
+  text: string;
+  relevance: string;
+}
+
 export interface ReadingContextEntry {
   title: string;
   intro: string;
@@ -19,6 +25,7 @@ export interface ReadingContextEntry {
   historical_context: string;
   main_message: string;
   tone: string;
+  citations?: ReadingCitation[];
 }
 
 interface ReadingContextProps {
@@ -140,22 +147,47 @@ export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0 
                     </div>
 
                     {/* Tone */}
-                    <div className="flex gap-3">
-                      <Palette className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                      <div className="min-w-0">
-                        <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
-                          Tón přednesu
-                        </p>
-                        <p className="text-foreground text-[1.05rem] leading-relaxed">{reading.tone}</p>
+                      <div className="flex gap-3">
+                        <Palette className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
+                            Tón přednesu
+                          </p>
+                          <p className="text-foreground text-[1.05rem] leading-relaxed">{reading.tone}</p>
+                        </div>
                       </div>
+
+                      {/* Citations from Základy víry */}
+                      {reading.citations && reading.citations.length > 0 && (
+                        <div className="flex gap-3">
+                          <BookMarked className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
+                              Ze Základů víry CČSH
+                            </p>
+                            <div className="space-y-3">
+                              {reading.citations.map((citation, ci) => (
+                                <blockquote key={ci} className="border-l-2 border-primary/30 pl-3.5">
+                                  <p className="font-serif text-[1.05rem] text-foreground leading-relaxed">
+                                    <span className="font-bold text-primary/70">{citation.question_number}:</span>{" "}
+                                    {citation.text}
+                                  </p>
+                                  <p className="font-sans text-xs text-foreground/50 mt-1 italic">
+                                    {citation.relevance}
+                                  </p>
+                                </blockquote>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </SheetContent>
-    </Sheet>
-  );
-}
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }

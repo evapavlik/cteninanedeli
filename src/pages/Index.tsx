@@ -1,9 +1,7 @@
 import { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
 
 import { fetchCyklus, getCachedCyklus } from "@/lib/api/firecrawl";
-import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Moon, Sun } from "lucide-react";
-import { toast } from "sonner";
 import type { ReadingContextEntry } from "@/components/ReadingContext";
 import ccshChalice from "@/assets/ccsh-chalice.svg";
 
@@ -139,6 +137,7 @@ const Index = () => {
     const fetchContext = async () => {
       setIsLoadingContext(true);
       try {
+        const { supabase } = await import("@/integrations/supabase/client");
         const { data, error } = await supabase.functions.invoke("annotate-reading", {
           body: { text: markdown, mode: "context" },
         });
@@ -208,6 +207,8 @@ const Index = () => {
 
     setIsAnnotating(true);
     try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { toast } = await import("sonner");
       const { data, error } = await supabase.functions.invoke("annotate-reading", {
         body: { text: markdown },
       });
@@ -222,6 +223,7 @@ const Index = () => {
       }
     } catch (e) {
       console.error("Annotation error:", e);
+      const { toast } = await import("sonner");
       toast.error("Nepodařilo se anotovat text");
     } finally {
       setIsAnnotating(false);

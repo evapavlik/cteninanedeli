@@ -3,15 +3,13 @@ import { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react"
 import { fetchCyklus, getCachedCyklus } from "@/lib/api/firecrawl";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Moon, Sun } from "lucide-react";
-import { LectorGuide } from "@/components/LectorGuide";
-import { SectionProgress } from "@/components/SectionProgress";
-import type { ReadingContextEntry } from "@/components/ReadingContext";
 import { toast } from "sonner";
+import type { ReadingContextEntry } from "@/components/ReadingContext";
 import ccshChalice from "@/assets/ccsh-chalice.svg";
 
-const AmbonMode = lazy(() => import("@/components/AmbonMode").then(m => ({ default: m.AmbonMode })));
-
-// Lazy-load heavy components (react-markdown, sheet, toolbar) to reduce initial JS
+// Lazy-load all heavy components to reduce initial JS
+const LectorGuide = lazy(() => import("@/components/LectorGuide").then(m => ({ default: m.LectorGuide })));
+const SectionProgress = lazy(() => import("@/components/SectionProgress").then(m => ({ default: m.SectionProgress })));
 const AnnotatedText = lazy(() => import("@/components/AnnotatedText").then(m => ({ default: m.AnnotatedText })));
 const ReadingToolbar = lazy(() => import("@/components/ReadingToolbar").then(m => ({ default: m.ReadingToolbar })));
 const ReadingContext = lazy(() => import("@/components/ReadingContext").then(m => ({ default: m.ReadingContext })));

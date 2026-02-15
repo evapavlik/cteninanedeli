@@ -1,37 +1,66 @@
 
 
-# Nedělní čtení – Kazatelský cyklus CČSH
+# Strukturovaný teologický korpus
 
-Jednoduchá aplikace pro klidnou sobotní přípravu na nedělní bohoslužbu. Černobílý, čistý design zaměřený výhradně na čitelnost textu.
+## Současný stav
 
-## Jak to bude fungovat
+Celý teologický profil CČSH je uložen jako jeden dlouhý textový řetězec (7 184 znaků) v tabulce `theological_profiles`. Edge funkce ho načte celý a vloží do system promptu AI modelu. To má několik nevýhod:
 
-Aplikace bude využívat **Firecrawl** (webový scraper) přes **Supabase Edge Function** k automatickému stažení aktuálního textu kazatelského cyklu ze stránky `ccsh.cz/cyklus.html`.
+- Nelze přidávat další dokumenty bez ručního skládání textu
+- Nelze rozlišit, co je "Základy víry", co je liturgický manuál, co je kázání
+- Při dotazu na konkrétní téma se AI modelu posílá vše naráz
+- Těžko se spravuje a rozšiřuje
 
-## Hlavní obrazovka
+## Navrhované řešení
 
-- **Minimalistická úvodní stránka** s názvem aktuální neděle (např. „Poslední neděle po Zjevení Páně") a datem
-- **Tlačítko „Načíst nedělní čtení"** – po kliknutí se stáhne a zobrazí aktuální text
-- Zobrazení plného textu kazatelského cyklu v přehledně formátovaném markdown:
-  - Úvodní verš
-  - První čtení z Písma
-  - Tužby
-  - Modlitba před čtením
-  - Druhé čtení (epištola)
-  - Evangelium
-  - Případné další části (zpěv, slovo k požehnání)
+### 1. Nová tabulka `corpus_documents`
 
-## Design
+Nahradí stávající jednosloupcový přístup strukturovaným úložištěm:
 
-- **Čistě černobílý** – černý text na bílém pozadí, žádné barvy
-- **Velké, dobře čitelné písmo** (serif font pro duchovní text)
-- **Dostatek prostoru** mezi jednotlivými čteními
-- Jasně oddělené sekce (První čtení, Epištola, Evangelium…)
-- Responzivní – pohodlné čtení na mobilu i tabletu
-- Žádné rušivé prvky – jen text a čtení
+| Sloupec | Typ | Popis |
+|---------|-----|-------|
+| id | uuid | Primární klíč |
+| profile_slug | text | Odkaz na teologický profil (např. "ccsh") |
+| title | text | Název dokumentu (např. "Základy víry CČSH") |
+| category | text | Kategorie: "věrouka", "liturgika", "homiletika", "pastorace", "dějiny" |
+| content | text | Plný text dokumentu |
+| summary | text (nullable) | Volitelný krátký souhrn pro AI kontext |
+| sort_order | integer | Pořadí důležitosti (1 = nejdůležitější) |
+| is_active | boolean | Zda se dokument používá v AI promptu |
+| created_at | timestamp | Datum vytvoření |
+| updated_at | timestamp | Datum poslední změny |
 
-## Backend (Firecrawl + Supabase Edge Function)
+### 2. Migrace stávajících dat
 
-- Edge funkce, která pomocí Firecrawl stáhne obsah stránky `ccsh.cz/cyklus.html` ve formátu markdown
-- Frontend zavolá tuto funkci a výsledný text přehledně zobrazí
+Stávající obsah z `theological_profiles` se přesune do `corpus_documents` jako první dokument s kategorií "věrouka" a `sort_order = 1`.
+
+### 3. Úprava edge funkce `annotate-reading`
+
+Místo načtení jednoho profilu se načtou všechny aktivní dokumenty pro daný `profile_slug`, seřazené podle `sort_order`, a sestaví se z nich system prompt. Díky tomu:
+
+- Každý nový dokument se automaticky zahrne do AI kontextu
+- Lze snadno deaktivovat dokument bez mazání (`is_active = false`)
+- Kategorie pomáhají AI lépe rozlišit zdroje
+
+### 4. Workflow pro přidávání dokumentů
+
+Dokumenty budete nahrávat přímo v chatu -- já je zpracuji a uložím do databáze s příslušnou kategorií.
+
+## Dostupné kategorie
+
+- **věrouka** -- vyznání víry, Základy víry, dogmatické texty
+- **liturgika** -- bohoslužebné řády, liturgické texty, svátosti
+- **homiletika** -- kazatelské příručky, vzorová kázání
+- **pastorace** -- pastorační dokumenty, metodiky
+- **dějiny** -- historické dokumenty, sněmovní usnesení
+
+---
+
+## Technický souhrn
+
+1. Vytvořit tabulku `corpus_documents` s RLS pro veřejné čtení
+2. Migrovat stávající data z `theological_profiles.content` do nové tabulky
+3. Upravit edge funkci `annotate-reading` -- načítat dokumenty z `corpus_documents` místo `theological_profiles`
+4. Tabulka `theological_profiles` zůstane jako hlavička profilu (název, slug), ale obsah se přesune do `corpus_documents`
+5. Odstranit hardkódovaný fallback profil z edge funkce (nahradí ho data z DB)
 

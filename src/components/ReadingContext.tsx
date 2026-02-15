@@ -1,4 +1,4 @@
-import { BookOpen, Users, Landmark, MessageCircle, Palette, ChevronDown, ChevronUp, ScrollText } from "lucide-react";
+import { BookOpen, Users, Landmark, MessageCircle, Music, ChevronDown, ChevronUp, ScrollText } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
   Sheet,
@@ -148,7 +148,7 @@ export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0 
 
                     {/* Tone */}
                     <div className="flex gap-3">
-                      <Palette className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                      <Music className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                       <div className="min-w-0">
                         <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
                           Tón přednesu

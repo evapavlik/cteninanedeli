@@ -114,7 +114,7 @@ export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0 
                           <ul className="space-y-1">
                             {reading.characters.map((c, ci) => (
                               <li key={ci} className="text-foreground text-[1.05rem] leading-relaxed">
-                                <strong className="text-foreground">{c.name}</strong>
+                                <span className="font-medium text-foreground">{c.name}</span>
                                 {" — "}
                                 {c.description}
                               </li>
@@ -142,7 +142,7 @@ export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0 
                         <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
                           Hlavní poselství
                         </p>
-                        <p className="text-foreground font-medium text-[1.05rem] leading-relaxed">{reading.main_message}</p>
+                        <p className="text-foreground text-[1.05rem] leading-relaxed">{reading.main_message}</p>
                       </div>
                     </div>
 

@@ -1,37 +1,38 @@
 
+# Zjednodušení Průvodce ke čtení
 
-# Nedělní čtení – Kazatelský cyklus CČSH
+Aktuálně má každé čtení v průvodci 6 samostatných sekcí s ikonami a nadpisy. Cílem je zredukovat obsah na 3 kompaktnější bloky, aby byl průvodce přehlednější a méně zahlcující.
 
-Jednoduchá aplikace pro klidnou sobotní přípravu na nedělní bohoslužbu. Černobílý, čistý design zaměřený výhradně na čitelnost textu.
+## Nová struktura průvodce
 
-## Jak to bude fungovat
+Místo 6 sekcí budou **3 bloky**:
 
-Aplikace bude využívat **Firecrawl** (webový scraper) přes **Supabase Edge Function** k automatickému stažení aktuálního textu kazatelského cyklu ze stránky `ccsh.cz/cyklus.html`.
+1. **Úvod pro shromáždění** -- zůstane samostatně, protože ho lektor přímo předčítá
+2. **Kontext** -- sloučení Klíčových postav + Historický kontext + Hlavní poselství do jednoho plynulého odstavce
+3. **Přednes** -- Tón přednesu + Citace ze Základů víry v jednom bloku
 
-## Hlavní obrazovka
+## Co se změní
 
-- **Minimalistická úvodní stránka** s názvem aktuální neděle (např. „Poslední neděle po Zjevení Páně") a datem
-- **Tlačítko „Načíst nedělní čtení"** – po kliknutí se stáhne a zobrazí aktuální text
-- Zobrazení plného textu kazatelského cyklu v přehledně formátovaném markdown:
-  - Úvodní verš
-  - První čtení z Písma
-  - Tužby
-  - Modlitba před čtením
-  - Druhé čtení (epištola)
-  - Evangelium
-  - Případné další části (zpěv, slovo k požehnání)
+### 1. AI prompt (Edge funkce `annotate-reading`)
+- Místo 5 samostatných polí (`characters`, `historical_context`, `main_message`, `tone`, `citations`) se prompt upraví na 3 pole:
+  - `intro` -- beze změny
+  - `context` -- jeden odstavec (3-4 věty) zahrnující postavy, historické pozadí i poselství
+  - `delivery` -- tón přednesu + citace v jednom bloku
+- Celkově kratší výstupy -- AI dostane instrukci být stručnější
 
-## Design
+### 2. Datový model (`ReadingContextEntry`)
+- Zjednoduší se na: `title`, `intro`, `context`, `delivery_tone`, `citations`
+- Odstraní se: `characters`, `historical_context`, `main_message`, `tone`
 
-- **Čistě černobílý** – černý text na bílém pozadí, žádné barvy
-- **Velké, dobře čitelné písmo** (serif font pro duchovní text)
-- **Dostatek prostoru** mezi jednotlivými čteními
-- Jasně oddělené sekce (První čtení, Epištola, Evangelium…)
-- Responzivní – pohodlné čtení na mobilu i tabletu
-- Žádné rušivé prvky – jen text a čtení
+### 3. UI komponenta (`ReadingContext.tsx`)
+- Místo 6 sekcí s ikonami se zobrazí 3 kompaktní bloky
+- Méně vizuálního šumu, méně scrollování
 
-## Backend (Firecrawl + Supabase Edge Function)
+### 4. Cache
+- Po nasazení bude nutné smazat existující cache (`DELETE FROM ai_cache WHERE mode = 'context'`), aby se vygenerovaly nové kratší výstupy
 
-- Edge funkce, která pomocí Firecrawl stáhne obsah stránky `ccsh.cz/cyklus.html` ve formátu markdown
-- Frontend zavolá tuto funkci a výsledný text přehledně zobrazí
+## Technické detaily
 
+Soubory k úpravě:
+- `supabase/functions/annotate-reading/index.ts` -- nový prompt
+- `src/components/ReadingContext.tsx` -- nový interface + jednodušší UI

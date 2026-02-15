@@ -350,7 +350,7 @@ const Index = () => {
 
       {/* Footer */}
       <footer className="border-t border-border mt-12 py-8 text-center font-serif text-sm text-muted-foreground">
-        <p>Vytvořeno s láskou k poznání.</p>
+        <p>S láskou k poznání vytvořila Eva Pavlíková.</p>
         <p className="mt-1">
           Našli jste chybu? Napište mi na{" "}
           <a

@@ -188,10 +188,21 @@ Deno.serve(async (req) => {
       }
 
       const extracted = extractReadings(rawMarkdown, nextSunday.title);
-      readingsMarkdown = extracted.readings || rawMarkdown;
+      
+      // Validate: extracted readings must contain actual biblical text, not site navigation
+      if (!extracted.readings || extracted.readings.length < 100) {
+        addLog(`Extraction failed — readings too short (${extracted.readings?.length || 0} chars). Raw markdown starts with: ${rawMarkdown.substring(0, 100)}`);
+        return new Response(JSON.stringify({ success: false, log, error: "Extraction produced no valid readings" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      readingsMarkdown = extracted.readings;
       sundayTitle = extracted.sundayTitle;
 
-      // Save to readings_cache
+      // Save to readings_cache — delete old entries first, then insert
+      await supabase.from("readings_cache").delete().neq("sunday_title", sundayTitle);
       await supabase.from("readings_cache").upsert(
         {
           sunday_title: sundayTitle,

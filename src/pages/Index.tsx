@@ -260,13 +260,8 @@ const Index = () => {
             <span className="text-[0.55rem]">✦</span>
             <span className="block h-px w-12 bg-current" />
           </div>
-          {sundayTitle && (
-            <p className="mt-5 font-serif text-lg font-medium text-foreground md:text-xl">
-              {sundayTitle}
-            </p>
-          )}
           {sundayDate && (
-            <p className="mt-2 font-serif text-sm text-muted-foreground md:text-base">
+            <p className="mt-5 font-serif text-lg font-medium text-foreground md:text-xl">
               {new Date(sundayDate + 'T00:00:00').toLocaleDateString('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
             </p>
           )}

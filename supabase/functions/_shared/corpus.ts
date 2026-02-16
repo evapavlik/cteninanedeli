@@ -34,8 +34,9 @@ interface CorpusDoc {
  * - Secondary documents (sort_order > 1): summary if available, otherwise truncated content
  * - Total output is capped at MAX_CORPUS_CHARS to keep token usage reasonable
  */
+// deno-lint-ignore no-explicit-any
 export async function buildTheologicalContext(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   profileSlug: string,
 ): Promise<string> {
   const { data: docs, error } = await supabase

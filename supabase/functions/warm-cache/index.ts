@@ -233,7 +233,7 @@ Deno.serve(async (req) => {
     try {
       theologicalContext = await buildTheologicalContext(supabase, profileSlug);
     } catch (e) {
-      addLog(`Warning: could not load corpus — ${e.message}`);
+      addLog(`Warning: could not load corpus — ${(e as Error).message}`);
     }
 
     async function generateAndCache(mode: "context" | "annotate") {
@@ -321,8 +321,8 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    addLog(`Fatal error: ${e.message}`);
-    return new Response(JSON.stringify({ success: false, error: e.message, log }), {
+    addLog(`Fatal error: ${(e as Error).message}`);
+    return new Response(JSON.stringify({ success: false, error: (e as Error).message, log }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
       formattedUrl = `https://${formattedUrl}`;
     }
 
-    const ALLOWED_DOMAINS = ['ccsh.cz', 'www.ccsh.cz'];
+    const ALLOWED_DOMAINS = ['ccsh.cz', 'www.ccsh.cz', 'cyklus.ccsh.cz'];
     try {
       const urlObj = new URL(formattedUrl);
       if (!ALLOWED_DOMAINS.includes(urlObj.hostname)) {

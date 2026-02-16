@@ -12,7 +12,7 @@ const AnnotatedText = lazy(() => import("@/components/AnnotatedText").then(m => 
 const ReadingToolbar = lazy(() => import("@/components/ReadingToolbar").then(m => ({ default: m.ReadingToolbar })));
 const ReadingContext = lazy(() => import("@/components/ReadingContext").then(m => ({ default: m.ReadingContext })));
 
-const CONTEXT_CACHE_VERSION = 2; // bump to invalidate old cache (v2: added citations)
+const CONTEXT_CACHE_VERSION = 3; // bump to invalidate old cache (v3: removed firecrawl-scrape)
 const CONTEXT_CACHE_KEY = "ccsh-context-cache";
 const ANNOTATE_CACHE_KEY = "ccsh-annotate-cache";
 

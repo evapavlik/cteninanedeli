@@ -155,23 +155,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    const markdown = data?.data?.markdown || data?.markdown;
-
-    // Save to readings_cache
-    if (markdown) {
-      // Extract sunday title from markdown
-      const sundayMatch = markdown.match(/neděle\s+\d+\.\s*\w+/i) || markdown.match(/neděle[^\n]*/i);
-      const sundayTitle = sundayMatch ? sundayMatch[0].trim() : formattedUrl;
-
-      await supabase
-        .from("readings_cache")
-        .upsert(
-          { sunday_title: sundayTitle, url: formattedUrl, markdown_content: markdown, scraped_at: new Date().toISOString() },
-          { onConflict: "sunday_title" }
-        );
-      console.log("Saved to readings_cache:", sundayTitle);
-    }
-
     console.log('Scrape successful');
     return new Response(
       JSON.stringify(data),

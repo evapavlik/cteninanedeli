@@ -1,0 +1,1 @@
+ALTER TABLE public.readings_cache ADD COLUMN sunday_date DATE;

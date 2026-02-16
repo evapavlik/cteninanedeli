@@ -18,7 +18,7 @@ const INDEX_URL = "https://cyklus.ccsh.cz/index.php?option=com_content&view=arti
  * Parse the index page to find the next upcoming Sunday reading URL.
  * Lines look like: Ne 22.02.2026 [08](A.23): [1. neděle postní (Invocavit)](https://cyklus.ccsh.cz/...)
  */
-function findNextSundayUrl(markdown: string): { url: string; title: string } | null {
+function findNextSundayUrl(markdown: string): { url: string; title: string; date: string } | null {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -44,7 +44,10 @@ function findNextSundayUrl(markdown: string): { url: string; title: string } | n
     }
   }
 
-  return closest ? { url: closest.url, title: closest.title } : null;
+  if (!closest) return null;
+  const d = closest.date;
+  const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return { url: closest.url, title: closest.title, date: dateStr };
 }
 
 /**
@@ -195,6 +198,7 @@ Deno.serve(async (req) => {
           url: nextSunday.url,
           markdown_content: readingsMarkdown,
           scraped_at: new Date().toISOString(),
+          sunday_date: nextSunday.date,
         },
         { onConflict: "sunday_title" }
       );

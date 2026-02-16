@@ -7,19 +7,58 @@ const corsHeaders = {
 };
 
 /**
- * warm-cache: Pre-fetches readings from ccsh.cz and pre-generates
- * both AI outputs (context + annotate) so users get instant results.
- * Designed to be called via pg_cron daily.
+ * warm-cache: Scrapes cyklus.ccsh.cz index to find the next Sunday's readings,
+ * fetches the full reading page, and pre-generates both AI outputs (context + annotate).
+ * Designed to be called via pg_cron daily at 4:00 UTC.
  */
 
-function extractReadings(markdown: string): { sundayTitle: string; readings: string } {
-  const sundayMatch = markdown.match(/neděle\s+\d+\.\s*\w+/i) || markdown.match(/neděle[^\n]*/i);
-  const sundayDate = sundayMatch ? sundayMatch[0].trim() : "";
+const INDEX_URL = "https://cyklus.ccsh.cz/index.php?option=com_content&view=article&id=275&bck=1";
 
+/**
+ * Parse the index page to find the next upcoming Sunday reading URL.
+ * Lines look like: Ne 22.02.2026 [08](A.23): [1. neděle postní (Invocavit)](https://cyklus.ccsh.cz/...)
+ */
+function findNextSundayUrl(markdown: string): { url: string; title: string } | null {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Match lines like: Ne DD.MM.YYYY \[WW\](A.NN): [Title](URL)
+  // Note: brackets may be escaped as \[ \] in markdown
+  const lineRegex = /Ne\s+(\d{2})\.(\d{2})\.(\d{4})\s+\\?\[[\d]*\\?\]\([^)]*\):\s*\[([^\]]+)\]\(([^)]+)\)/g;
+  let match: RegExpExecArray | null;
+  let closest: { url: string; title: string; date: Date } | null = null;
+
+  while ((match = lineRegex.exec(markdown)) !== null) {
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10) - 1;
+    const year = parseInt(match[3], 10);
+    const title = match[4];
+    const url = match[5];
+    const date = new Date(year, month, day);
+
+    // Find the first Sunday that is today or in the future
+    if (date >= today) {
+      if (!closest || date < closest.date) {
+        closest = { url, title, date };
+      }
+    }
+  }
+
+  return closest ? { url: closest.url, title: closest.title } : null;
+}
+
+/**
+ * Extract readings from a cyklus.ccsh.cz reading page.
+ * Format: #### První čtení z Písma: Reference \n text
+ */
+function extractReadings(markdown: string, pageTitle: string): { sundayTitle: string; readings: string } {
   const sections: string[] = [];
 
   function extractSection(keyword: string): string | null {
-    const regex = new RegExp(`####\\s*([^\\n]*${keyword}[^\\n]*)\\n+([\\s\\S]*?)(?=\\n####|\\n##\\s|$)`, "i");
+    const regex = new RegExp(
+      `####\\s*([^\\n]*${keyword}[^\\n]*)\\n+([\\s\\S]*?)(?=\\n####|$)`,
+      "i"
+    );
     const match = markdown.match(regex);
     if (match) {
       return `## ${match[1].trim()}\n\n${match[2].trim()}`;
@@ -34,8 +73,11 @@ function extractReadings(markdown: string): { sundayTitle: string; readings: str
   const gospel = extractSection("Evangelium");
   if (gospel) sections.push(gospel);
 
+  // Clean the page title: remove markdown escapes like \. 
+  const cleanTitle = pageTitle.replace(/\\([.#*_~`])/g, "$1").trim();
+
   return {
-    sundayTitle: sundayDate,
+    sundayTitle: cleanTitle,
     readings: sections.join("\n\n---\n\n"),
   };
 }
@@ -46,6 +88,21 @@ async function hashText(text: string): Promise<string> {
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("").substring(0, 32);
+}
+
+async function scrapeUrl(url: string, apiKey: string): Promise<string | null> {
+  const res = await fetch("https://api.firecrawl.dev/v1/scrape", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true }),
+  });
+
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data?.data?.markdown || data?.markdown || null;
 }
 
 Deno.serve(async (req) => {
@@ -63,87 +120,91 @@ Deno.serve(async (req) => {
   const addLog = (msg: string) => { console.log(msg); log.push(msg); };
 
   try {
-    // --- Step 1: Scrape readings ---
-    const url = "https://www.ccsh.cz/cyklus.html";
-
     if (!FIRECRAWL_API_KEY) {
-      addLog("FIRECRAWL_API_KEY not set, checking existing cache only");
-    }
-
-    let rawMarkdown: string | null = null;
-    let sundayTitle = "";
-
-    // Check if we have a fresh cache (< 6 hours)
-    const { data: cached } = await supabase
-      .from("readings_cache")
-      .select("markdown_content, sunday_title, scraped_at")
-      .eq("url", url)
-      .order("scraped_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    const SIX_HOURS = 6 * 60 * 60 * 1000;
-    const isFresh = cached && (Date.now() - new Date(cached.scraped_at).getTime()) < SIX_HOURS;
-
-    if (isFresh) {
-      addLog("Readings cache is fresh, reusing");
-      rawMarkdown = cached.markdown_content;
-      sundayTitle = cached.sunday_title;
-    } else if (FIRECRAWL_API_KEY) {
-      addLog("Scraping fresh readings from ccsh.cz");
-      const scrapeRes = await fetch("https://api.firecrawl.dev/v1/scrape", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true }),
-      });
-
-      if (!scrapeRes.ok) {
-        addLog(`Firecrawl error: ${scrapeRes.status}`);
-        // Fall back to stale cache
-        if (cached) {
-          rawMarkdown = cached.markdown_content;
-          sundayTitle = cached.sunday_title;
-          addLog("Using stale cache as fallback");
-        }
-      } else {
-        const scrapeData = await scrapeRes.json();
-        rawMarkdown = scrapeData?.data?.markdown || scrapeData?.markdown || null;
-      }
-    } else if (cached) {
-      rawMarkdown = cached.markdown_content;
-      sundayTitle = cached.sunday_title;
-      addLog("Using stale cache (no Firecrawl key)");
-    }
-
-    if (!rawMarkdown) {
-      addLog("No readings available — aborting");
+      addLog("FIRECRAWL_API_KEY not set — aborting");
       return new Response(JSON.stringify({ success: false, log }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Extract and clean readings
-    const extracted = extractReadings(rawMarkdown);
-    const readingsMarkdown = extracted.readings || rawMarkdown;
-    if (!sundayTitle) sundayTitle = extracted.sundayTitle;
+    // --- Step 1: Scrape index page to find next Sunday ---
+    addLog("Scraping cyklus.ccsh.cz index…");
+    const indexMarkdown = await scrapeUrl(INDEX_URL, FIRECRAWL_API_KEY);
+    if (!indexMarkdown) {
+      addLog("Failed to scrape index page");
+      return new Response(JSON.stringify({ success: false, log }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    // Save to readings_cache if we scraped fresh
-    if (!isFresh && FIRECRAWL_API_KEY) {
+    const nextSunday = findNextSundayUrl(indexMarkdown);
+    if (!nextSunday) {
+      addLog("No upcoming Sunday found in index");
+      return new Response(JSON.stringify({ success: false, log }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    addLog(`Next Sunday: "${nextSunday.title}" → ${nextSunday.url}`);
+
+    // --- Step 2: Check if we already have this Sunday cached ---
+    const { data: cached } = await supabase
+      .from("readings_cache")
+      .select("id, sunday_title, scraped_at")
+      .eq("sunday_title", nextSunday.title)
+      .maybeSingle();
+
+    let readingsMarkdown: string;
+    let sundayTitle: string;
+
+    const SIX_HOURS = 6 * 60 * 60 * 1000;
+    const isFresh = cached && (Date.now() - new Date(cached.scraped_at).getTime()) < SIX_HOURS;
+
+    if (isFresh) {
+      addLog("Readings cache is fresh, reusing");
+      const { data: fullCached } = await supabase
+        .from("readings_cache")
+        .select("markdown_content, sunday_title")
+        .eq("id", cached.id)
+        .single();
+      readingsMarkdown = fullCached!.markdown_content;
+      sundayTitle = fullCached!.sunday_title;
+    } else {
+      // Scrape the reading page
+      addLog(`Scraping reading page: ${nextSunday.url}`);
+      const rawMarkdown = await scrapeUrl(nextSunday.url, FIRECRAWL_API_KEY);
+      if (!rawMarkdown) {
+        addLog("Failed to scrape reading page");
+        return new Response(JSON.stringify({ success: false, log }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const extracted = extractReadings(rawMarkdown, nextSunday.title);
+      readingsMarkdown = extracted.readings || rawMarkdown;
+      sundayTitle = extracted.sundayTitle;
+
+      // Save to readings_cache
       await supabase.from("readings_cache").upsert(
-        { sunday_title: sundayTitle, url, markdown_content: rawMarkdown, scraped_at: new Date().toISOString() },
+        {
+          sunday_title: sundayTitle,
+          url: nextSunday.url,
+          markdown_content: readingsMarkdown,
+          scraped_at: new Date().toISOString(),
+        },
         { onConflict: "sunday_title" }
       );
       addLog(`Saved readings to cache: "${sundayTitle}"`);
     }
 
-    // --- Step 2: Pre-generate AI outputs ---
+    // --- Step 3: Pre-generate AI outputs ---
     if (!LOVABLE_API_KEY) {
       addLog("LOVABLE_API_KEY not set, skipping AI pre-generation");
-      return new Response(JSON.stringify({ success: true, log }), {
+      return new Response(JSON.stringify({ success: true, sundayTitle, log }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -161,7 +222,7 @@ Deno.serve(async (req) => {
 
     if (!docs || docs.length === 0) {
       addLog("No corpus documents found, skipping AI");
-      return new Response(JSON.stringify({ success: true, log }), {
+      return new Response(JSON.stringify({ success: true, sundayTitle, log }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -173,9 +234,7 @@ Deno.serve(async (req) => {
       return `${separator}\n${header}\n${separator}${summaryLine}\n${doc.content}`;
     }).join("\n\n");
 
-    // Helper to call AI and cache result
     async function generateAndCache(mode: "context" | "annotate") {
-      // Check if already cached
       const { data: existing } = await supabase
         .from("ai_cache")
         .select("id")
@@ -259,7 +318,7 @@ Výstup: "**Hospodin** řekl **Mojžíšovi**: [pauza] Jdi k **faraónovi** a ř
             { text_hash: textHash, mode, profile_slug: profileSlug, result: parsed, model_used: "google/gemini-3-flash-preview" },
             { onConflict: "text_hash,mode,profile_slug" }
           );
-          addLog(`Cached AI context (${Object.keys(parsed).length} keys)`);
+          addLog(`Cached AI context`);
         } catch {
           addLog("Failed to parse context JSON");
         }
@@ -272,7 +331,6 @@ Výstup: "**Hospodin** řekl **Mojžíšovi**: [pauza] Jdi k **faraónovi** a ř
       }
     }
 
-    // Generate both in parallel
     await Promise.all([
       generateAndCache("context"),
       generateAndCache("annotate"),

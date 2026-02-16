@@ -104,6 +104,7 @@ export type Database = {
           id: string
           markdown_content: string
           scraped_at: string
+          sunday_date: string | null
           sunday_title: string
           url: string | null
         }
@@ -111,6 +112,7 @@ export type Database = {
           id?: string
           markdown_content: string
           scraped_at?: string
+          sunday_date?: string | null
           sunday_title: string
           url?: string | null
         }
@@ -118,6 +120,7 @@ export type Database = {
           id?: string
           markdown_content?: string
           scraped_at?: string
+          sunday_date?: string | null
           sunday_title?: string
           url?: string | null
         }

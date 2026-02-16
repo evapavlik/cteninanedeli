@@ -5,12 +5,13 @@ const CACHE_KEY = 'ccsh-cyklus-cache';
 interface CacheEntry {
   markdown: string;
   sundayTitle: string;
+  sundayDate: string | null;
   timestamp: number;
 }
 
-function saveToCache(markdown: string, sundayTitle: string) {
+function saveToCache(markdown: string, sundayTitle: string, sundayDate: string | null) {
   try {
-    const entry: CacheEntry = { markdown, sundayTitle, timestamp: Date.now() };
+    const entry: CacheEntry = { markdown, sundayTitle, sundayDate, timestamp: Date.now() };
     localStorage.setItem(CACHE_KEY, JSON.stringify(entry));
   } catch { /* localStorage full or unavailable */ }
 }
@@ -25,10 +26,10 @@ function loadFromCache(): CacheEntry | null {
   }
 }
 
-export function getCachedCyklus(): { markdown: string; sundayTitle: string } | null {
+export function getCachedCyklus(): { markdown: string; sundayTitle: string; sundayDate: string | null } | null {
   const cached = loadFromCache();
   if (!cached) return null;
-  return { markdown: cached.markdown, sundayTitle: cached.sundayTitle };
+  return { markdown: cached.markdown, sundayTitle: cached.sundayTitle, sundayDate: cached.sundayDate };
 }
 
 /**
@@ -36,11 +37,10 @@ export function getCachedCyklus(): { markdown: string; sundayTitle: string } | n
  * Primary path: read from the server-side readings_cache (populated by warm-cache cron).
  * The most recent entry is always the correct next Sunday.
  */
-export async function fetchCyklus(): Promise<{ success: boolean; markdown?: string; sundayTitle?: string; error?: string }> {
-  // Read the latest cached reading from the database (populated by warm-cache cron)
+export async function fetchCyklus(): Promise<{ success: boolean; markdown?: string; sundayTitle?: string; sundayDate?: string | null; error?: string }> {
   const { data, error } = await supabase
     .from('readings_cache')
-    .select('markdown_content, sunday_title')
+    .select('markdown_content, sunday_title, sunday_date')
     .order('scraped_at', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -53,11 +53,13 @@ export async function fetchCyklus(): Promise<{ success: boolean; markdown?: stri
     return { success: false, error: 'Žádná čtení nejsou k dispozici' };
   }
 
-  saveToCache(data.markdown_content, data.sunday_title);
+  const sundayDate = (data as any).sunday_date as string | null;
+  saveToCache(data.markdown_content, data.sunday_title, sundayDate);
 
   return {
     success: true,
     markdown: data.markdown_content,
     sundayTitle: data.sunday_title,
+    sundayDate,
   };
 }

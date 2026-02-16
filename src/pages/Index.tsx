@@ -64,6 +64,7 @@ const Index = () => {
     return null;
   });
   const [sundayTitle, setSundayTitle] = useState<string>(cached?.sundayTitle || "");
+  const [sundayDate, setSundayDate] = useState<string | null>(cached?.sundayDate || null);
   const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState<"light" | "dark">(() => {
@@ -114,6 +115,7 @@ const Index = () => {
       if (result.success && result.markdown) {
         setMarkdown(result.markdown);
         setSundayTitle(result.sundayTitle || "");
+        setSundayDate(result.sundayDate || null);
       } else if (!markdown) {
         setError(result.error || "Nepodařilo se načíst čtení.");
       }
@@ -261,6 +263,11 @@ const Index = () => {
           {sundayTitle && (
             <p className="mt-5 font-serif text-lg font-medium text-foreground md:text-xl">
               {sundayTitle}
+            </p>
+          )}
+          {sundayDate && (
+            <p className="mt-2 font-serif text-sm text-muted-foreground md:text-base">
+              {new Date(sundayDate + 'T00:00:00').toLocaleDateString('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
             </p>
           )}
         </header>

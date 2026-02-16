@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { buildTheologicalContext, buildContextPrompt, ANNOTATE_SYSTEM_PROMPT } from "../_shared/corpus.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -35,43 +36,6 @@ async function hashText(text: string): Promise<string> {
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, "0")).join("").substring(0, 32);
-}
-
-/**
- * Build theological context from corpus_documents table.
- * Documents are loaded by profile_slug, filtered by is_active, and sorted by sort_order.
- * Each document is prefixed with its category and title for AI clarity.
- */
-async function buildTheologicalContext(
-  supabase: ReturnType<typeof createClient>,
-  profileSlug: string
-): Promise<string> {
-  const { data: docs, error } = await supabase
-    .from("corpus_documents")
-    .select("title, category, content, summary")
-    .eq("profile_slug", profileSlug)
-    .eq("is_active", true)
-    .order("sort_order", { ascending: true });
-
-  if (error) {
-    console.error("Error loading corpus documents:", error.message);
-    throw new Error("Failed to load theological corpus");
-  }
-
-  if (!docs || docs.length === 0) {
-    throw new Error(`No active corpus documents found for profile "${profileSlug}"`);
-  }
-
-  console.log(`Loaded ${docs.length} corpus document(s) for profile "${profileSlug}"`);
-
-  const sections = docs.map((doc: { title: string; category: string; content: string; summary: string | null }) => {
-    const header = `[${doc.category.toUpperCase()}] ${doc.title}`;
-    const separator = "=".repeat(header.length);
-    const summaryLine = doc.summary ? `\nSouhrn: ${doc.summary}\n` : "";
-    return `${separator}\n${header}\n${separator}${summaryLine}\n${doc.content}`;
-  });
-
-  return sections.join("\n\n");
 }
 
 serve(async (req) => {
@@ -125,10 +89,7 @@ serve(async (req) => {
     const isContext = mode === "context";
     const profileSlug = "ccsh";
 
-    // 1. Load theological corpus from structured documents
-    const theologicalProfile = await buildTheologicalContext(supabase, profileSlug);
-
-    // 2. Check AI cache
+    // 1. Check AI cache first (before loading corpus — saves a DB call on cache hit)
     const textHash = await hashText(text);
     const cacheMode = isContext ? "context" : "annotate";
 
@@ -152,41 +113,17 @@ serve(async (req) => {
       });
     }
 
+    // 2. Build system prompt — only load corpus for context mode
+    let systemPrompt: string;
+    if (isContext) {
+      const theologicalContext = await buildTheologicalContext(supabase, profileSlug);
+      systemPrompt = buildContextPrompt(theologicalContext);
+    } else {
+      // Annotate mode: no corpus needed — purely about reading technique
+      systemPrompt = ANNOTATE_SYSTEM_PROMPT;
+    }
+
     // 3. Generate via AI
-    const systemPrompt = isContext
-      ? `${theologicalProfile}
-
-Tvým úkolem je pro zadaný biblický text (jedno nebo více čtení) vytvořit stručný kontextový průvodce v duchu teologie CČSH.
-
-Vrať JSON objekt s polem "readings", kde každý prvek odpovídá jednomu čtení a má tyto klíče:
-- "title": název čtení (např. "První čtení – Iz 58,7-10")
-- "intro": 1-2 věty, které může lektor říct shromáždění PŘED čtením, aby zasadil text do kontextu. Formuluj v duchu husitské teologie – zdůrazni Kristův odkaz, reformační tradici, obecenství a aktuálnost poselství pro dnešek.
-- "characters": pole klíčových postav [{name, description}] – kdo je kdo v textu (max 4)
-- "historical_context": 2-3 věty o historickém pozadí – kdy, kde, proč text vznikl, komu byl určen
-- "main_message": 1 věta shrnující jádro/poselství textu z perspektivy CČSH – zdůrazni Ducha Kristova, obecenství, zpřítomnění Božího slova a praktický dopad do života věřícího
-- "tone": jaký emocionální charakter má mít přednes (např. "slavnostní a povzbudivý", "naléhavý a varovný")
-- "citations": pole 0–2 relevantních citací ze Základů víry CČSH [{question_number, text, relevance}]. question_number je číslo otázky (např. 105), text je krátká citace z odpovědi (max 2 věty), relevance je 1 věta vysvětlující spojitost s čtením. Pokud žádná otázka přímo nesouvisí, vrať prázdné pole []. NEVYMÝŠLEJ citace — používej POUZE skutečné otázky a odpovědi z dokumentu Základy víry CČSH uvedeného výše.
-
-Vrať POUZE validní JSON, žádný markdown ani komentáře.`
-      : `${theologicalProfile}
-
-Jsi expert na liturgické předčítání (lektorování) v Církvi československé husitské.
-Tvým úkolem je anotovat biblický text značkami pro přednes:
-
-Pravidla:
-- **tučně** označ slova, která mají být zdůrazněna (klíčová slova, jména, důležité pojmy)
-- Vlož značku [pauza] tam, kde má být krátká pauza (cca 1 sekunda) — typicky před důležitou myšlenkou nebo po čárce
-- Vlož značku [dlouhá pauza] tam, kde má být delší pauza (2-3 sekundy) — typicky mezi odstavci, před závěrečným veršem
-- Vlož značku [pomalu] před pasáže, které mají být čteny pomaleji (slavnostní momenty, klíčové výroky)
-- Vlož značku [normálně] pro návrat k normálnímu tempu
-- Zachovej celý původní text — nic neodstraňuj, nic nepřidávej kromě značek
-- Neměň formátování nadpisů (## zůstane ##)
-- Nevkládej žádné komentáře ani vysvětlení — vrať POUZE anotovaný text
-
-Příklad:
-Vstup: "Hospodin řekl Mojžíšovi: Jdi k faraónovi a řekni mu: Propusť můj lid."
-Výstup: "**Hospodin** řekl **Mojžíšovi**: [pauza] Jdi k **faraónovi** a řekni mu: [pauza] [pomalu] **Propusť můj lid.** [normálně]"`;
-
     const messages = [
       { role: "system", content: systemPrompt },
       { role: "user", content: text },

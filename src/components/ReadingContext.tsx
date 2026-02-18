@@ -1,4 +1,4 @@
-import { BookOpen, Users, Landmark, MessageCircle, Music, ChevronDown, ChevronUp, ScrollText } from "lucide-react";
+import { BookOpen, Users, Landmark, MessageCircle, Music, ChevronDown, ChevronUp, ScrollText, Feather } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
   Sheet,
@@ -18,6 +18,11 @@ export interface ZVCitation {
   relevance: string;
 }
 
+export interface FarskyTeaser {
+  quote: string;
+  source_ref: string;
+}
+
 export interface ReadingContextEntry {
   title: string;
   intro: string;
@@ -26,6 +31,7 @@ export interface ReadingContextEntry {
   main_message: string;
   tone: string;
   citations?: ZVCitation[];
+  farsky?: FarskyTeaser;
 }
 
 interface ReadingContextProps {
@@ -33,9 +39,11 @@ interface ReadingContextProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialIndex?: number;
+  onOpenInspiration?: () => void;
+  hasInspiration?: boolean;
 }
 
-export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0 }: ReadingContextProps) {
+export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0, onOpenInspiration, hasInspiration }: ReadingContextProps) {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(initialIndex);
 
   // Sync expanded index when sheet opens with a new initialIndex
@@ -173,6 +181,38 @@ export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0 
                               </li>
                             ))}
                           </ul>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Farského teaser */}
+                    {reading.farsky && (
+                      <div className="flex gap-3 pt-2 border-t border-border/50">
+                        <Feather className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
+                            Farského postila
+                          </p>
+                          <p className="text-xs text-muted-foreground mb-1.5">
+                            {reading.farsky.source_ref}
+                          </p>
+                          <blockquote className="border-l-2 border-primary/30 pl-3 mb-2">
+                            <p className="font-serif italic text-foreground text-[1.05rem] leading-relaxed">
+                              „{reading.farsky.quote}"
+                            </p>
+                          </blockquote>
+                          {hasInspiration && onOpenInspiration && (
+                            <button
+                              onClick={() => {
+                                onOpenChange(false);
+                                setTimeout(() => onOpenInspiration(), 300);
+                              }}
+                              className="text-sm text-primary hover:text-primary/80 transition-colors font-medium flex items-center gap-1"
+                            >
+                              Otevřít Inspiraci pro kázání
+                              <span className="text-xs">→</span>
+                            </button>
+                          )}
                         </div>
                       </div>
                     )}

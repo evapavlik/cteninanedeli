@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react"
 import { fetchCyklus, getCachedCyklus } from "@/lib/api/firecrawl";
 import { Loader2, Moon, Sun } from "lucide-react";
 import type { ReadingContextEntry } from "@/components/ReadingContext";
+import type { PreachingInspirationData } from "@/components/PreachingInspiration";
 import ccshChalice from "@/assets/ccsh-chalice.svg";
 
 // Lazy-load all heavy components to reduce initial JS
@@ -11,10 +12,12 @@ const SectionProgress = lazy(() => import("@/components/SectionProgress").then(m
 const AnnotatedText = lazy(() => import("@/components/AnnotatedText").then(m => ({ default: m.AnnotatedText })));
 const ReadingToolbar = lazy(() => import("@/components/ReadingToolbar").then(m => ({ default: m.ReadingToolbar })));
 const ReadingContext = lazy(() => import("@/components/ReadingContext").then(m => ({ default: m.ReadingContext })));
+const PreachingInspiration = lazy(() => import("@/components/PreachingInspiration").then(m => ({ default: m.PreachingInspiration })));
 
 const CONTEXT_CACHE_VERSION = 3; // bump to invalidate old cache (v3: removed firecrawl-scrape)
 const CONTEXT_CACHE_KEY = "ccsh-context-cache";
 const ANNOTATE_CACHE_KEY = "ccsh-annotate-cache";
+const POSTILY_CACHE_KEY = "ccsh-postily-cache";
 
 function saveContextToCache(sundayTitle: string, readings: ReadingContextEntry[]) {
   try {
@@ -56,6 +59,26 @@ function loadAnnotateFromCache(sundayTitle: string): string | null {
   }
 }
 
+function savePostilyToCache(sundayTitle: string, data: PreachingInspirationData) {
+  try {
+    localStorage.setItem(POSTILY_CACHE_KEY, JSON.stringify({ sundayTitle, data, timestamp: Date.now() }));
+  } catch { /* ignore */ }
+}
+
+function loadPostilyFromCache(sundayTitle: string): PreachingInspirationData | null {
+  try {
+    const raw = localStorage.getItem(POSTILY_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed.sundayTitle === sundayTitle && parsed.data) {
+      return parsed.data;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 const Index = () => {
   const cached = getCachedCyklus();
   const [markdown, setMarkdown] = useState<string | null>(cached?.markdown || null);
@@ -83,12 +106,18 @@ const Index = () => {
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [activeReadingIndex, setActiveReadingIndex] = useState(0);
 
+  // Preaching inspiration state
+  const [postilyData, setPostilyData] = useState<PreachingInspirationData | null>(() => {
+    if (cached?.sundayTitle) return loadPostilyFromCache(cached.sundayTitle);
+    return null;
+  });
+  const [isLoadingPostily, setIsLoadingPostily] = useState(false);
+  const [isInspirationOpen, setIsInspirationOpen] = useState(false);
+
   // Toolbar state
   const [isAnnotating, setIsAnnotating] = useState(false);
   const [fontSize, setFontSize] = useState(21);
   const [lineHeight, setLineHeight] = useState(1.9);
-
-  const [isAmbonMode, setIsAmbonMode] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   
@@ -157,6 +186,41 @@ const Index = () => {
       }
     };
     fetchContext();
+  }, [markdown, sundayTitle]);
+
+  // Fetch postily (preaching inspiration) when markdown is available
+  useEffect(() => {
+    if (!markdown || postilyData) return;
+
+    if (sundayTitle) {
+      const cachedPostily = loadPostilyFromCache(sundayTitle);
+      if (cachedPostily) {
+        setPostilyData(cachedPostily);
+        return;
+      }
+    }
+
+    const fetchPostily = async () => {
+      setIsLoadingPostily(true);
+      try {
+        const { supabase } = await import("@/integrations/supabase/client");
+        const { data, error } = await supabase.functions.invoke("annotate-reading", {
+          body: { text: markdown, mode: "postily" },
+        });
+        if (error) throw error;
+        if (data?.postily?.postily && data.postily.postily.length > 0) {
+          setPostilyData(data.postily);
+          if (sundayTitle) {
+            savePostilyToCache(sundayTitle, data.postily);
+          }
+        }
+      } catch (e) {
+        console.error("Postily fetch error:", e);
+      } finally {
+        setIsLoadingPostily(false);
+      }
+    };
+    fetchPostily();
   }, [markdown, sundayTitle]);
 
   // Track which reading heading is currently in view via IntersectionObserver
@@ -297,6 +361,16 @@ const Index = () => {
                   open={isGuideOpen}
                   onOpenChange={setIsGuideOpen}
                   initialIndex={activeReadingIndex}
+                  onOpenInspiration={() => setIsInspirationOpen(true)}
+                  hasInspiration={!!postilyData}
+                />
+              )}
+
+              {postilyData && (
+                <PreachingInspiration
+                  data={postilyData}
+                  open={isInspirationOpen}
+                  onOpenChange={setIsInspirationOpen}
                 />
               )}
 
@@ -312,6 +386,9 @@ const Index = () => {
                   onOpenGuide={() => setIsGuideOpen(true)}
                   hasGuide={!!contextData}
                   isLoadingGuide={isLoadingContext}
+                  onOpenInspiration={() => setIsInspirationOpen(true)}
+                  hasInspiration={!!postilyData}
+                  isLoadingInspiration={isLoadingPostily}
                 />
 
                 {/* Section progress indicator */}

@@ -1,4 +1,3 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { extractAllRefsFromMarkdown } from "./biblical-refs.ts";
 
 export interface PostilaMatch {
@@ -20,7 +19,7 @@ export interface PostilaMatch {
  * Uses the GIN index on biblical_references array for efficient lookup.
  */
 export async function findMatchingPostily(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   markdownContent: string,
 ): Promise<PostilaMatch[]> {
   const { allRefs } = extractAllRefsFromMarkdown(markdownContent);
@@ -52,8 +51,8 @@ export async function findMatchingPostily(
   console.log(`Found ${data.length} matching postil(s)`);
 
   // Annotate each match with which ref matched
-  return data.map((row) => {
-    const matchedRef = row.biblical_references.find((r: string) => allRefs.includes(r)) || allRefs[0];
-    return { ...row, matched_ref: matchedRef };
+  return (data as any[]).map((row) => {
+    const matchedRef = (row.biblical_references as string[]).find((r: string) => allRefs.includes(r)) || allRefs[0];
+    return { ...row, matched_ref: matchedRef } as PostilaMatch;
   });
 }

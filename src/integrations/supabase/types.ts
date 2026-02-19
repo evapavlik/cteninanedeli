@@ -99,6 +99,57 @@ export type Database = {
           },
         ]
       }
+      postily: {
+        Row: {
+          biblical_references: string[]
+          biblical_refs_raw: string | null
+          biblical_text: string | null
+          content: string
+          created_at: string
+          id: string
+          is_active: boolean
+          issue_number: number
+          liturgical_context: string | null
+          postil_number: number
+          source_ref: string
+          title: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          biblical_references?: string[]
+          biblical_refs_raw?: string | null
+          biblical_text?: string | null
+          content: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          issue_number: number
+          liturgical_context?: string | null
+          postil_number: number
+          source_ref: string
+          title: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          biblical_references?: string[]
+          biblical_refs_raw?: string | null
+          biblical_text?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          issue_number?: number
+          liturgical_context?: string | null
+          postil_number?: number
+          source_ref?: string
+          title?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
       readings_cache: {
         Row: {
           id: string

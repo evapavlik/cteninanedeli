@@ -16,7 +16,6 @@ export interface PostilaMatch {
 
 /**
  * Find postily matching the biblical references in the given Sunday readings markdown.
- * Uses the GIN index on biblical_references array for efficient lookup.
  */
 export async function findMatchingPostily(
   supabase: any,
@@ -31,12 +30,15 @@ export async function findMatchingPostily(
 
   console.log("Looking for postily matching refs:", allRefs);
 
-  // Query postily where any biblical_reference matches any Sunday reading ref
+  // PostgREST array literal: values containing commas must be double-quoted
+  // e.g. {"Mt 4,1-11","Gn 2,15-17"} — without quotes, commas split the values
+  const arrayLiteral = `{${allRefs.map(r => `"${r}"`).join(",")}}`;
+
   const { data, error } = await supabase
     .from("postily")
     .select("id, postil_number, title, biblical_references, liturgical_context, year, issue_number, source_ref, biblical_text, content")
     .eq("is_active", true)
-    .overlaps("biblical_references", allRefs);
+    .filter("biblical_references", "ov", arrayLiteral);
 
   if (error) {
     console.error("Error querying postily:", error.message);

@@ -14,7 +14,7 @@ const ReadingToolbar = lazy(() => import("@/components/ReadingToolbar").then(m =
 const ReadingContext = lazy(() => import("@/components/ReadingContext").then(m => ({ default: m.ReadingContext })));
 const PreachingInspiration = lazy(() => import("@/components/PreachingInspiration").then(m => ({ default: m.PreachingInspiration })));
 
-const CONTEXT_CACHE_VERSION = 3; // bump to invalidate old cache (v3: removed firecrawl-scrape)
+const CONTEXT_CACHE_VERSION = 4; // bump to invalidate old cache (v4: added farsky teaser)
 const CONTEXT_CACHE_KEY = "ccsh-context-cache";
 const ANNOTATE_CACHE_KEY = "ccsh-annotate-cache";
 const POSTILY_CACHE_KEY = "ccsh-postily-cache";

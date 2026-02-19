@@ -98,7 +98,7 @@ export async function buildTheologicalContext(
  */
 export function buildContextPrompt(theologicalContext: string, farskySnippet?: string): string {
   const farskyInstruction = farskySnippet
-    ? `- "farsky": objekt s jednou nejsilnější větou z postily Karla Farského (viz kontext níže). Klíče: "quote" (1 věta doslova z textu — výstižná, inspirativní), "source_ref" (odkaz na Český zápas, např. "Český zápas, roč. 4, č. 9"). Pokud postila není k dispozici, vynech tento klíč.`
+    ? `- "farsky": objekt s jednou nejsilnější VLASTNÍ myšlenkou Karla Farského z jeho postily (viz kontext níže). Klíče: "quote" (1 věta doslova z textu — musí to být Farského ORIGINÁLNÍ výklad, úvaha nebo komentář, NIKOLI biblický citát ani parafráze biblického textu; vyber větu, která ukazuje Farského jedinečný pohled), "source_ref" (odkaz na Český zápas, např. "Český zápas, roč. 4, č. 9"). Pokud postila není k dispozici nebo neobsahuje žádnou originální myšlenku, vynech tento klíč.`
     : "";
   const farskyContext = farskySnippet
     ? `\n\nPOSTILA KARLA FARSKÉHO (pro výběr citátu):\n${farskySnippet}`

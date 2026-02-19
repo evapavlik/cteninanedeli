@@ -246,7 +246,22 @@ ${postilyContext}`;
     let systemPrompt: string;
     if (isContext) {
       const theologicalContext = await buildTheologicalContext(supabase, profileSlug);
-      systemPrompt = buildContextPrompt(theologicalContext);
+
+      // Try to find a matching Farský postila for a teaser quote
+      let farskySnippet: string | undefined;
+      try {
+        const matches = await findMatchingPostily(supabase, text);
+        if (matches.length > 0) {
+          const m = matches[0];
+          // Provide first ~800 chars so AI can pick the best sentence
+          const excerpt = m.content.length > 800 ? m.content.substring(0, 800) + "…" : m.content;
+          farskySnippet = `Postila č. ${m.postil_number}: „${m.title}"\n${m.source_ref}\n---\n${excerpt}`;
+        }
+      } catch (e) {
+        console.error("Failed to load postily for context teaser:", e);
+      }
+
+      systemPrompt = buildContextPrompt(theologicalContext, farskySnippet);
     } else {
       // Annotate mode: no corpus needed — purely about reading technique
       systemPrompt = ANNOTATE_SYSTEM_PROMPT;

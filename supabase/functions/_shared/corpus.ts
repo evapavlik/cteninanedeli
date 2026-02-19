@@ -96,7 +96,14 @@ export async function buildTheologicalContext(
  * System prompt for "context" mode — generates a JSON reading guide
  * grounded in CČSH theology. Requires the full corpus for citations.
  */
-export function buildContextPrompt(theologicalContext: string): string {
+export function buildContextPrompt(theologicalContext: string, farskySnippet?: string): string {
+  const farskyInstruction = farskySnippet
+    ? `- "farsky": objekt s jednou nejsilnější větou z postily Karla Farského (viz kontext níže). Klíče: "quote" (1 věta doslova z textu — výstižná, inspirativní), "source_ref" (odkaz na Český zápas, např. "Český zápas, roč. 4, č. 9"). Pokud postila není k dispozici, vynech tento klíč.`
+    : "";
+  const farskyContext = farskySnippet
+    ? `\n\nPOSTILA KARLA FARSKÉHO (pro výběr citátu):\n${farskySnippet}`
+    : "";
+
   return `${theologicalContext}
 
 Tvým úkolem je pro zadaný biblický text (jedno nebo více čtení) vytvořit stručný kontextový průvodce v duchu teologie CČSH.
@@ -109,8 +116,9 @@ Vrať JSON objekt s polem "readings", kde každý prvek odpovídá jednomu čten
 - "main_message": 1 věta shrnující jádro/poselství textu z perspektivy CČSH – zdůrazni Ducha Kristova, obecenství, zpřítomnění Božího slova a praktický dopad do života věřícího
 - "tone": jaký emocionální charakter má mít přednes (např. "slavnostní a povzbudivý", "naléhavý a varovný")
 - "citations": pole 0–2 relevantních citací ze Základů víry CČSH [{question_number, text, relevance}]. question_number je číslo otázky (např. 105), text je krátká citace z odpovědi (max 2 věty), relevance je 1 věta vysvětlující spojitost s čtením. Pokud žádná otázka přímo nesouvisí, vrať prázdné pole []. NEVYMÝŠLEJ citace — používej POUZE skutečné otázky a odpovědi z dokumentu Základy víry CČSH uvedeného výše.
+${farskyInstruction}
 
-Vrať POUZE validní JSON, žádný markdown ani komentáře.`;
+Vrať POUZE validní JSON, žádný markdown ani komentáře.${farskyContext}`;
 }
 
 /**

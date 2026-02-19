@@ -8,7 +8,7 @@
  */
 
 const BOOK_ALIASES: Record<string, string> = {
-  // Starý zákon
+  // Starý zákon — abbreviations
   "gn": "Gn", "gen": "Gn",
   "ex": "Ex",
   "lv": "Lv", "lev": "Lv",
@@ -52,7 +52,50 @@ const BOOK_ALIASES: Record<string, string> = {
   "mal": "Mal",
   "mak": "Mak",
 
-  // Nový zákon
+  // Starý zákon — full Czech names (used by cyklus.ccsh.cz headings)
+  "genesis": "Gn",
+  "exodus": "Ex",
+  "leviticus": "Lv",
+  "numeri": "Nm",
+  "deuteronomium": "Dt",
+  "jozue": "Joz",
+  "soudců": "Sd",
+  "rút": "Rt",
+  "samuel": "Sam",
+  "královská": "Král",
+  "paralipomenon": "Pa",
+  "ezdráš": "Ezd",
+  "nehemiáš": "Neh",
+  "tobiáš": "Tob",
+  "júdit": "Jdt",
+  "ester": "Est",
+  "žalmy": "Ž", "žalmů": "Ž",
+  "přísloví": "Př",
+  "kazatel": "Kaz",
+  "píseň": "Pís",
+  "moudrosti": "Mdr", "moudrost": "Mdr",
+  "sirachovec": "Sír", "sírachovec": "Sír",
+  "izaiáš": "Iz", "izajáš": "Iz",
+  "jeremiáš": "Jr",
+  "pláč": "Pláč",
+  "baruch": "Bar",
+  "ezechiel": "Ez",
+  "daniel": "Dan",
+  "ozeáš": "Oz",
+  "jóel": "Jl",
+  "ámos": "Am",
+  "abdiáš": "Abd",
+  "jonáš": "Jon",
+  "micheáš": "Mi",
+  "nahum": "Na",
+  "habakuk": "Hab",
+  "sofoniáš": "Sof",
+  "ageus": "Ag",
+  "zachariáš": "Za",
+  "malachiáš": "Mal",
+  "makabejská": "Mak",
+
+  // Nový zákon — abbreviations
   "mt": "Mt", "mat": "Mt",
   "mk": "Mk", "mar": "Mk",
   "lk": "Lk", "l": "Lk", "luk": "Lk",
@@ -73,6 +116,29 @@ const BOOK_ALIASES: Record<string, string> = {
   "pt": "Pt", "petr": "Pt",
   "jud": "Jud",
   "zj": "Zj", "zjev": "Zj",
+
+  // Nový zákon — full Czech names (used by cyklus.ccsh.cz headings)
+  "matouš": "Mt",
+  "marek": "Mk",
+  "lukáš": "Lk",
+  "jan": "J",
+  "skutky": "Sk",
+  "římanům": "Ř", "římanúm": "Ř",
+  "korintským": "Kor", "korinťanům": "Kor",
+  "galatským": "Gal", "galaťanům": "Gal",
+  "efezským": "Ef", "efezanům": "Ef",
+  "filipským": "Fp", "filipanům": "Fp",
+  "koloským": "Kol", "kolossanům": "Kol",
+  "tesalonickým": "Sol", "soluňanům": "Sol",
+  "timoteovi": "Tim", "timoteus": "Tim",
+  "titovi": "Tt", "titus": "Tt",
+  "filemonovi": "Fm", "filemon": "Fm",
+  "židům": "Žd",
+  "jakub": "Jk", "jakubův": "Jk",
+  "petrův": "Pt", "petrova": "Pt",
+  "janův": "J", "janova": "J",
+  "judův": "Jud", "judova": "Jud",
+  "zjevení": "Zj",
 };
 
 /**
@@ -134,13 +200,25 @@ export function extractRefsFromHeading(heading: string): string[] {
 
   if (!text) return [];
 
-  // Split on ";" for multiple refs
+  // Split on ";" for multiple refs (e.g., "Genesis 2, 15-17; 3, 1-7")
   const parts = text.split(/;\s*/);
   const refs: string[] = [];
+  let lastBook = ""; // carry forward book name for subsequent chapter-only parts
+
   for (const part of parts) {
-    const normalized = normalizeBiblicalRef(part.trim());
+    let input = part.trim();
+
+    // If part starts with a digit and has no book name, prepend the last known book
+    if (lastBook && /^\d/.test(input)) {
+      input = `${lastBook} ${input}`;
+    }
+
+    const normalized = normalizeBiblicalRef(input);
     if (normalized && /\d/.test(normalized)) {
       refs.push(normalized);
+      // Extract the book portion for carry-forward
+      const bookPart = normalized.match(/^([A-ZŽŘČŠa-zžřčšůúýáéíóďťňě0-9]+)\s/);
+      if (bookPart) lastBook = bookPart[1];
     }
   }
   return refs;

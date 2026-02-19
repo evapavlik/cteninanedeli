@@ -3,7 +3,7 @@
 
 CREATE TABLE public.postily (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  postil_number INTEGER NOT NULL,
+  postil_number INTEGER NOT NULL UNIQUE,
   title TEXT NOT NULL,
   biblical_references TEXT[] NOT NULL DEFAULT '{}',
   biblical_refs_raw TEXT,

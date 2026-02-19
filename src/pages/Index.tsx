@@ -6,7 +6,6 @@ import type { ReadingContextEntry } from "@/components/ReadingContext";
 import type { PreachingInspirationData } from "@/components/PreachingInspiration";
 import ccshChalice from "@/assets/ccsh-chalice.svg";
 
-// Lazy-load all heavy components to reduce initial JS
 const LectorGuide = lazy(() => import("@/components/LectorGuide").then(m => ({ default: m.LectorGuide })));
 const SectionProgress = lazy(() => import("@/components/SectionProgress").then(m => ({ default: m.SectionProgress })));
 const AnnotatedText = lazy(() => import("@/components/AnnotatedText").then(m => ({ default: m.AnnotatedText })));
@@ -14,130 +13,70 @@ const ReadingToolbar = lazy(() => import("@/components/ReadingToolbar").then(m =
 const ReadingContext = lazy(() => import("@/components/ReadingContext").then(m => ({ default: m.ReadingContext })));
 const PreachingInspiration = lazy(() => import("@/components/PreachingInspiration").then(m => ({ default: m.PreachingInspiration })));
 
-const CONTEXT_CACHE_VERSION = 3; // bump to invalidate old cache (v3: removed firecrawl-scrape)
-const CONTEXT_CACHE_KEY = "ccsh-context-cache";
-const ANNOTATE_CACHE_KEY = "ccsh-annotate-cache";
-const POSTILY_CACHE_KEY = "ccsh-postily-cache";
+/* ---------- Generic localStorage cache ---------- */
 
-function saveContextToCache(sundayTitle: string, readings: ReadingContextEntry[]) {
+const CACHE_VERSION = 3;
+
+function saveCache<T>(key: string, sundayTitle: string, data: T) {
   try {
-    localStorage.setItem(CONTEXT_CACHE_KEY, JSON.stringify({ sundayTitle, readings, timestamp: Date.now(), version: CONTEXT_CACHE_VERSION }));
-  } catch { /* ignore */ }
+    localStorage.setItem(key, JSON.stringify({ sundayTitle, data, ts: Date.now(), v: CACHE_VERSION }));
+  } catch { /* full */ }
 }
 
-function loadContextFromCache(sundayTitle: string): ReadingContextEntry[] | null {
+function loadCache<T>(key: string, sundayTitle: string): T | null {
   try {
-    const raw = localStorage.getItem(CONTEXT_CACHE_KEY);
+    const raw = localStorage.getItem(key);
     if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (parsed.sundayTitle === sundayTitle && parsed.readings && parsed.version === CONTEXT_CACHE_VERSION) {
-      return parsed.readings;
-    }
+    const p = JSON.parse(raw);
+    if (p.sundayTitle === sundayTitle && p.data && p.v === CACHE_VERSION) return p.data as T;
     return null;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
-function saveAnnotateToCache(sundayTitle: string, annotated: string) {
-  try {
-    localStorage.setItem(ANNOTATE_CACHE_KEY, JSON.stringify({ sundayTitle, annotated, timestamp: Date.now() }));
-  } catch { /* ignore */ }
-}
-
-function loadAnnotateFromCache(sundayTitle: string): string | null {
-  try {
-    const raw = localStorage.getItem(ANNOTATE_CACHE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (parsed.sundayTitle === sundayTitle && parsed.annotated) {
-      return parsed.annotated;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-function savePostilyToCache(sundayTitle: string, data: PreachingInspirationData) {
-  try {
-    localStorage.setItem(POSTILY_CACHE_KEY, JSON.stringify({ sundayTitle, data, timestamp: Date.now() }));
-  } catch { /* ignore */ }
-}
-
-function loadPostilyFromCache(sundayTitle: string): PreachingInspirationData | null {
-  try {
-    const raw = localStorage.getItem(POSTILY_CACHE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (parsed.sundayTitle === sundayTitle && parsed.data) {
-      return parsed.data;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
+/* ---------- Component ---------- */
 
 const Index = () => {
   const cached = getCachedCyklus();
   const [markdown, setMarkdown] = useState<string | null>(cached?.markdown || null);
-  const [annotatedMarkdown, setAnnotatedMarkdown] = useState<string | null>(() => {
-    if (cached?.sundayTitle) return loadAnnotateFromCache(cached.sundayTitle);
-    return null;
-  });
-  const [sundayTitle, setSundayTitle] = useState<string>(cached?.sundayTitle || "");
+  const [annotatedMarkdown, setAnnotatedMarkdown] = useState<string | null>(() =>
+    cached?.sundayTitle ? loadCache<string>("ccsh-annotate", cached.sundayTitle) : null
+  );
+  const [sundayTitle, setSundayTitle] = useState(cached?.sundayTitle || "");
   const [sundayDate, setSundayDate] = useState<string | null>(cached?.sundayDate || null);
   const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState<string | null>(null);
-  const [theme, setTheme] = useState<"light" | "dark">(() => {
-    if (typeof window !== "undefined") {
-      return (localStorage.getItem("theme") as "light" | "dark") || "light";
-    }
-    return "light";
-  });
+  const [theme, setTheme] = useState<"light" | "dark">(() =>
+    typeof window !== "undefined" ? (localStorage.getItem("theme") as "light" | "dark") || "light" : "light"
+  );
 
-  // Context panel state
-  const [contextData, setContextData] = useState<ReadingContextEntry[] | null>(() => {
-    if (cached?.sundayTitle) return loadContextFromCache(cached.sundayTitle);
-    return null;
-  });
+  const [contextData, setContextData] = useState<ReadingContextEntry[] | null>(() =>
+    cached?.sundayTitle ? loadCache("ccsh-context", cached.sundayTitle) : null
+  );
   const [isLoadingContext, setIsLoadingContext] = useState(false);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [activeReadingIndex, setActiveReadingIndex] = useState(0);
 
-  // Preaching inspiration state
-  const [postilyData, setPostilyData] = useState<PreachingInspirationData | null>(() => {
-    if (cached?.sundayTitle) return loadPostilyFromCache(cached.sundayTitle);
-    return null;
-  });
+  const [postilyData, setPostilyData] = useState<PreachingInspirationData | null>(() =>
+    cached?.sundayTitle ? loadCache("ccsh-postily", cached.sundayTitle) : null
+  );
   const [isLoadingPostily, setIsLoadingPostily] = useState(false);
   const [isInspirationOpen, setIsInspirationOpen] = useState(false);
 
-  // Toolbar state
   const [isAnnotating, setIsAnnotating] = useState(false);
   const [fontSize, setFontSize] = useState(21);
   const [lineHeight, setLineHeight] = useState(1.9);
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  
 
+  // Theme
   useEffect(() => {
-    document.documentElement.classList.remove("dark");
-    if (theme === "dark") document.documentElement.classList.add("dark");
+    document.documentElement.classList.toggle("dark", theme === "dark");
     localStorage.setItem("theme", theme);
   }, [theme]);
 
-  const toggleTheme = () => {
-    setTheme((t) => (t === "light" ? "dark" : "light"));
-  };
-
-  const themeIcon = theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />;
-  const themeLabel = theme === "light" ? "Noční režim" : "Denní režim";
-
-  // Auto-fetch on mount (background refresh if cached)
+  // Auto-fetch readings on mount
   useEffect(() => {
-    const load = async () => {
+    (async () => {
       if (!markdown) setLoading(true);
       setError(null);
       const result = await fetchCyklus();
@@ -149,128 +88,66 @@ const Index = () => {
         setError(result.error || "Nepodařilo se načíst čtení.");
       }
       setLoading(false);
-    };
-    load();
+    })();
   }, []);
 
-  // Fetch context when markdown is available (use cache first)
+  // Fetch AI data (context + postily) once markdown is available
   useEffect(() => {
-    if (!markdown || contextData) return;
-
-    if (sundayTitle) {
-      const cachedContext = loadContextFromCache(sundayTitle);
-      if (cachedContext) {
-        setContextData(cachedContext);
-        return;
+    if (!markdown) return;
+    const fetchAi = async (mode: string, cacheKey: string, setter: (d: any) => void, current: unknown) => {
+      if (current) return;
+      if (sundayTitle) {
+        const c = loadCache(cacheKey, sundayTitle);
+        if (c) { setter(c); return; }
       }
-    }
-
-    const fetchContext = async () => {
-      setIsLoadingContext(true);
+      const setLoading = mode === "context" ? setIsLoadingContext : setIsLoadingPostily;
+      setLoading(true);
       try {
         const { supabase } = await import("@/integrations/supabase/client");
         const { data, error } = await supabase.functions.invoke("annotate-reading", {
-          body: { text: markdown, mode: "context" },
+          body: { text: markdown, mode },
         });
         if (error) throw error;
-        if (data?.context?.readings) {
-          setContextData(data.context.readings);
-          if (sundayTitle) {
-            saveContextToCache(sundayTitle, data.context.readings);
-          }
+        const result = mode === "context" ? data?.context?.readings : data?.postily;
+        if (result && (mode !== "postily" || result.postily?.length > 0)) {
+          setter(result);
+          if (sundayTitle) saveCache(cacheKey, sundayTitle, result);
         }
-      } catch (e) {
-        console.error("Context fetch error:", e);
-      } finally {
-        setIsLoadingContext(false);
-      }
+      } catch (e) { console.error(`${mode} fetch error:`, e); }
+      finally { setLoading(false); }
     };
-    fetchContext();
+    fetchAi("context", "ccsh-context", setContextData, contextData);
+    fetchAi("postily", "ccsh-postily", setPostilyData, postilyData);
   }, [markdown, sundayTitle]);
 
-  // Fetch postily (preaching inspiration) when markdown is available
+  // Track active reading via IntersectionObserver
   useEffect(() => {
-    if (!markdown || postilyData) return;
-
-    if (sundayTitle) {
-      const cachedPostily = loadPostilyFromCache(sundayTitle);
-      if (cachedPostily) {
-        setPostilyData(cachedPostily);
-        return;
-      }
-    }
-
-    const fetchPostily = async () => {
-      setIsLoadingPostily(true);
-      try {
-        const { supabase } = await import("@/integrations/supabase/client");
-        const { data, error } = await supabase.functions.invoke("annotate-reading", {
-          body: { text: markdown, mode: "postily" },
-        });
-        if (error) throw error;
-        if (data?.postily?.postily && data.postily.postily.length > 0) {
-          setPostilyData(data.postily);
-          if (sundayTitle) {
-            savePostilyToCache(sundayTitle, data.postily);
-          }
-        }
-      } catch (e) {
-        console.error("Postily fetch error:", e);
-      } finally {
-        setIsLoadingPostily(false);
-      }
-    };
-    fetchPostily();
-  }, [markdown, sundayTitle]);
-
-  // Track which reading heading is currently in view via IntersectionObserver
-  useEffect(() => {
-    const displayMd = annotatedMarkdown || markdown;
-    if (!displayMd) return;
-
-    const observeHeadings = () => {
-      const article = document.querySelector(".prose-reading");
-      if (!article) return undefined;
-
-      const headings = article.querySelectorAll("h2");
-      if (headings.length === 0) return undefined;
-
+    if (!annotatedMarkdown && !markdown) return;
+    let cleanup: (() => void) | undefined;
+    const timer = setTimeout(() => {
+      const headings = document.querySelector(".prose-reading")?.querySelectorAll("h2");
+      if (!headings?.length) return;
       const observer = new IntersectionObserver(
         (entries) => {
-          for (const entry of entries) {
-            if (entry.isIntersecting) {
-              const idx = Array.from(headings).indexOf(entry.target as HTMLHeadingElement);
+          for (const e of entries) {
+            if (e.isIntersecting) {
+              const idx = Array.from(headings).indexOf(e.target as HTMLHeadingElement);
               if (idx >= 0) setActiveReadingIndex(idx);
             }
           }
         },
         { rootMargin: "-120px 0px -60% 0px", threshold: 0 }
       );
-
       headings.forEach((h) => observer.observe(h));
-      return () => observer.disconnect();
-    };
-
-    // Small delay to let markdown render
-    let cleanup: (() => void) | undefined;
-    const timer = setTimeout(() => {
-      cleanup = observeHeadings();
+      cleanup = () => observer.disconnect();
     }, 300);
-    return () => {
-      clearTimeout(timer);
-      cleanup?.();
-    };
+    return () => { clearTimeout(timer); cleanup?.(); };
   }, [markdown, annotatedMarkdown]);
 
   // Annotate via AI
   const handleAnnotate = useCallback(async () => {
     if (!markdown || isAnnotating) return;
-
-    if (annotatedMarkdown) {
-      setAnnotatedMarkdown(null);
-      return;
-    }
-
+    if (annotatedMarkdown) { setAnnotatedMarkdown(null); return; }
     setIsAnnotating(true);
     try {
       const { supabase } = await import("@/integrations/supabase/client");
@@ -278,22 +155,17 @@ const Index = () => {
       const { data, error } = await supabase.functions.invoke("annotate-reading", {
         body: { text: markdown },
       });
-
       if (error) throw error;
       if (data?.annotated) {
         setAnnotatedMarkdown(data.annotated);
-        if (sundayTitle) saveAnnotateToCache(sundayTitle, data.annotated);
+        if (sundayTitle) saveCache("ccsh-annotate", sundayTitle, data.annotated);
         toast.success("Značky pro přednes přidány");
-      } else {
-        throw new Error("Prázdná odpověď");
-      }
+      } else { throw new Error("Prázdná odpověď"); }
     } catch (e) {
       console.error("Annotation error:", e);
       const { toast } = await import("sonner");
       toast.error("Nepodařilo se anotovat text");
-    } finally {
-      setIsAnnotating(false);
-    }
+    } finally { setIsAnnotating(false); }
   }, [markdown, isAnnotating, annotatedMarkdown]);
 
   const displayMarkdown = annotatedMarkdown || markdown;
@@ -304,12 +176,12 @@ const Index = () => {
         {/* Dark mode toggle */}
         <div className="flex justify-end mb-6">
           <button
-            onClick={toggleTheme}
+            onClick={() => setTheme(t => t === "light" ? "dark" : "light")}
             className="p-2 rounded-full text-foreground/60 hover:text-foreground transition-colors"
-            aria-label={themeLabel}
-            title={themeLabel}
+            aria-label={theme === "light" ? "Noční režim" : "Denní režim"}
+            title={theme === "light" ? "Noční režim" : "Denní režim"}
           >
-            {themeIcon}
+            {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
           </button>
         </div>
 
@@ -391,7 +263,6 @@ const Index = () => {
                   isLoadingInspiration={isLoadingPostily}
                 />
 
-                {/* Section progress indicator */}
                 <SectionProgress activeIndex={activeReadingIndex} total={3} onSelect={setActiveReadingIndex} />
               </div>
 
@@ -416,7 +287,6 @@ const Index = () => {
                 fontSize={fontSize}
                 lineHeight={lineHeight}
               />
-
             </Suspense>
 
             {/* Ending ornament */}

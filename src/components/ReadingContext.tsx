@@ -1,5 +1,5 @@
 import { BookOpen, Users, Landmark, MessageCircle, Music, ChevronDown, ChevronUp, ScrollText, Feather } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import {
   Sheet,
   SheetContent,
@@ -43,24 +43,35 @@ interface ReadingContextProps {
   hasInspiration?: boolean;
 }
 
+/* Reusable section row: icon + label + content */
+function Section({ icon, label, children }: { icon: ReactNode; label: string; children: ReactNode }) {
+  return (
+    <div className="flex gap-3">
+      <span className="h-5 w-5 text-primary mt-0.5 shrink-0">{icon}</span>
+      <div className="min-w-0">
+        <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">{label}</p>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+const P = ({ children }: { children: ReactNode }) => (
+  <p className="text-foreground text-[1.05rem] leading-relaxed">{children}</p>
+);
+
 export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0, onOpenInspiration, hasInspiration }: ReadingContextProps) {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(initialIndex);
 
-  // Sync expanded index when sheet opens with a new initialIndex
   useEffect(() => {
-    if (open) {
-      setExpandedIndex(initialIndex);
-    }
+    if (open) setExpandedIndex(initialIndex);
   }, [open, initialIndex]);
 
   if (!readings || readings.length === 0) return null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="bottom"
-        className="max-h-[85vh] overflow-y-auto rounded-t-2xl px-5 pb-8 pt-5"
-      >
+      <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-2xl px-5 pb-8 pt-5">
         <SheetHeader className="mb-5">
           <SheetTitle className="text-center font-serif text-xl font-medium text-foreground">
             Průvodce ke čtení
@@ -78,139 +89,73 @@ export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0,
           {readings.map((reading, idx) => {
             const isOpen = expandedIndex === idx;
             return (
-              <div
-                key={idx}
-                className="rounded-xl border border-border bg-card overflow-hidden transition-all"
-              >
+              <div key={idx} className="rounded-xl border border-border bg-card overflow-hidden transition-all">
                 <button
                   onClick={() => setExpandedIndex(isOpen ? null : idx)}
                   className="w-full flex items-center justify-between px-4 py-3.5 text-left hover:bg-accent/30 transition-colors"
                 >
-                  <span className="font-serif text-base font-medium text-foreground">
-                    {reading.title}
-                  </span>
-                  {isOpen ? (
-                    <ChevronUp className="h-5 w-5 text-muted-foreground shrink-0" />
-                  ) : (
-                    <ChevronDown className="h-5 w-5 text-muted-foreground shrink-0" />
-                  )}
+                  <span className="font-serif text-base font-medium text-foreground">{reading.title}</span>
+                  {isOpen ? <ChevronUp className="h-5 w-5 text-muted-foreground shrink-0" /> : <ChevronDown className="h-5 w-5 text-muted-foreground shrink-0" />}
                 </button>
 
                 {isOpen && (
                   <div className="px-4 pb-5 space-y-4 text-base leading-relaxed">
-                    {/* Intro */}
-                    <div className="flex gap-3">
-                      <BookOpen className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                      <div className="min-w-0">
-                        <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
-                          Úvod pro shromáždění
-                        </p>
-                        <p className="font-serif text-foreground italic text-[1.05rem] leading-relaxed">
-                          „{reading.intro}"
-                        </p>
-                      </div>
-                    </div>
+                    <Section icon={<BookOpen className="h-5 w-5" />} label="Úvod pro shromáždění">
+                      <p className="font-serif text-foreground italic text-[1.05rem] leading-relaxed">„{reading.intro}"</p>
+                    </Section>
 
-                    {/* Characters */}
-                    {reading.characters && reading.characters.length > 0 && (
-                      <div className="flex gap-3">
-                        <Users className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                        <div className="min-w-0">
-                          <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
-                            Klíčové postavy
-                          </p>
-                          <ul className="space-y-1">
-                            {reading.characters.map((c, ci) => (
-                              <li key={ci} className="text-foreground text-[1.05rem] leading-relaxed">
-                                <span className="font-medium text-foreground">{c.name}</span>
-                                {" — "}
-                                {c.description}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
+                    {reading.characters?.length > 0 && (
+                      <Section icon={<Users className="h-5 w-5" />} label="Klíčové postavy">
+                        <ul className="space-y-1">
+                          {reading.characters.map((c, ci) => (
+                            <li key={ci} className="text-foreground text-[1.05rem] leading-relaxed">
+                              <span className="font-medium text-foreground">{c.name}</span>{" — "}{c.description}
+                            </li>
+                          ))}
+                        </ul>
+                      </Section>
                     )}
 
-                    {/* Historical context */}
-                    <div className="flex gap-3">
-                      <Landmark className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                      <div className="min-w-0">
-                        <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
-                          Historický kontext
-                        </p>
-                        <p className="text-foreground text-[1.05rem] leading-relaxed">{reading.historical_context}</p>
-                      </div>
-                    </div>
+                    <Section icon={<Landmark className="h-5 w-5" />} label="Historický kontext">
+                      <P>{reading.historical_context}</P>
+                    </Section>
 
-                    {/* Main message */}
-                    <div className="flex gap-3">
-                      <MessageCircle className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                      <div className="min-w-0">
-                        <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
-                          Hlavní poselství
-                        </p>
-                        <p className="text-foreground text-[1.05rem] leading-relaxed">{reading.main_message}</p>
-                      </div>
-                    </div>
+                    <Section icon={<MessageCircle className="h-5 w-5" />} label="Hlavní poselství">
+                      <P>{reading.main_message}</P>
+                    </Section>
 
-                    {/* Tone */}
-                    <div className="flex gap-3">
-                      <Music className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                      <div className="min-w-0">
-                        <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
-                          Tón přednesu
-                        </p>
-                        <p className="text-foreground text-[1.05rem] leading-relaxed">{reading.tone}</p>
-                      </div>
-                    </div>
+                    <Section icon={<Music className="h-5 w-5" />} label="Tón přednesu">
+                      <P>{reading.tone}</P>
+                    </Section>
 
-                    {/* Základy víry citations */}
                     {reading.citations && reading.citations.length > 0 && (
-                      <div className="flex gap-3">
-                        <ScrollText className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                        <div className="min-w-0">
-                          <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
-                            Základy víry CČSH
-                          </p>
-                          <ul className="space-y-2">
-                            {reading.citations.map((c, ci) => (
-                              <li key={ci} className="text-foreground text-[1.05rem] leading-relaxed">
-                                <span className="font-serif italic">„{c.text}"</span>
-                                <p className="text-sm text-muted-foreground mt-0.5">{c.relevance}</p>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
+                      <Section icon={<ScrollText className="h-5 w-5" />} label="Základy víry CČSH">
+                        <ul className="space-y-2">
+                          {reading.citations.map((c, ci) => (
+                            <li key={ci} className="text-foreground text-[1.05rem] leading-relaxed">
+                              <span className="font-serif italic">„{c.text}"</span>
+                              <p className="text-sm text-muted-foreground mt-0.5">{c.relevance}</p>
+                            </li>
+                          ))}
+                        </ul>
+                      </Section>
                     )}
 
-                    {/* Farského teaser */}
                     {reading.farsky && (
                       <div className="flex gap-3 pt-2 border-t border-border/50">
                         <Feather className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                         <div className="min-w-0">
-                          <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
-                            Farského postila
-                          </p>
-                          <p className="text-xs text-muted-foreground mb-1.5">
-                            {reading.farsky.source_ref}
-                          </p>
+                          <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">Farského postila</p>
+                          <p className="text-xs text-muted-foreground mb-1.5">{reading.farsky.source_ref}</p>
                           <blockquote className="border-l-2 border-primary/30 pl-3 mb-2">
-                            <p className="font-serif italic text-foreground text-[1.05rem] leading-relaxed">
-                              „{reading.farsky.quote}"
-                            </p>
+                            <p className="font-serif italic text-foreground text-[1.05rem] leading-relaxed">„{reading.farsky.quote}"</p>
                           </blockquote>
                           {hasInspiration && onOpenInspiration && (
                             <button
-                              onClick={() => {
-                                onOpenChange(false);
-                                setTimeout(() => onOpenInspiration(), 300);
-                              }}
+                              onClick={() => { onOpenChange(false); setTimeout(() => onOpenInspiration(), 300); }}
                               className="text-sm text-primary hover:text-primary/80 transition-colors font-medium flex items-center gap-1"
                             >
-                              Otevřít Inspiraci pro kázání
-                              <span className="text-xs">→</span>
+                              Otevřít Inspiraci pro kázání <span className="text-xs">→</span>
                             </button>
                           )}
                         </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Feather, ChevronDown, ChevronUp, Quote, Lightbulb, ArrowRight, BookOpen } from "lucide-react";
 import {
   Sheet,
@@ -30,6 +30,19 @@ interface PreachingInspirationProps {
   onOpenChange: (open: boolean) => void;
 }
 
+/* Reusable section row */
+function Section({ icon, label, children }: { icon: ReactNode; label: string; children: ReactNode }) {
+  return (
+    <div className="flex gap-3">
+      <span className="h-5 w-5 text-primary mt-0.5 shrink-0">{icon}</span>
+      <div className="min-w-0">
+        <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">{label}</p>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export function PreachingInspiration({ data, open, onOpenChange }: PreachingInspirationProps) {
   const [expandedFullText, setExpandedFullText] = useState<number | null>(null);
 
@@ -37,10 +50,7 @@ export function PreachingInspiration({ data, open, onOpenChange }: PreachingInsp
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="bottom"
-        className="max-h-[85vh] overflow-y-auto rounded-t-2xl px-5 pb-8 pt-5"
-      >
+      <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-2xl px-5 pb-8 pt-5">
         <SheetHeader className="mb-5">
           <SheetTitle className="text-center font-serif text-xl font-medium text-foreground">
             Inspirace pro kázání
@@ -52,91 +62,43 @@ export function PreachingInspiration({ data, open, onOpenChange }: PreachingInsp
 
         <div className="space-y-6">
           {data.postily.map((postila, idx) => (
-            <div
-              key={idx}
-              className="rounded-xl border border-border bg-card overflow-hidden"
-            >
-              {/* Header */}
+            <div key={idx} className="rounded-xl border border-border bg-card overflow-hidden">
               <div className="px-4 py-3.5 border-b border-border/50 bg-accent/20">
-                <h3 className="font-serif text-base font-medium text-foreground">
-                  {postila.title}
-                </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {postila.source_ref} · {postila.matched_ref}
-                </p>
+                <h3 className="font-serif text-base font-medium text-foreground">{postila.title}</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">{postila.source_ref} · {postila.matched_ref}</p>
               </div>
 
               <div className="px-4 pb-5 pt-4 space-y-4 text-base leading-relaxed">
-                {/* Quotes */}
-                {postila.quotes && postila.quotes.length > 0 && (
-                  <div className="flex gap-3">
-                    <Quote className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-2">
-                        Citáty z Farského
-                      </p>
-                      <div className="space-y-2">
-                        {postila.quotes.map((quote, qi) => (
-                          <blockquote
-                            key={qi}
-                            className="border-l-2 border-primary/30 pl-3"
-                          >
-                            <p className="font-serif italic text-foreground text-[1.05rem] leading-relaxed">
-                              „{quote}"
-                            </p>
-                          </blockquote>
-                        ))}
-                      </div>
+                {postila.quotes?.length > 0 && (
+                  <Section icon={<Quote className="h-5 w-5" />} label="Citáty z Farského">
+                    <div className="space-y-2">
+                      {postila.quotes.map((quote, qi) => (
+                        <blockquote key={qi} className="border-l-2 border-primary/30 pl-3">
+                          <p className="font-serif italic text-foreground text-[1.05rem] leading-relaxed">„{quote}"</p>
+                        </blockquote>
+                      ))}
                     </div>
-                  </div>
+                  </Section>
                 )}
 
-                {/* Insight */}
                 {postila.insight && (
-                  <div className="flex gap-3">
-                    <Lightbulb className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
-                        Farského pohled
-                      </p>
-                      <p className="text-foreground text-[1.05rem] leading-relaxed">
-                        {postila.insight}
-                      </p>
-                    </div>
-                  </div>
+                  <Section icon={<Lightbulb className="h-5 w-5" />} label="Farského pohled">
+                    <p className="text-foreground text-[1.05rem] leading-relaxed">{postila.insight}</p>
+                  </Section>
                 )}
 
-                {/* Relevance */}
                 {postila.relevance && (
-                  <div className="flex gap-3">
-                    <ArrowRight className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
-                        Aktuálnost pro dnešek
-                      </p>
-                      <p className="text-foreground text-[1.05rem] leading-relaxed">
-                        {postila.relevance}
-                      </p>
-                    </div>
-                  </div>
+                  <Section icon={<ArrowRight className="h-5 w-5" />} label="Aktuálnost pro dnešek">
+                    <p className="text-foreground text-[1.05rem] leading-relaxed">{postila.relevance}</p>
+                  </Section>
                 )}
 
-                {/* Preaching angle */}
                 {postila.preaching_angle && (
-                  <div className="flex gap-3">
-                    <Feather className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
-                        Podnět pro kázání
-                      </p>
-                      <p className="text-foreground font-medium text-[1.05rem] leading-relaxed">
-                        {postila.preaching_angle}
-                      </p>
-                    </div>
-                  </div>
+                  <Section icon={<Feather className="h-5 w-5" />} label="Podnět pro kázání">
+                    <p className="text-foreground font-medium text-[1.05rem] leading-relaxed">{postila.preaching_angle}</p>
+                  </Section>
                 )}
 
-                {/* Full text toggle */}
                 {postila.full_text && (
                   <div className="pt-2 border-t border-border/50">
                     <button
@@ -145,11 +107,7 @@ export function PreachingInspiration({ data, open, onOpenChange }: PreachingInsp
                     >
                       <BookOpen className="h-4 w-4" />
                       {expandedFullText === idx ? "Skrýt celý text postily" : "Celý text postily"}
-                      {expandedFullText === idx ? (
-                        <ChevronUp className="h-4 w-4" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4" />
-                      )}
+                      {expandedFullText === idx ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </button>
 
                     {expandedFullText === idx && (

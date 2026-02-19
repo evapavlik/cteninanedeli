@@ -9,6 +9,9 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
 // Simple in-memory rate limiter (per isolate)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_MAX = 20;
@@ -30,107 +33,93 @@ function getClientIp(req: Request): string {
     req.headers.get("cf-connecting-ip") || "unknown";
 }
 
-// Simple hash function for cache key
 async function hashText(text: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(text);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("").substring(0, 32);
+  const data = new TextEncoder().encode(text);
+  const buf = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("").substring(0, 32);
+}
+
+const AI_MODEL = "google/gemini-3-flash-preview";
+const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+
+async function callAI(apiKey: string, messages: { role: string; content: string }[], jsonMode = false) {
+  const body: Record<string, unknown> = { model: AI_MODEL, messages };
+  if (jsonMode) body.response_format = { type: "json_object" };
+
+  const res = await fetch(AI_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const t = await res.text();
+    console.error("AI gateway error:", res.status, t);
+    return { ok: false as const, status: res.status };
+  }
+  const data = await res.json();
+  return { ok: true as const, content: data.choices?.[0]?.message?.content || "" };
+}
+
+async function cacheResult(supabase: any, textHash: string, mode: string, slug: string, result: unknown) {
+  await supabase.from("ai_cache").upsert(
+    { text_hash: textHash, mode, profile_slug: slug, result, model_used: AI_MODEL },
+    { onConflict: "text_hash,mode,profile_slug" }
+  );
+}
+
+function buildPostilyFallback(matches: any[]) {
+  return {
+    postily: matches.map((m) => ({
+      postil_number: m.postil_number, title: m.title, source_ref: m.source_ref,
+      year: m.year, matched_ref: m.matched_ref, quotes: [],
+      insight: "", relevance: "", preaching_angle: "", full_text: m.content,
+    })),
+  };
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  // Rate limiting
   const clientIp = getClientIp(req);
-  if (!checkRateLimit(clientIp)) {
-    return new Response(
-      JSON.stringify({ error: "Příliš mnoho požadavků, zkuste to později." }),
-      { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
+  if (!checkRateLimit(clientIp)) return json({ error: "Příliš mnoho požadavků, zkuste to později." }, 429);
 
   try {
     const { text, mode } = await req.json();
 
-    // Validate text parameter
-    if (!text || typeof text !== 'string') {
-      return new Response(
-        JSON.stringify({ error: 'Text parameter is required and must be a string' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const MAX_TEXT_LENGTH = 50000;
-    if (text.length > MAX_TEXT_LENGTH) {
-      return new Response(
-        JSON.stringify({ error: `Text too long (max ${MAX_TEXT_LENGTH} characters)` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Validate mode parameter
-    if (mode && !['annotate', 'context', 'postily'].includes(mode)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid mode parameter' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    if (!text || typeof text !== 'string') return json({ error: 'Text parameter is required and must be a string' }, 400);
+    if (text.length > 50000) return json({ error: 'Text too long (max 50000 characters)' }, 400);
+    if (mode && !['annotate', 'context', 'postily'].includes(mode)) return json({ error: 'Invalid mode parameter' }, 400);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const isContext = mode === "context";
     const isPostily = mode === "postily";
     const profileSlug = "ccsh";
 
-    // 1. Check AI cache first (before loading corpus — saves a DB call on cache hit)
+    // 1. Check AI cache
     const textHash = await hashText(text);
     const cacheMode = isPostily ? "postily" : isContext ? "context" : "annotate";
 
     const { data: cached } = await supabase
-      .from("ai_cache")
-      .select("result")
-      .eq("text_hash", textHash)
-      .eq("mode", cacheMode)
-      .eq("profile_slug", profileSlug)
+      .from("ai_cache").select("result")
+      .eq("text_hash", textHash).eq("mode", cacheMode).eq("profile_slug", profileSlug)
       .maybeSingle();
 
     if (cached) {
-      console.log("Returning cached AI result for mode:", cacheMode);
-      if (isContext) {
-        return new Response(JSON.stringify({ context: cached.result }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (isPostily) {
-        return new Response(JSON.stringify({ postily: cached.result }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      return new Response(JSON.stringify({ annotated: cached.result.annotated }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.log("Cache hit:", cacheMode);
+      if (isContext) return json({ context: cached.result });
+      if (isPostily) return json({ postily: cached.result });
+      return json({ annotated: cached.result.annotated });
     }
 
-    // Mode "postily": find matching postily and generate AI insights for preaching
+    // 2. Handle postily mode
     if (isPostily) {
       const matches = await findMatchingPostily(supabase, text);
+      if (matches.length === 0) return json({ postily: { matches: [], insights: null } });
 
-      if (matches.length === 0) {
-        return new Response(JSON.stringify({ postily: { matches: [], insights: null } }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      // Use at most 2 matching postily (to keep prompt size reasonable)
       const topMatches = matches.slice(0, 2);
       const postilyContext = topMatches.map((m) =>
         `---\nPOSTILA č. ${m.postil_number}: „${m.title}"\n${m.source_ref}\nBiblický odkaz: ${m.matched_ref}\n${m.liturgical_context ? `Liturgický kontext: ${m.liturgical_context}\n` : ""}---\n${m.content}`
@@ -157,190 +146,58 @@ Vrať POUZE validní JSON, žádný markdown ani komentáře.
 POSTILY KARLA FARSKÉHO:
 ${postilyContext}`;
 
-      const postilyMessages = [
+      const result = await callAI(LOVABLE_API_KEY, [
         { role: "system", content: postilyPrompt },
         { role: "user", content: text },
-      ];
+      ], true);
 
-      const postilyBody = {
-        model: "google/gemini-3-flash-preview",
-        messages: postilyMessages,
-        response_format: { type: "json_object" },
-      };
-
-      const postilyResponse = await fetch(
-        "https://ai.gateway.lovable.dev/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(postilyBody),
-        }
-      );
-
-      if (!postilyResponse.ok) {
-        const t = await postilyResponse.text();
-        console.error("AI gateway error for postily:", postilyResponse.status, t);
-        // Fallback: return raw matches without AI insights
-        const fallback = {
-          postily: topMatches.map((m) => ({
-            postil_number: m.postil_number,
-            title: m.title,
-            source_ref: m.source_ref,
-            year: m.year,
-            matched_ref: m.matched_ref,
-            quotes: [],
-            insight: "",
-            relevance: "",
-            preaching_angle: "",
-            full_text: m.content,
-          })),
-        };
-        return new Response(JSON.stringify({ postily: fallback }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const postilyData = await postilyResponse.json();
-      const postilyContent = postilyData.choices?.[0]?.message?.content || "";
+      if (!result.ok) return json({ postily: buildPostilyFallback(topMatches) });
 
       try {
-        const parsed = JSON.parse(postilyContent);
-
-        // Cache the result
-        await supabase.from("ai_cache").upsert(
-          { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: parsed, model_used: "google/gemini-3-flash-preview" },
-          { onConflict: "text_hash,mode,profile_slug" }
-        );
-        console.log("Cached postily result");
-
-        return new Response(JSON.stringify({ postily: parsed }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        const parsed = JSON.parse(result.content);
+        await cacheResult(supabase, textHash, cacheMode, profileSlug, parsed);
+        return json({ postily: parsed });
       } catch {
-        console.error("Failed to parse postily JSON:", postilyContent);
-        // Fallback with raw data
-        const fallback = {
-          postily: topMatches.map((m) => ({
-            postil_number: m.postil_number,
-            title: m.title,
-            source_ref: m.source_ref,
-            year: m.year,
-            matched_ref: m.matched_ref,
-            quotes: [],
-            insight: "",
-            relevance: "",
-            preaching_angle: "",
-            full_text: m.content,
-          })),
-        };
-        return new Response(JSON.stringify({ postily: fallback }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        console.error("Failed to parse postily JSON:", result.content);
+        return json({ postily: buildPostilyFallback(topMatches) });
       }
     }
 
-    // 2. Build system prompt — only load corpus for context mode
+    // 3. Handle context / annotate modes
     let systemPrompt: string;
     if (isContext) {
       const theologicalContext = await buildTheologicalContext(supabase, profileSlug);
       systemPrompt = buildContextPrompt(theologicalContext);
     } else {
-      // Annotate mode: no corpus needed — purely about reading technique
       systemPrompt = ANNOTATE_SYSTEM_PROMPT;
     }
 
-    // 3. Generate via AI
-    const messages = [
+    const result = await callAI(LOVABLE_API_KEY, [
       { role: "system", content: systemPrompt },
       { role: "user", content: text },
-    ];
+    ], isContext);
 
-    const body: Record<string, unknown> = {
-      model: "google/gemini-3-flash-preview",
-      messages,
-    };
-
-    if (isContext) {
-      body.response_format = { type: "json_object" };
+    if (!result.ok) {
+      if (result.status === 429) return json({ error: "Příliš mnoho požadavků, zkuste to později." }, 429);
+      if (result.status === 402) return json({ error: "Nedostatek kreditů." }, 402);
+      return json({ error: "Chyba AI služby" }, 500);
     }
-
-    const response = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      }
-    );
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Příliš mnoho požadavků, zkuste to později." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Nedostatek kreditů." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
-      return new Response(
-        JSON.stringify({ error: "Chyba AI služby" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || "";
 
     if (isContext) {
       try {
-        const parsed = JSON.parse(content);
-
-        // Save to AI cache
-        await supabase.from("ai_cache").upsert(
-          { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: parsed, model_used: "google/gemini-3-flash-preview" },
-          { onConflict: "text_hash,mode,profile_slug" }
-        );
-        console.log("Cached context result");
-
-        return new Response(JSON.stringify({ context: parsed }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        const parsed = JSON.parse(result.content);
+        await cacheResult(supabase, textHash, cacheMode, profileSlug, parsed);
+        return json({ context: parsed });
       } catch {
-        console.error("Failed to parse context JSON:", content);
-        return new Response(
-          JSON.stringify({ error: "Nepodařilo se zpracovat kontext" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        console.error("Failed to parse context JSON:", result.content);
+        return json({ error: "Nepodařilo se zpracovat kontext" }, 500);
       }
     }
 
-    // Save annotate result to AI cache
-    await supabase.from("ai_cache").upsert(
-      { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: { annotated: content }, model_used: "google/gemini-3-flash-preview" },
-      { onConflict: "text_hash,mode,profile_slug" }
-    );
-    console.log("Cached annotate result");
-
-    return new Response(JSON.stringify({ annotated: content }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    await cacheResult(supabase, textHash, cacheMode, profileSlug, { annotated: result.content });
+    return json({ annotated: result.content });
   } catch (e) {
     console.error("annotate error:", e);
-    return new Response(
-      JSON.stringify({ error: "Došlo k chybě při zpracování požadavku" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return json({ error: "Došlo k chybě při zpracování požadavku" }, 500);
   }
 });

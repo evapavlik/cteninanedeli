@@ -7,6 +7,7 @@ import {
   Plus,
   BookOpen,
   Maximize,
+  Feather,
 } from "lucide-react";
 
 interface ReadingToolbarProps {
@@ -21,6 +22,9 @@ interface ReadingToolbarProps {
   hasGuide?: boolean;
   isLoadingGuide?: boolean;
   onAmbon?: () => void;
+  onOpenInspiration?: () => void;
+  hasInspiration?: boolean;
+  isLoadingInspiration?: boolean;
 }
 
 export function ReadingToolbar({
@@ -35,6 +39,9 @@ export function ReadingToolbar({
   hasGuide,
   isLoadingGuide,
   onAmbon,
+  onOpenInspiration,
+  hasInspiration,
+  isLoadingInspiration,
 }: ReadingToolbarProps) {
   const [showSettings, setShowSettings] = useState(false);
 
@@ -93,7 +100,21 @@ export function ReadingToolbar({
           </button>
         )}
 
-        {/* Ambon mode button – temporarily disabled */}
+        {/* Inspiration button */}
+        {(hasInspiration || isLoadingInspiration) && (
+          <button
+            onClick={onOpenInspiration}
+            disabled={isLoadingInspiration || !hasInspiration}
+            className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 font-serif text-sm font-medium transition-colors border border-border bg-background text-foreground hover:bg-accent disabled:opacity-50"
+          >
+            {isLoadingInspiration ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Feather className="h-4 w-4" />
+            )}
+            Inspirace
+          </button>
+        )}
       </div>
 
       {/* Typography settings */}

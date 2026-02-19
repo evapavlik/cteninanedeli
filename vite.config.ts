@@ -55,9 +55,7 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom'],
-          'markdown': ['react-markdown', 'remark-gfm'],
           'router': ['react-router-dom'],
-          'supabase': ['@supabase/supabase-js'],
           'ui-vendor': ['sonner', 'lucide-react'],
           'query': ['@tanstack/react-query'],
         },

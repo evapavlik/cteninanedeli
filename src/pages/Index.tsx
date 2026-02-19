@@ -61,7 +61,7 @@ function loadAnnotateFromCache(sundayTitle: string): string | null {
 
 function savePostilyToCache(sundayTitle: string, data: PreachingInspirationData) {
   try {
-    localStorage.setItem(POSTILY_CACHE_KEY, JSON.stringify({ sundayTitle, data, timestamp: Date.now() }));
+    localStorage.setItem(POSTILY_CACHE_KEY, JSON.stringify({ sundayTitle, data, timestamp: Date.now(), version: CONTEXT_CACHE_VERSION }));
   } catch { /* ignore */ }
 }
 
@@ -70,7 +70,7 @@ function loadPostilyFromCache(sundayTitle: string): PreachingInspirationData | n
     const raw = localStorage.getItem(POSTILY_CACHE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (parsed.sundayTitle === sundayTitle && parsed.data) {
+    if (parsed.sundayTitle === sundayTitle && parsed.data && parsed.version === CONTEXT_CACHE_VERSION) {
       return parsed.data;
     }
     return null;

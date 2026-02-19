@@ -1,0 +1,2 @@
+ALTER TABLE public.ai_cache DROP CONSTRAINT ai_cache_mode_check;
+ALTER TABLE public.ai_cache ADD CONSTRAINT ai_cache_mode_check CHECK (mode = ANY (ARRAY['annotate'::text, 'context'::text, 'postily'::text]));

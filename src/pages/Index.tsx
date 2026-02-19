@@ -208,10 +208,14 @@ const Index = () => {
           body: { text: markdown, mode: "postily" },
         });
         if (error) throw error;
-        if (data?.postily?.postily && data.postily.postily.length > 0) {
-          setPostilyData(data.postily);
+        // AI may return { postily: [...] } or just [...] — normalize
+        const postilyResult = data?.postily;
+        const postilyArray = Array.isArray(postilyResult) ? postilyResult : postilyResult?.postily;
+        if (postilyArray && postilyArray.length > 0) {
+          const normalized = { postily: postilyArray };
+          setPostilyData(normalized);
           if (sundayTitle) {
-            savePostilyToCache(sundayTitle, data.postily);
+            savePostilyToCache(sundayTitle, normalized);
           }
         }
       } catch (e) {

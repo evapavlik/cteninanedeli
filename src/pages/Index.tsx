@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
 
 import { fetchCyklus, getCachedCyklus } from "@/lib/api/firecrawl";
+import { trackEvent } from "@/lib/analytics";
 import { Loader2, Moon, Sun } from "lucide-react";
 import type { ReadingContextEntry } from "@/components/ReadingContext";
 import type { PreachingInspirationData } from "@/components/PreachingInspiration";
@@ -122,6 +123,8 @@ const Index = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   
 
+  useEffect(() => { trackEvent("page_view"); }, []);
+
   useEffect(() => {
     document.documentElement.classList.remove("dark");
     if (theme === "dark") document.documentElement.classList.add("dark");
@@ -129,7 +132,11 @@ const Index = () => {
   }, [theme]);
 
   const toggleTheme = () => {
-    setTheme((t) => (t === "light" ? "dark" : "light"));
+    setTheme((t) => {
+      const next = t === "light" ? "dark" : "light";
+      trackEvent("theme_toggle", { to: next });
+      return next;
+    });
   };
 
   const themeIcon = theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />;
@@ -387,10 +394,10 @@ const Index = () => {
                   onFontSizeChange={setFontSize}
                   lineHeight={lineHeight}
                   onLineHeightChange={setLineHeight}
-                  onOpenGuide={() => setIsGuideOpen(true)}
+                  onOpenGuide={() => { trackEvent("open_guide"); setIsGuideOpen(true); }}
                   hasGuide={!!contextData}
                   isLoadingGuide={isLoadingContext}
-                  onOpenInspiration={() => setIsInspirationOpen(true)}
+                  onOpenInspiration={() => { trackEvent("open_inspiration"); setIsInspirationOpen(true); }}
                   hasInspiration={!!postilyData}
                   isLoadingInspiration={isLoadingPostily}
                 />

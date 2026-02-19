@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { trackEvent } from "@/lib/analytics";
 import {
   Type,
   Sparkles,
@@ -51,7 +52,7 @@ export function ReadingToolbar({
       <div className="flex flex-wrap items-center justify-center gap-3">
         {/* Annotate */}
         <button
-          onClick={onAnnotate}
+          onClick={() => { trackEvent("annotate_click", { isAnnotated }); onAnnotate(); }}
           disabled={isAnnotating}
           className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 font-serif text-sm font-medium transition-colors ${
             isAnnotated
@@ -73,7 +74,7 @@ export function ReadingToolbar({
 
         {/* Typography settings toggle */}
         <button
-          onClick={() => setShowSettings(!showSettings)}
+          onClick={() => { trackEvent("toggle_settings", { open: !showSettings }); setShowSettings(!showSettings); }}
           className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 font-serif text-sm font-medium transition-colors border border-border ${
             showSettings
               ? "bg-accent text-accent-foreground"

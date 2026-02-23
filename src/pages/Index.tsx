@@ -117,8 +117,8 @@ const Index = () => {
 
   // Toolbar state
   const [isAnnotating, setIsAnnotating] = useState(false);
-  const [fontSize, setFontSize] = useState(21);
-  const [lineHeight, setLineHeight] = useState(1.9);
+  const [fontSize, setFontSize] = useState(24);
+  const [lineHeight, setLineHeight] = useState(2.0);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastTitleRef = useRef(cached?.sundayTitle || "");

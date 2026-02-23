@@ -37,12 +37,12 @@ export function SectionProgress({ activeIndex, total, labels, onSelect }: Sectio
               window.scrollTo({ top: elementPosition - headerOffset, behavior: "smooth" });
               onSelect?.(i);
             }}
-            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 font-serif text-xs transition-all duration-300 ${
+            className={`flex items-center gap-1.5 rounded-full px-4 py-2 md:px-3 md:py-1.5 font-serif text-sm md:text-xs transition-all duration-300 ${
               i === activeIndex
                 ? "bg-primary text-primary-foreground shadow-sm scale-105"
                 : i < activeIndex
-                ? "bg-accent text-accent-foreground/70"
-                : "bg-accent/50 text-muted-foreground"
+                ? "bg-accent text-foreground/70"
+                : "bg-accent/50 text-foreground/70"
             }`}
           >
             <span

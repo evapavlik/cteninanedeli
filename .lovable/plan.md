@@ -1,66 +1,50 @@
 
 
-# Strukturovaný teologický korpus
+# Vizualni zmeny pro lepsi citelnost na mobilu
 
-## Současný stav
+## Problem
+Aplikace ma na mobilnich zarizenich problemy s citelnosti:
+1. **Nizky kontrast** -- texty pouzivaji `text-foreground/60`, `text-muted-foreground` a dalsi oslabene barvy, ktere jsou na mobilech spatne citelne
+2. **Male texty u tlacitek** -- toolbar tlacitka (Pruvodce, Inspirace, Znacky pro prednes) pouzivaji `text-sm` (14px), coz je na mobilu malo
+3. **Male popisky v panelech** -- kategorie jako "Uvod pro shromazdeni", "Klicove postavy" pouzivaji `text-xs` (12px) s `text-foreground/60`
+4. **SectionProgress prehled** -- navigacni pilulky maji `text-xs` a slaby kontrast u neaktivnich polozek
 
-Celý teologický profil CČSH je uložen jako jeden dlouhý textový řetězec (7 184 znaků) v tabulce `theological_profiles`. Edge funkce ho načte celý a vloží do system promptu AI modelu. To má několik nevýhod:
+## Navrzene zmeny
 
-- Nelze přidávat další dokumenty bez ručního skládání textu
-- Nelze rozlišit, co je "Základy víry", co je liturgický manuál, co je kázání
-- Při dotazu na konkrétní téma se AI modelu posílá vše naráz
-- Těžko se spravuje a rozšiřuje
+### 1. Toolbar tlacitka -- vetsi dotyková plocha a text
+- Zvetsit `text-sm` na `text-base` na mobilu (16px)
+- Zvetsit padding z `px-4 py-2.5` na `px-5 py-3` na mobilu
+- Zvetsit ikony z `h-4 w-4` na `h-5 w-5` na mobilu
 
-## Navrhované řešení
+### 2. SectionProgress -- vetsi text a lepsi kontrast
+- Zvetsit `text-xs` na `text-sm` na mobilu
+- Neaktivni polozky: zmenit `text-muted-foreground` na `text-foreground/70` pro lepsi kontrast
+- Zvetsit padding pilulek z `px-3 py-1.5` na `px-4 py-2`
 
-### 1. Nová tabulka `corpus_documents`
+### 3. Panely Pruvodce a Inspirace -- lepsi kontrast popisku
+- Kategorie (napr. "Klicove postavy"): zmenit `text-foreground/60` na `text-foreground/80`
+- Zvetsit z `text-xs` na `text-sm` (14px)
+- Disclaimer texty: zmenit z `text-xs` na `text-sm`
 
-Nahradí stávající jednosloupcový přístup strukturovaným úložištěm:
+### 4. Lector Guide -- lepsi kontrast
+- Podtitulek "7 praktickych tipu": zmenit `text-foreground/60` na `text-foreground/70`
 
-| Sloupec | Typ | Popis |
-|---------|-----|-------|
-| id | uuid | Primární klíč |
-| profile_slug | text | Odkaz na teologický profil (např. "ccsh") |
-| title | text | Název dokumentu (např. "Základy víry CČSH") |
-| category | text | Kategorie: "věrouka", "liturgika", "homiletika", "pastorace", "dějiny" |
-| content | text | Plný text dokumentu |
-| summary | text (nullable) | Volitelný krátký souhrn pro AI kontext |
-| sort_order | integer | Pořadí důležitosti (1 = nejdůležitější) |
-| is_active | boolean | Zda se dokument používá v AI promptu |
-| created_at | timestamp | Datum vytvoření |
-| updated_at | timestamp | Datum poslední změny |
+### 5. Globalni kontrast v CSS
+- `--muted-foreground` v light modu: zmenit z `0 0% 45%` na `0 0% 35%` (tmavsi seda = lepsi kontrast)
+- `--border` v light modu: zmenit z `0 0% 85%` na `0 0% 78%` (viditelnejsi ramecky)
 
-### 2. Migrace stávajících dat
+## Technicke detaily
 
-Stávající obsah z `theological_profiles` se přesune do `corpus_documents` jako první dokument s kategorií "věrouka" a `sort_order = 1`.
+Zmeny se tykaji techto souboru:
 
-### 3. Úprava edge funkce `annotate-reading`
+| Soubor | Zmena |
+|---|---|
+| `src/index.css` | Uprava CSS promennych pro vyssi kontrast |
+| `src/components/ReadingToolbar.tsx` | Vetsi tlacitka a text na mobilu |
+| `src/components/SectionProgress.tsx` | Vetsi pilulky, lepsi kontrast |
+| `src/components/ReadingContext.tsx` | Vetsi a kontrastnejsi popisky |
+| `src/components/PreachingInspiration.tsx` | Vetsi a kontrastnejsi popisky |
+| `src/components/LectorGuide.tsx` | Lepsi kontrast podtitulku |
 
-Místo načtení jednoho profilu se načtou všechny aktivní dokumenty pro daný `profile_slug`, seřazené podle `sort_order`, a sestaví se z nich system prompt. Díky tomu:
-
-- Každý nový dokument se automaticky zahrne do AI kontextu
-- Lze snadno deaktivovat dokument bez mazání (`is_active = false`)
-- Kategorie pomáhají AI lépe rozlišit zdroje
-
-### 4. Workflow pro přidávání dokumentů
-
-Dokumenty budete nahrávat přímo v chatu -- já je zpracuji a uložím do databáze s příslušnou kategorií.
-
-## Dostupné kategorie
-
-- **věrouka** -- vyznání víry, Základy víry, dogmatické texty
-- **liturgika** -- bohoslužebné řády, liturgické texty, svátosti
-- **homiletika** -- kazatelské příručky, vzorová kázání
-- **pastorace** -- pastorační dokumenty, metodiky
-- **dějiny** -- historické dokumenty, sněmovní usnesení
-
----
-
-## Technický souhrn
-
-1. Vytvořit tabulku `corpus_documents` s RLS pro veřejné čtení
-2. Migrovat stávající data z `theological_profiles.content` do nové tabulky
-3. Upravit edge funkci `annotate-reading` -- načítat dokumenty z `corpus_documents` místo `theological_profiles`
-4. Tabulka `theological_profiles` zůstane jako hlavička profilu (název, slug), ale obsah se přesune do `corpus_documents`
-5. Odstranit hardkódovaný fallback profil z edge funkce (nahradí ho data z DB)
+Vsechny zmeny zachovavaji stavajici "knizni" estetiku -- jen zesilaji kontrast a zvetsují dotykove plochy pro mobilni pouziti.
 

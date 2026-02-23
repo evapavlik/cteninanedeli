@@ -67,6 +67,8 @@ const Index = () => {
   const [lineHeight, setLineHeight] = useState(1.9);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lastTitleRef = useRef(cached?.sundayTitle || "");
+  const lastContentRef = useRef(cached?.markdown || "");
 
   // Theme
   useEffect(() => {
@@ -74,22 +76,49 @@ const Index = () => {
     localStorage.setItem("theme", theme);
   }, [theme]);
 
-  // Auto-fetch readings on mount
-  useEffect(() => {
-    (async () => {
-      if (!markdown) setLoading(true);
-      setError(null);
-      const result = await fetchCyklus();
-      if (result.success && result.markdown) {
-        setMarkdown(result.markdown);
-        setSundayTitle(result.sundayTitle || "");
-        setSundayDate(result.sundayDate || null);
-      } else if (!markdown) {
-        setError(result.error || "Nepodařilo se načíst čtení.");
+  // Reusable fetch-and-reconcile
+  const refreshData = useCallback(async () => {
+    if (!markdown) setLoading(true);
+    setError(null);
+    const result = await fetchCyklus();
+    if (result.success && result.markdown) {
+      const newTitle = result.sundayTitle || "";
+      const titleChanged = newTitle !== lastTitleRef.current;
+      const contentChanged = result.markdown !== lastContentRef.current;
+
+      setMarkdown(result.markdown);
+      setSundayTitle(newTitle);
+      setSundayDate(result.sundayDate || null);
+
+      if (titleChanged || contentChanged) {
+        setAnnotatedMarkdown(null);
+        setContextData(null);
+        setPostilyData(null);
+        localStorage.removeItem("ccsh-annotate");
+        localStorage.removeItem("ccsh-context");
+        localStorage.removeItem("ccsh-postily");
+        lastTitleRef.current = newTitle;
+        lastContentRef.current = result.markdown;
       }
-      setLoading(false);
-    })();
+    } else if (!markdown) {
+      setError(result.error || "Nepodařilo se načíst čtení.");
+    }
+    setLoading(false);
+  }, [markdown]);
+
+  // Auto-fetch on mount
+  useEffect(() => {
+    refreshData();
   }, []);
+
+  // Re-fetch when PWA resumes from background
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refreshData();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [refreshData]);
 
   // Fetch AI data (context + postily) once markdown is available
   useEffect(() => {

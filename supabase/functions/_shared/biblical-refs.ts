@@ -60,7 +60,7 @@ const BOOK_ALIASES: Record<string, string> = {
   "deuteronomium": "Dt",
   "jozue": "Joz",
   "soudců": "Sd",
-  "rút": "Rt",
+  // "rút" already defined above
   "samuel": "Sam",
   "královská": "Král",
   "paralipomenon": "Pa",
@@ -77,7 +77,7 @@ const BOOK_ALIASES: Record<string, string> = {
   "sirachovec": "Sír", "sírachovec": "Sír",
   "izaiáš": "Iz", "izajáš": "Iz",
   "jeremiáš": "Jr",
-  "pláč": "Pláč",
+  // "pláč" already defined above
   "baruch": "Bar",
   "ezechiel": "Ez",
   "daniel": "Dan",
@@ -121,7 +121,7 @@ const BOOK_ALIASES: Record<string, string> = {
   "matouš": "Mt",
   "marek": "Mk",
   "lukáš": "Lk",
-  "jan": "J",
+  // "jan" already defined above
   "skutky": "Sk",
   "římanům": "Ř", "římanúm": "Ř",
   "korintským": "Kor", "korinťanům": "Kor",

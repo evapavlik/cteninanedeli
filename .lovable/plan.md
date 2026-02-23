@@ -1,50 +1,51 @@
 
 
-# Vizualni zmeny pro lepsi citelnost na mobilu
+# Zvetseni citelnosti textu na mobilu
 
-## Problem
-Aplikace ma na mobilnich zarizenich problemy s citelnosti:
-1. **Nizky kontrast** -- texty pouzivaji `text-foreground/60`, `text-muted-foreground` a dalsi oslabene barvy, ktere jsou na mobilech spatne citelne
-2. **Male texty u tlacitek** -- toolbar tlacitka (Pruvodce, Inspirace, Znacky pro prednes) pouzivaji `text-sm` (14px), coz je na mobilu malo
-3. **Male popisky v panelech** -- kategorie jako "Uvod pro shromazdeni", "Klicove postavy" pouzivaji `text-xs` (12px) s `text-foreground/60`
-4. **SectionProgress prehled** -- navigacni pilulky maji `text-xs` a slaby kontrast u neaktivnich polozek
+## Analyza
+Referencni stranka bible.com pouziva:
+- Sans-serif font s velkou x-height (cca 20px)
+- Stedy radkovani (~1.8)
+- Text pusobi vetsi a vzdusnejsi
+
+Aktualni aplikace pouziva:
+- EB Garamond (serif s malou x-height) -- pri 21px pusobi jako 17-18px sans-serifu
+- Vychozi velikost 21px, minimum 14px
+- CSS `.prose-reading` nastavuje 1.3rem na mobilu (cca 20.8px), ale inline style to prepise na 21px
 
 ## Navrzene zmeny
 
-### 1. Toolbar tlacitka -- vetsi dotyková plocha a text
-- Zvetsit `text-sm` na `text-base` na mobilu (16px)
-- Zvetsit padding z `px-4 py-2.5` na `px-5 py-3` na mobilu
-- Zvetsit ikony z `h-4 w-4` na `h-5 w-5` na mobilu
+### 1. Zvysit vychozi velikost pisma na mobilu
+- Zmenit vychozi `fontSize` z 21 na 24px v `src/pages/Index.tsx`
+- Zvysit minimalni velikost z 14px na 18px v `src/components/ReadingToolbar.tsx`
+- Zvysit maximalni velikost z 40px na 48px
 
-### 2. SectionProgress -- vetsi text a lepsi kontrast
-- Zvetsit `text-xs` na `text-sm` na mobilu
-- Neaktivni polozky: zmenit `text-muted-foreground` na `text-foreground/70` pro lepsi kontrast
-- Zvetsit padding pilulek z `px-3 py-1.5` na `px-4 py-2`
+### 2. Zmenit font textu na lepe citelny serif
+Navrhuji zamenit EB Garamond za **Georgia** (systemovy font) nebo **Literata** (Google Font navrzeny primo pro ctecky -- ma velkou x-height a skvele se cte na obrazovkach).
 
-### 3. Panely Pruvodce a Inspirace -- lepsi kontrast popisku
-- Kategorie (napr. "Klicove postavy"): zmenit `text-foreground/60` na `text-foreground/80`
-- Zvetsit z `text-xs` na `text-sm` (14px)
-- Disclaimer texty: zmenit z `text-xs` na `text-sm`
+Literata je:
+- Navrzena pro e-ctecky a obrazovky
+- Ma vyrazne vetsi x-height nez EB Garamond
+- Stale pusobi knizne a dustojne
+- Zdarma z Google Fonts
 
-### 4. Lector Guide -- lepsi kontrast
-- Podtitulek "7 praktickych tipu": zmenit `text-foreground/60` na `text-foreground/70`
+Zmeny:
+- `index.html` -- pridat Literata do font preload
+- `src/index.css` -- zmenit `font-family` v `body` a `.prose-reading` z EB Garamond na Literata
+- EB Garamond zustanou jen pro dekorativni prvky (headery, disclaimery)
 
-### 5. Globalni kontrast v CSS
-- `--muted-foreground` v light modu: zmenit z `0 0% 45%` na `0 0% 35%` (tmavsi seda = lepsi kontrast)
-- `--border` v light modu: zmenit z `0 0% 85%` na `0 0% 78%` (viditelnejsi ramecky)
+### 3. Upravit CSS prose-reading pro mobil
+- Zvysit zakladni `font-size` z `1.3rem` na `1.5rem` na mobilu
+- Zvysit `line-height` z `1.9` na `2.0` na mobilu
 
-## Technicke detaily
-
-Zmeny se tykaji techto souboru:
+## Soubory k uprave
 
 | Soubor | Zmena |
 |---|---|
-| `src/index.css` | Uprava CSS promennych pro vyssi kontrast |
-| `src/components/ReadingToolbar.tsx` | Vetsi tlacitka a text na mobilu |
-| `src/components/SectionProgress.tsx` | Vetsi pilulky, lepsi kontrast |
-| `src/components/ReadingContext.tsx` | Vetsi a kontrastnejsi popisky |
-| `src/components/PreachingInspiration.tsx` | Vetsi a kontrastnejsi popisky |
-| `src/components/LectorGuide.tsx` | Lepsi kontrast podtitulku |
+| `index.html` | Pridat font Literata do preload |
+| `src/index.css` | Zmenit body a prose-reading font na Literata, zvetsit base font-size |
+| `src/pages/Index.tsx` | Vychozi fontSize 24, vychozi lineHeight 2.0 |
+| `src/components/ReadingToolbar.tsx` | Min 18px, max 48px |
 
-Vsechny zmeny zachovavaji stavajici "knizni" estetiku -- jen zesilaji kontrast a zvetsují dotykove plochy pro mobilni pouziti.
-
+## Poznamka
+Dekorativni prvky (nadpis "Cteni textu na nedeli", iniciala, nadpisy h2) zustanou v Cormorant Garamond pro zachovani "knizni" estetiky. Zmena se tyka pouze hlavniho textu cteni, kde je citelnost klicova.

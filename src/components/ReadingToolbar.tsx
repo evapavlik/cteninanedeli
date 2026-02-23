@@ -54,16 +54,16 @@ export function ReadingToolbar({
         <button
           onClick={() => { trackEvent("annotate_click", { isAnnotated }); onAnnotate(); }}
           disabled={isAnnotating}
-          className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 font-serif text-sm font-medium transition-colors ${
+          className={`inline-flex items-center gap-2 rounded-lg px-5 py-3 font-serif text-base md:text-sm md:px-4 md:py-2.5 font-medium transition-colors ${
             isAnnotated
               ? "bg-accent text-accent-foreground"
               : "bg-primary text-primary-foreground hover:bg-primary/90"
           } disabled:opacity-50`}
         >
           {isAnnotating ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="h-5 w-5 md:h-4 md:w-4 animate-spin" />
           ) : (
-            <Sparkles className="h-4 w-4" />
+            <Sparkles className="h-5 w-5 md:h-4 md:w-4" />
           )}
           {isAnnotating
             ? "Zpracovávám…"
@@ -75,13 +75,13 @@ export function ReadingToolbar({
         {/* Typography settings toggle */}
         <button
           onClick={() => { trackEvent("toggle_settings", { open: !showSettings }); setShowSettings(!showSettings); }}
-          className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 font-serif text-sm font-medium transition-colors border border-border ${
+          className={`inline-flex items-center gap-2 rounded-lg px-5 py-3 font-serif text-base md:text-sm md:px-4 md:py-2.5 font-medium transition-colors border border-border ${
             showSettings
               ? "bg-accent text-accent-foreground"
               : "bg-background text-foreground hover:bg-accent"
           }`}
         >
-          <Type className="h-4 w-4" />
+          <Type className="h-5 w-5 md:h-4 md:w-4" />
           Zobrazení
         </button>
 
@@ -90,12 +90,12 @@ export function ReadingToolbar({
           <button
             onClick={onOpenGuide}
             disabled={isLoadingGuide || !hasGuide}
-            className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 font-serif text-sm font-medium transition-colors border border-border bg-background text-foreground hover:bg-accent disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-lg px-5 py-3 font-serif text-base md:text-sm md:px-4 md:py-2.5 font-medium transition-colors border border-border bg-background text-foreground hover:bg-accent disabled:opacity-50"
           >
             {isLoadingGuide ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-5 w-5 md:h-4 md:w-4 animate-spin" />
             ) : (
-              <BookOpen className="h-4 w-4" />
+              <BookOpen className="h-5 w-5 md:h-4 md:w-4" />
             )}
             Průvodce
           </button>
@@ -106,12 +106,12 @@ export function ReadingToolbar({
           <button
             onClick={onOpenInspiration}
             disabled={isLoadingInspiration || !hasInspiration}
-            className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 font-serif text-sm font-medium transition-colors border border-border bg-background text-foreground hover:bg-accent disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-lg px-5 py-3 font-serif text-base md:text-sm md:px-4 md:py-2.5 font-medium transition-colors border border-border bg-background text-foreground hover:bg-accent disabled:opacity-50"
           >
             {isLoadingInspiration ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-5 w-5 md:h-4 md:w-4 animate-spin" />
             ) : (
-              <Feather className="h-4 w-4" />
+              <Feather className="h-5 w-5 md:h-4 md:w-4" />
             )}
             Inspirace
           </button>

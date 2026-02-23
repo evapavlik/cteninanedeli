@@ -45,7 +45,7 @@ export function PreachingInspiration({ data, open, onOpenChange }: PreachingInsp
           <SheetTitle className="text-center font-serif text-xl font-medium text-foreground">
             Inspirace pro kázání
           </SheetTitle>
-          <p className="text-center font-sans text-xs text-muted-foreground italic">
+          <p className="text-center font-sans text-sm text-muted-foreground italic">
             Z postil Karla Farského (1921–1924) · zpracováno pomocí AI
           </p>
         </SheetHeader>
@@ -72,7 +72,7 @@ export function PreachingInspiration({ data, open, onOpenChange }: PreachingInsp
                   <div className="flex gap-3">
                     <Quote className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                     <div className="min-w-0">
-                      <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-2">
+                      <p className="font-sans text-sm font-bold uppercase tracking-wider text-foreground/80 mb-2">
                         Citáty z Farského
                       </p>
                       <div className="space-y-2">
@@ -96,7 +96,7 @@ export function PreachingInspiration({ data, open, onOpenChange }: PreachingInsp
                   <div className="flex gap-3">
                     <Lightbulb className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                     <div className="min-w-0">
-                      <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
+                      <p className="font-sans text-sm font-bold uppercase tracking-wider text-foreground/80 mb-1">
                         Farského pohled
                       </p>
                       <p className="text-foreground text-[1.05rem] leading-relaxed">
@@ -111,7 +111,7 @@ export function PreachingInspiration({ data, open, onOpenChange }: PreachingInsp
                   <div className="flex gap-3">
                     <ArrowRight className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                     <div className="min-w-0">
-                      <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
+                      <p className="font-sans text-sm font-bold uppercase tracking-wider text-foreground/80 mb-1">
                         Aktuálnost pro dnešek
                       </p>
                       <p className="text-foreground text-[1.05rem] leading-relaxed">
@@ -126,7 +126,7 @@ export function PreachingInspiration({ data, open, onOpenChange }: PreachingInsp
                   <div className="flex gap-3">
                     <Feather className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                     <div className="min-w-0">
-                      <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
+                      <p className="font-sans text-sm font-bold uppercase tracking-wider text-foreground/80 mb-1">
                         Podnět pro kázání
                       </p>
                       <p className="text-foreground font-medium text-[1.05rem] leading-relaxed">

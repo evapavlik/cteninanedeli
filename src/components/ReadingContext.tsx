@@ -65,7 +65,7 @@ export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0,
           <SheetTitle className="text-center font-serif text-xl font-medium text-foreground">
             Průvodce ke čtení
           </SheetTitle>
-          <p className="text-center font-sans text-xs text-muted-foreground italic">
+          <p className="text-center font-sans text-sm text-muted-foreground italic">
             Vygenerováno pomocí AI · tonalita dle{" "}
             <span className="underline decoration-dotted" title="Základy víry Církve československé husitské, schválené VI. řádným sněmem 1971, revidované VIII. sněmem 2014">
               Základů víry CČSH
@@ -102,7 +102,7 @@ export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0,
                     <div className="flex gap-3">
                       <BookOpen className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                       <div className="min-w-0">
-                        <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
+                        <p className="font-sans text-sm font-bold uppercase tracking-wider text-foreground/80 mb-1">
                           Úvod pro shromáždění
                         </p>
                         <p className="font-serif text-foreground italic text-[1.05rem] leading-relaxed">
@@ -116,7 +116,7 @@ export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0,
                       <div className="flex gap-3">
                         <Users className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                         <div className="min-w-0">
-                          <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
+                          <p className="font-sans text-sm font-bold uppercase tracking-wider text-foreground/80 mb-1">
                             Klíčové postavy
                           </p>
                           <ul className="space-y-1">
@@ -136,7 +136,7 @@ export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0,
                     <div className="flex gap-3">
                       <Landmark className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                       <div className="min-w-0">
-                        <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
+                        <p className="font-sans text-sm font-bold uppercase tracking-wider text-foreground/80 mb-1">
                           Historický kontext
                         </p>
                         <p className="text-foreground text-[1.05rem] leading-relaxed">{reading.historical_context}</p>
@@ -147,7 +147,7 @@ export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0,
                     <div className="flex gap-3">
                       <MessageCircle className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                       <div className="min-w-0">
-                        <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
+                        <p className="font-sans text-sm font-bold uppercase tracking-wider text-foreground/80 mb-1">
                           Hlavní poselství
                         </p>
                         <p className="text-foreground text-[1.05rem] leading-relaxed">{reading.main_message}</p>
@@ -158,7 +158,7 @@ export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0,
                     <div className="flex gap-3">
                       <Music className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                       <div className="min-w-0">
-                        <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
+                        <p className="font-sans text-sm font-bold uppercase tracking-wider text-foreground/80 mb-1">
                           Tón přednesu
                         </p>
                         <p className="text-foreground text-[1.05rem] leading-relaxed">{reading.tone}</p>
@@ -170,7 +170,7 @@ export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0,
                       <div className="flex gap-3">
                         <ScrollText className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                         <div className="min-w-0">
-                          <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
+                          <p className="font-sans text-sm font-bold uppercase tracking-wider text-foreground/80 mb-1">
                             Základy víry CČSH
                           </p>
                           <ul className="space-y-2">
@@ -190,10 +190,10 @@ export function ReadingContext({ readings, open, onOpenChange, initialIndex = 0,
                       <div className="flex gap-3 pt-2 border-t border-border/50">
                         <Feather className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                         <div className="min-w-0">
-                          <p className="font-sans text-xs font-bold uppercase tracking-wider text-foreground/60 mb-1">
+                          <p className="font-sans text-sm font-bold uppercase tracking-wider text-foreground/80 mb-1">
                             Farského postila
                           </p>
-                          <p className="text-xs text-muted-foreground mb-1.5">
+                          <p className="text-sm text-muted-foreground mb-1.5">
                             {reading.farsky.source_ref}
                           </p>
                           <blockquote className="border-l-2 border-primary/30 pl-3 mb-2">

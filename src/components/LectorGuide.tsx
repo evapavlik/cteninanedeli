@@ -47,7 +47,7 @@ export function LectorGuide() {
             <p className="font-serif text-base font-semibold text-foreground">
               Jak se připravit na přednes
             </p>
-            <p className="font-serif text-sm text-foreground/60">
+            <p className="font-serif text-sm text-foreground/70">
               7 praktických tipů pro lektory
             </p>
           </div>

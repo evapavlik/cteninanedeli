@@ -135,7 +135,7 @@ All colors MUST be HSL.
 .prose-reading h2,
 .prose-reading h3,
 .prose-reading h4 {
-  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-family: 'Literata', Georgia, serif;
   font-weight: 600;
   margin-top: 3rem;
   margin-bottom: 1rem;
@@ -177,7 +177,7 @@ All colors MUST be HSL.
 }
 
 .prose-reading p:first-of-type::first-letter {
-  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-family: 'Literata', Georgia, serif;
   font-size: 3.2em;
   float: left;
   line-height: 0.8;

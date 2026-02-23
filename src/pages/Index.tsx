@@ -354,7 +354,7 @@ const Index = () => {
         {/* Header */}
         <header className="mb-14 text-center md:mb-20">
           <img src={ccshChalice} alt="Kalich CČSH" width="20" height="56" className="mx-auto mb-6 h-14 w-auto md:h-16" style={{ filter: 'var(--chalice-filter, none)' }} loading="eager" decoding="sync" />
-          <h1 className="mb-3 text-2xl font-normal tracking-wider text-foreground/80 md:text-3xl" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+          <h1 className="mb-3 text-2xl font-normal tracking-wider text-foreground/80 md:text-3xl" style={{ fontFamily: "'Literata', Georgia, serif", letterSpacing: '0.12em', textTransform: 'uppercase' }}>
             Čtení textů na neděli
           </h1>
           <div className="mx-auto mt-2 mb-1 flex items-center justify-center gap-3 text-muted-foreground/35">

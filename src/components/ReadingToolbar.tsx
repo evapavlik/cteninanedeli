@@ -127,7 +127,7 @@ export function ReadingToolbar({
               Velikost písma
             </span>
             <button
-              onClick={() => onFontSizeChange(Math.max(14, fontSize - 2))}
+              onClick={() => onFontSizeChange(Math.max(18, fontSize - 2))}
               className="rounded-md border border-border p-1.5 hover:bg-accent"
             >
               <Minus className="h-3.5 w-3.5" />
@@ -136,7 +136,7 @@ export function ReadingToolbar({
               {fontSize}px
             </span>
             <button
-              onClick={() => onFontSizeChange(Math.min(40, fontSize + 2))}
+              onClick={() => onFontSizeChange(Math.min(48, fontSize + 2))}
               className="rounded-md border border-border p-1.5 hover:bg-accent"
             >
               <Plus className="h-3.5 w-3.5" />

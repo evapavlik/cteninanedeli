@@ -105,7 +105,7 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
+    font-family: 'Literata', Georgia, 'Times New Roman', serif;
   }
 }
 
@@ -114,9 +114,9 @@ All colors MUST be HSL.
 }
 
 .prose-reading {
-  font-family: 'EB Garamond', Georgia, serif;
-  font-size: 1.3rem;
-  line-height: 1.9;
+  font-family: 'Literata', Georgia, serif;
+  font-size: 1.5rem;
+  line-height: 2.0;
   color: hsl(var(--foreground));
   letter-spacing: 0.01em;
   text-align: justify;

@@ -1,73 +1,124 @@
-# Welcome to your Lovable project
+# Čtení textů na neděli — CČSH
 
-## Project info
+Webová aplikace pro čtení textů pro aktuální neděli v jednoduchém knižním designu s důrazem na čitelnost. Texty jsou pro bohoslužby v Církvi československé husitské.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Co aplikace umí
 
-## How can I edit this code?
+**Nedělní čtení** — Automaticky stahuje texty aktuální neděle z [cyklus.ccsh.cz](https://cyklus.ccsh.cz). Zobrazí 1. čtení, 2. čtení a evangelium v přehledném formátu.
 
-There are several ways of editing your application.
+**Značky pro přednes** — AI vygeneruje značky přímo do textu: pauzy (‖ krátká, ‖‖ dlouhá), změny tempa (▼ pomalu, ▲ normálně) a tučný text pro důraz. Lektor tak vidí na první pohled, kde zpomalit, kde se zastavit.
 
-**Use Lovable**
+**Teologický průvodce** — Ke každému čtení dostanete úvod pro shromáždění, klíčové postavy, historický kontext, hlavní poselství a doporučený tón přednesu. Kde je to relevantní, průvodce cituje Základy víry CČSH.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+**Inspirace z Farského postil** — Aplikace obsahuje postily Karla Farského (Český zápas, 1921–1924). K aktuálním čtením najde odpovídající kázání podle biblických odkazů a nabídne citáty, Farského pohled a podněty pro dnešní kázání.
 
-Changes made via Lovable will be committed automatically to this repo.
+**Tipy pro lektory** — 7 praktických rad pro přípravu a přednes (číst nahlas 3×, porozumět textu, pracovat s tichem, nahrát se…).
 
-**Use your preferred IDE**
+**Nastavení zobrazení** — Velikost písma (14–40 px), řádkování (1,4–3,0), tmavý / světlý režim.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+**PWA** — Funguje jako mobilní aplikace. Lze nainstalovat na domovskou obrazovku, funguje i offline.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Jak to funguje
 
-Follow these steps:
+```
+cyklus.ccsh.cz
+      │
+      ▼
+ warm-cache          ← cron job, každý den v 4:00 UTC
+ (edge funkce)
+      │
+      ▼
+  Supabase DB        ← readings_cache + ai_cache
+      │
+      ▼
+   Frontend          ← načte data z DB, zobrazí z localStorage cache
+      │
+      ▼
+ annotate-reading    ← AI edge funkce (3 režimy: značky, průvodce, postily)
+ (on demand)
+```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+1. **warm-cache** — denně v 4:00 stáhne texty z cyklus.ccsh.cz a předgeneruje AI výstupy (značky, průvodce, postily)
+2. **Frontend** — při otevření načte data z Supabase, cachuje v localStorage pro rychlé zobrazení
+3. **annotate-reading** — pokud AI výstupy ještě nejsou v cache, vygenerují se na požádání
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+## Technologie
 
-# Step 3: Install the necessary dependencies.
-npm i
+| Oblast | Technologie |
+|--------|------------|
+| Frontend | React 18, TypeScript, Vite |
+| Styling | Tailwind CSS, shadcn/ui, Literata + Playfair Display SC |
+| Backend | Supabase (PostgreSQL, Edge Functions, pg_cron) |
+| AI | Google Gemini 3 Flash (přes Lovable AI gateway) |
+| Scraping | Firecrawl |
+| PWA | vite-plugin-pwa + Workbox |
+| Testy | Vitest, Testing Library |
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+## Struktura projektu
+
+```
+src/
+├── pages/Index.tsx              # Hlavní stránka (state management, cache, lazy loading)
+├── components/
+│   ├── AnnotatedText.tsx        # Vykreslení textu se značkami pro přednes
+│   ├── ReadingToolbar.tsx       # Ovládací panel (značky, zobrazení, průvodce, inspirace)
+│   ├── ReadingContext.tsx       # Teologický průvodce (bottom sheet)
+│   ├── PreachingInspiration.tsx # Farského postily (bottom sheet)
+│   ├── LectorGuide.tsx         # 7 tipů pro lektory
+│   ├── SectionProgress.tsx     # Indikátor aktuálního čtení (1./2./evangelium)
+│   ├── AmbonMode.tsx           # Režim pro čtení z ambonu (auto-scroll)
+│   └── ui/                     # shadcn/ui komponenty
+├── lib/
+│   ├── api/firecrawl.ts        # Stahování a cachování čtení
+│   ├── analytics.ts            # Sledování událostí
+│   └── utils.ts                # Pomocné funkce
+└── integrations/supabase/      # Supabase klient a typy
+
+supabase/
+├── functions/
+│   ├── annotate-reading/       # AI edge funkce (značky + průvodce + postily)
+│   ├── warm-cache/             # Cron: předgenerování dat pro příští neděli
+│   ├── import-corpus/          # Import teologických textů
+│   ├── import-postily/         # Import Farského postil
+│   └── _shared/                # Sdílené moduly (corpus, biblical-refs, postily)
+└── migrations/                 # SQL migrace (tabulky, indexy, RLS)
+
+scripts/
+└── parse-postily.ts            # Parser OCR textu Farského postil → JSON
+```
+
+## Jak spustit lokálně
+
+```bash
+# 1. Naklonovat repozitář
+git clone https://github.com/evapavlik/cteninanedeli.git
+cd cteninanedeli
+
+# 2. Nainstalovat závislosti
+npm install
+
+# 3. Vytvořit .env s klíči (Supabase URL, anon key)
+#    viz .env.example nebo Lovable dashboard
+
+# 4. Spustit vývojový server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Aplikace poběží na `http://localhost:8080`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Skripty
 
-**Use GitHub Codespaces**
+| Příkaz | Popis |
+|--------|-------|
+| `npm run dev` | Vývojový server s HMR |
+| `npm run build` | Produkční build |
+| `npm run preview` | Náhled produkčního buildu |
+| `npm run test` | Spustit testy (jednorázově) |
+| `npm run test:watch` | Testy ve watch režimu |
+| `npm run lint` | ESLint kontrola |
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Vytvořeno s
 
-## What technologies are used for this project?
+Aplikace byla vytvořena pomocí [Lovable](https://lovable.dev) s láskou k poznání.
 
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Autorka: **Eva Pavlíková**

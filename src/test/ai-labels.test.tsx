@@ -16,11 +16,11 @@ const mockReadings: ReadingContextEntry[] = [
 
 describe("AI labels", () => {
   it("ReadingContext shows AI disclaimer", () => {
-    const { container } = render(
+    render(
       <ReadingContext readings={mockReadings} open={true} onOpenChange={() => {}} />
     );
-    const aiText = container.querySelector('p');
-    const allText = container.textContent || '';
+    // Sheet renders into a portal, so check document.body
+    const allText = document.body.textContent || '';
     expect(allText).toContain("Vygenerováno pomocí AI");
   });
 });

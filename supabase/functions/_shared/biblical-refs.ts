@@ -51,6 +51,7 @@ const BOOK_ALIASES: Record<string, string> = {
   "za": "Za", "zach": "Za",
   "mal": "Mal",
   "mak": "Mak",
+  "mojž": "Mojž",
 
   // Starý zákon — full Czech names (used by cyklus.ccsh.cz headings)
   "genesis": "Gn",
@@ -151,6 +152,7 @@ export function normalizeBiblicalRef(raw: string): string {
 
   // Fix common OCR errors
   ref = ref.replace(/^1z\b/i, "Iz");
+  ref = ref.replace(/^1an\b/i, "Jan");
 
   // Handle numbered books: "I. Kor." "II. Sol." "1 Kor"
   const numberedMatch = ref.match(/^([IVX]+\.?|[12345])\s+(.+)$/i);

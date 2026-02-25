@@ -7,6 +7,7 @@
  */
 
 import { readFileSync } from "fs";
+import { normalizeBiblicalRef } from "../supabase/functions/_shared/biblical-refs.ts";
 
 interface Postila {
   postil_number: number;
@@ -21,102 +22,7 @@ interface Postila {
   content: string;
 }
 
-/** Normalize a biblical book abbreviation to a canonical short form. */
-const BOOK_ALIASES: Record<string, string> = {
-  "mat": "Mt", "mat.": "Mt", "mt": "Mt", "mt.": "Mt",
-  "mk": "Mk", "mk.": "Mk", "mar": "Mk", "mar.": "Mk",
-  "luk": "Lk", "luk.": "Lk", "l": "Lk", "l.": "Lk",
-  "jan": "J", "jan.": "J", "j": "J", "j.": "J",
-  "iz": "Iz", "iz.": "Iz", "1z": "Iz",
-  "jer": "Jr", "jer.": "Jr", "jr": "Jr",
-  "ez": "Ez", "ez.": "Ez",
-  "dan": "Dan", "dan.": "Dan",
-  "am": "Am", "am.": "Am",
-  "oz": "Oz", "oz.": "Oz",
-  "mich": "Mi", "mich.": "Mi", "mi": "Mi",
-  "mal": "Mal", "mal.": "Mal",
-  "zach": "Za", "zach.": "Za", "za": "Za",
-  "řím": "Ř", "řím.": "Ř", "ř": "Ř",
-  "kor": "Kor", "kor.": "Kor",
-  "gal": "Gal", "gal.": "Gal",
-  "ef": "Ef", "ef.": "Ef",
-  "fil": "Fp", "fil.": "Fp", "fp": "Fp",
-  "kol": "Kol", "kol.": "Kol",
-  "sol": "Sol", "sol.": "Sol",
-  "tim": "Tim", "tim.": "Tim",
-  "tit": "Tt", "tit.": "Tt",
-  "filem": "Fm", "filem.": "Fm",
-  "žid": "Žd", "žid.": "Žd", "žd": "Žd",
-  "jak": "Jk", "jak.": "Jk", "jk": "Jk",
-  "petr": "Pt", "petr.": "Pt", "pt": "Pt",
-  "jud": "Jud", "jud.": "Jud",
-  "zjev": "Zj", "zjev.": "Zj", "zj": "Zj",
-  "sk": "Sk", "sk.": "Sk",
-  "mojž": "Mojž", "mojž.": "Mojž",
-  "žalm": "Ž", "žalm.": "Ž", "ž": "Ž",
-  "přísl": "Př", "přísl.": "Př", "př": "Př",
-  "kaz": "Kaz", "kaz.": "Kaz",
-  "pís": "Pís", "pís.": "Pís",
-  "dt": "Dt", "dt.": "Dt",
-  "gn": "Gn", "gn.": "Gn",
-  "ex": "Ex", "ex.": "Ex",
-  "lv": "Lv", "lv.": "Lv",
-  "nm": "Nm", "nm.": "Nm",
-  "joz": "Joz", "joz.": "Joz",
-  "sd": "Sd", "sd.": "Sd",
-  "rút": "Rt", "rút.": "Rt",
-  "sam": "Sam", "sam.": "Sam",
-  "král": "Král", "král.": "Král",
-  "par": "Pa", "par.": "Pa",
-  "neh": "Neh", "neh.": "Neh",
-  "job": "Job", "job.": "Job", "jób": "Job",
-  "sir": "Sír", "sir.": "Sír",
-  "mak": "Mak", "mak.": "Mak",
-  "mudr": "Mdr", "mudr.": "Mdr",
-};
-
-/**
- * Normalize a single biblical reference like "Mat. 22, 37—46" to "Mt 22,37-46"
- */
-function normalizeBiblicalRef(raw: string): string {
-  let ref = raw.trim();
-
-  // Fix common OCR errors before parsing
-  ref = ref.replace(/^1z\b/i, "Iz"); // OCR "1z" → "Iz" (Isaiah)
-  ref = ref.replace(/^1an\b/i, "Jan"); // OCR "1an" → "Jan"
-
-  // Handle numbered books: "I. Kor." "II. Sol." "1 Kor" "2 Kor" "V. Mojž."
-  const numberedMatch = ref.match(/^([IVX]+\.?|[12])\s+(.+)$/i);
-  let prefix = "";
-  let rest = ref;
-  if (numberedMatch) {
-    const num = numberedMatch[1].replace(".", "");
-    if (num === "I" || num === "1") prefix = "1";
-    else if (num === "II" || num === "2") prefix = "2";
-    else if (num === "III" || num === "3") prefix = "3";
-    else if (num === "IV") prefix = "4";
-    else if (num === "V") prefix = "5";
-    rest = numberedMatch[2];
-  }
-
-  // Extract book name and chapter:verse
-  const bookMatch = rest.match(/^([A-ZŽŘČŠŽa-zžřčšůúýáéíóďťňě]+\.?)\s*(.*)$/i);
-  if (!bookMatch) return raw.trim();
-
-  const bookRaw = bookMatch[1].toLowerCase().replace(/\.$/, "");
-  const chapterVerse = bookMatch[2];
-
-  const book = BOOK_ALIASES[bookRaw] || BOOK_ALIASES[bookRaw + "."] || bookMatch[1].replace(/\.$/, "");
-
-  // Normalize chapter:verse — "22, 37—46" → "22,37-46"
-  const cv = chapterVerse
-    .replace(/\s+/g, "")        // remove spaces
-    .replace(/[—–]+/g, "-")     // normalize dashes
-    .replace(/\.$/g, "");       // remove trailing dot
-
-  const canonical = prefix ? `${prefix}${book}` : book;
-  return cv ? `${canonical} ${cv}` : canonical;
-}
+// normalizeBiblicalRef is imported from the shared module above
 
 /**
  * Extract biblical references from the raw parenthetical text.

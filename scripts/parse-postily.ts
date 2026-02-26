@@ -115,10 +115,10 @@ function parsePostily(filePath: string): Postila[] {
       }
     }
 
-    // Skip optional "(Upraveno v Naší postyle,...)" line
+    // Skip optional "(Upraveno v Naší postyle,...)" line — OCR may produce variants like "(Opravenov Našípostyle,...)"
     let cursor = cz.lineIdx + 1;
     while (cursor < nextCzLine && lines[cursor].trim() === "") cursor++;
-    if (cursor < nextCzLine && /^\(Upraven/i.test(lines[cursor].trim())) {
+    if (cursor < nextCzLine && /^\((?:Upraven|Opraven).*postyl/i.test(lines[cursor].trim())) {
       cursor++;
       while (cursor < nextCzLine && lines[cursor].trim() === "") cursor++;
     }
@@ -144,6 +144,10 @@ function parsePostily(filePath: string): Postila[] {
       .replace(/\s+/g, " ")
       .replace(/[„"",,]/g, '"')
       .trim();
+
+    if (!title) {
+      console.error(`Warning: empty title for postil near line ${cz.lineIdx}, source: Český zápas, ročník ${cz.year}, číslo ${cz.issue}`);
+    }
 
     // Extract biblical reference(s)
     let biblicalRefsRaw = "";

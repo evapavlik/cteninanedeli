@@ -16834,40 +16834,21 @@ odpustil nám."
 
 INSERT INTO public.postily (postil_number, title, biblical_references, biblical_refs_raw, liturgical_context, year, issue_number, source_ref, biblical_text, content) VALUES (
   149,
-  NULL,
-  '{"Opravenov Našípostyle,č.24,str.93-96"}',
-  '(Opravenov Naší postyle,č. 24, str. 93—96.)',
-  NULL,
+  'NEHLEDEJTE JEDEN KAŽDÝ JEN SVÝCH VĚCÍ, ALE KAŽDÝ TAKÉ TOHO, COŽ JEST JINÝCH.',
+  '{"Mk 3,1-6","Fp 2,1-4"}',
+  '(Ned. 9. po sv. D. 1924: Mar. 3, 1—6.) (Epištola k Filip. 2, 1—4.)',
+  'Ned. 9. po sv. D. 1924',
   1924,
   32,
   'Český zápas, ročník 1924, číslo 32',
-  NULL,
-  'KAŽDÝ
-NEHLEDEJTE
-JEDEN
-JEN SVÝCH
-COŽ JEST
-VÉCÍ, ALE KAŽDÝ
-TAKÉ
-TOHO,
-JINÝCH.
-(Ned. 9. po sv. D. 1924: Mar. 3, 1—6.)
-I vešel Ježíš opět do synagogy. A byl tam člověk, který měl
-ruku uschlou.
-I dávali na něho pozor, bude-li ho léčiti o šábesu, aby ho ob
-žalovali.
-I řekl tomu člověku, který měl uschlou ruku: ,,Stoupni si do
-prostřed."
+  'I vešel Ježíš opět do synagogy. A byl tam člověk, který měl ruku uschlou.
+I dávali na něho pozor, bude-li ho léčiti o šábesu, aby ho obžalovali.
+I řekl tomu člověku, který měl uschlou ruku: ,,Stoupni si doprostřed."
 A jim pravil: ,,Sluší-li o šábesu dobře činiti anebo ne? Život zachovati nebo zamordovati?" Ale oni mlčeli.
-Ale když pohleděl na ně vůkol s hněvem, zarmoutiv se nad
-tvrdostí srdce jejich řekl tomu člověku: ,,Vztáhni tu svou ruku!"
+Ale když pohleděl na ně vůkol s hněvem, zarmoutiv se nad tvrdostí srdce jejich řekl tomu člověku: ,,Vztáhni tu svou ruku!"
 I vztáhl; a učiněna jest ta ruka jeho zdravá jako druhá.
-.
-Ale farizeové vyšedše hned drželi radu s Herodiány proti němu,
-kterak by ho zahubili."
-(Epištola k Filip. 2, 1—4.)
-
-Většina živočíšstva trpí stihomamem: jeden živočich bojí se dru
+Ale farizeové vyšedše hned drželi radu s Herodiány proti němu, kterak by ho zahubili."',
+  'Většina živočíšstva trpí stihomamem: jeden živočich bojí se dru
 hého. Namnoze tuší v sobě vespolek nepřítele. Vede je k tomu od
 věký životní boj. Velká spousta býložravců sice živí se rostlinstvem,
 přiměšuje i potravu nerostnou n. př. sůl, ale převahu mají živoči

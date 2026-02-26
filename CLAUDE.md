@@ -1,0 +1,125 @@
+# CLAUDE.md — Čtení textů na neděli
+
+## Projekt
+
+Čtení textů na neděli — webová aplikace pro Církev československou husitskou (CČSH). Zobrazuje nedělní biblická čtení s AI anotacemi, teologickým průvodcem a inspirací z postil Karla Farského.
+
+- **Autorka:** Eva Pavlíková
+- **Vytvořeno v:** [Lovable](https://lovable.dev), prošlo refaktoringem (cache helper, custom hooks, cleanup UI)
+- **Uživatelé:** lektoři (čtení textů) a kazatelé (inspirace pro kázání). Do budoucna může přibýt další funkcionalita i obsah.
+- **Klíčová hodnota:** jednoduchost pro uživatele. Raději aplikace, která dělá málo věcí skvěle, než přeplněná aplikace. Pokud bude funkcí příliš, může se rozdělit do více samostatných aplikací.
+
+## Tech stack
+
+| Oblast | Technologie |
+|--------|------------|
+| Frontend | React 18 + TypeScript + Vite (port 8080) |
+| Styling | Tailwind CSS + shadcn/ui, fonty Literata (serif) + Playfair Display SC (nadpisy) |
+| Backend | Supabase — PostgreSQL, Edge Functions (Deno), pg_cron |
+| AI | Google Gemini 3 Flash (přes Lovable AI gateway) |
+| Scraping | Firecrawl |
+| Testy | Vitest + Testing Library |
+| PWA | vite-plugin-pwa + Workbox |
+
+## Klíčové příkazy
+
+```bash
+npm run dev       # Vývojový server (localhost:8080)
+npm run build     # Produkční build — spustit po každé změně pro kontrolu TS chyb
+npm run test      # Vitest testy
+npm run lint      # ESLint
+```
+
+- TypeScript: loose mode (`noImplicitAny: false`, `strictNullChecks: false`)
+- Path alias: `@/` → `./src/`
+
+## Architektura a datový tok
+
+```
+cyklus.ccsh.cz → warm-cache (cron 4:00 UTC) → Supabase DB
+                                                    ↓
+Frontend → readings_cache → useReadings hook → useAIData hook → UI
+                                                    ↓
+                                          annotate-reading (edge funkce)
+                                          3 režimy: annotate | context | postily
+```
+
+- **Cache:** ai_cache tabulka (server) + localStorage (klient, CACHE_VERSION = 4)
+- **Invalidace:** useReadings detekuje změnu nedělního obsahu → zvýší `invalidationEpoch` → useAIData smaže stará AI data
+
+## Konvence kódu
+
+- **UI texty, komentáře, commit messages:** česky
+- **Kód (proměnné, funkce, hooks):** anglicky
+- Komponenty: PascalCase, named exports, props typované interfacem (`*Props` suffix)
+- Hooks: `use*` prefix, v `src/hooks/`
+- Supabase funkce: Deno runtime, sdílené moduly v `_shared/`
+- Styling: Tailwind utility classes, žádné CSS moduly
+
+## Struktura projektu
+
+```
+src/
+├── pages/Index.tsx              # Hlavní stránka (orchestrace)
+├── hooks/
+│   ├── useReadings.ts           # Fetch čtení + invalidace cache
+│   └── useAIData.ts             # AI data (context, postily, anotace)
+├── components/
+│   ├── AnnotatedText.tsx        # Text se značkami pro přednes
+│   ├── ReadingToolbar.tsx       # Ovládací panel
+│   ├── ReadingContext.tsx       # Teologický průvodce (bottom sheet)
+│   ├── PreachingInspiration.tsx # Farského postily (bottom sheet)
+│   ├── LectorGuide.tsx          # 7 tipů pro lektory
+│   ├── SectionProgress.tsx      # Indikátor aktuálního čtení
+│   ├── AmbonMode.tsx            # Auto-scroll režim pro ambon
+│   └── ui/                      # shadcn/ui (používá se jen 5: sheet, sonner, tooltip, toaster, toast)
+├── lib/
+│   ├── cache.ts                 # Generický localStorage cache helper
+│   ├── api/firecrawl.ts         # Stahování čtení
+│   └── analytics.ts             # Sledování událostí
+└── integrations/supabase/       # Klient + generované typy
+
+supabase/
+├── functions/
+│   ├── annotate-reading/        # AI edge funkce (značky + průvodce + postily)
+│   ├── warm-cache/              # Cron: předgenerování pro příští neděli
+│   ├── import-corpus/           # Import teologických textů
+│   ├── import-postily/          # Import Farského postil
+│   └── _shared/
+│       ├── prompts.ts           # AI prompt šablony
+│       ├── corpus.ts            # Teologický kontext (Základy víry CČSH)
+│       ├── biblical-refs.ts     # Normalizace biblických odkazů (SINGLE SOURCE OF TRUTH)
+│       └── postily.ts           # Matching postil podle biblických referencí
+└── migrations/                  # 10 SQL migrací
+
+scripts/
+└── parse-postily.ts             # OCR parser Farského postil → JSON
+```
+
+## Na co dávat pozor
+
+- **Neměnit prompt šablony** v `_shared/prompts.ts` a `_shared/corpus.ts` bez konzultace — jsou citlivě vyladěné pro CČSH teologii
+- **Nemazat shadcn/ui komponenty** bez ověření — po refaktoringu zůstalo přesně 5 používaných
+- **biblical-refs.ts** je single source of truth pro normalizaci biblických odkazů — netvořit kopie
+- **CACHE_VERSION** v `src/lib/cache.ts` — při změně struktury cache zvýšit
+- **Lovable** může přidat UI komponenty zpět do `src/components/ui/` — je to normální
+- Edge funkce běží v **Deno** (ne Node) — importy přes URL, ne npm
+
+## Supabase
+
+- **Project ID:** `wvjicgclccnrcxtjiebk`
+- **Klíčové tabulky:** readings_cache, ai_cache, postily, corpus_documents, theological_profiles
+- **Postily matching:** GIN index na `biblical_references` + PostgreSQL overlap operator (`&&`)
+- **RLS:** všechny tabulky veřejně čitelné, zápis jen přes service role
+
+## Spolupráce s Evou
+
+- **Jazyk:** Eva komunikuje česky, neformálně, na tykačku. Odpovídej stejně — česky, stručně, bez formálností.
+- **Lovable + Claude = tým:** Eva staví UI a nové funkce v Lovable. Claude pomáhá s refaktoringem, architekturou, čištěním kódu a složitějšími úpravami, které Lovable nezvládne. Neděláme UI od nuly — vylepšujeme to, co Lovable vygeneroval.
+- **Diskuse před implementací:** Eva ráda probere možnosti, než se pustí do kódu. Často začíná brainstormingem. Neptej se hned na technické detaily — nejdřív pomoz prozkoumat nápady.
+- **Produkt > kód:** Eva přemýšlí z pohledu uživatele (lektoři, kazatelé CČSH), ne z pohledu vývojáře. Při vysvětlování mluv o tom, co uživatel uvidí, ne o implementačních detailech.
+- **Iterativní přístup:** Pracujeme po krocích — plán → schválení → implementace → ověření. Nedělej velké změny bez odsouhlasení.
+- **Vývojářští kamarádi:** Eva má kolem sebe vývojáře, kteří jí radí s technickými věcmi. Občas přijde s jejich nápady. Beri to jako validní vstup.
+- **Učení se:** Eva se chce v technologiích neustále zlepšovat. Při vysvětlování přidej krátké „proč" — vysvětli principy, ne jen řešení. Nebuď přednáškový, ale posunuj znalosti krok za krokem.
+- **Teologický kontext:** Aplikace slouží CČSH — specifická česká církev s husitskou tradicí. Klíčové texty: Základy víry CČSH, postily Karla Farského. Při práci s teologickým obsahem buď citlivý a přesný.
+- **Vize a směr:** Aplikace se rozrůstá — nejen o nový obsah (další autoři z Českého zápasu), ale i o funkce (pomůcky pro kazatele). Eva přemýšlí o tom, jestli to časem bude jedna aplikace nebo více menších. Klíčové pravidlo: jednoduchost pro uživatele je nad vše. Při navrhování nových funkcí vždy zvažuj, jestli to aplikaci nekomplikuje.

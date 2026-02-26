@@ -81,8 +81,8 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -141,17 +141,17 @@ serve(async (req) => {
       ];
 
       const postilyBody = {
-        model: "google/gemini-3-flash-preview",
+        model: "gemini-2.0-flash",
         messages: postilyMessages,
         response_format: { type: "json_object" },
       };
 
       const postilyResponse = await fetch(
-        "https://ai.gateway.lovable.dev/v1/chat/completions",
+        "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            Authorization: `Bearer ${GEMINI_API_KEY}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify(postilyBody),
@@ -189,7 +189,7 @@ serve(async (req) => {
 
         // Cache the result
         await supabase.from("ai_cache").upsert(
-          { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: parsed, model_used: "google/gemini-3-flash-preview" },
+          { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: parsed, model_used: "gemini-2.0-flash" },
           { onConflict: "text_hash,mode,profile_slug" }
         );
         console.log("Cached postily result");
@@ -252,7 +252,7 @@ serve(async (req) => {
     ];
 
     const body: Record<string, unknown> = {
-      model: "google/gemini-3-flash-preview",
+      model: "gemini-2.0-flash",
       messages,
     };
 
@@ -261,11 +261,11 @@ serve(async (req) => {
     }
 
     const response = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
+      "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          Authorization: `Bearer ${GEMINI_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
@@ -302,7 +302,7 @@ serve(async (req) => {
 
         // Save to AI cache
         await supabase.from("ai_cache").upsert(
-          { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: parsed, model_used: "google/gemini-3-flash-preview" },
+          { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: parsed, model_used: "gemini-2.0-flash" },
           { onConflict: "text_hash,mode,profile_slug" }
         );
         console.log("Cached context result");
@@ -321,7 +321,7 @@ serve(async (req) => {
 
     // Save annotate result to AI cache
     await supabase.from("ai_cache").upsert(
-      { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: { annotated: content }, model_used: "google/gemini-3-flash-preview" },
+      { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: { annotated: content }, model_used: "gemini-2.0-flash" },
       { onConflict: "text_hash,mode,profile_slug" }
     );
     console.log("Cached annotate result");

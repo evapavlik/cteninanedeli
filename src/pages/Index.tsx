@@ -233,6 +233,13 @@ const Index = () => {
       {/* Footer */}
       <footer className="border-t border-border mt-12 py-8 text-center font-serif text-sm text-muted-foreground">
         <p>S láskou k poznání vytvořila Eva Pavlíková.</p>
+        <p className="mt-2 text-xs text-muted-foreground/60">
+          Texty čtení z{" "}
+          <a href="https://cyklus.ccsh.cz" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground transition-colors">cyklus.ccsh.cz</a>
+          {" · "}postily Karla Farského z{" "}
+          <a href="https://www.ccsh.cz" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground transition-colors">Českého zápasu</a>
+          {" "}(1921–1924)
+        </p>
         <p className="mt-1">
           Našli jste chybu? Napište mi na{" "}
           <a

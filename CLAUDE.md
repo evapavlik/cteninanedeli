@@ -107,7 +107,7 @@ scripts/
 
 ## Supabase
 
-- **Project ID:** `wvjicgclccnrcxtjiebk`
+- **Project ID:** `uedluysdwvcdrhjiotjc`
 - **Klíčové tabulky:** readings_cache, ai_cache, postily, corpus_documents, theological_profiles
 - **Postily matching:** GIN index na `biblical_references` + PostgreSQL overlap operator (`&&`)
 - **RLS:** všechny tabulky veřejně čitelné, zápis jen přes service role

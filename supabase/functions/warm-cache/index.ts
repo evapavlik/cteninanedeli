@@ -106,7 +106,11 @@ async function scrapeUrl(url: string, apiKey: string): Promise<string | null> {
     body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true }),
   });
 
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const errorBody = await res.text().catch(() => "(no body)");
+    console.error(`Firecrawl error ${res.status}: ${errorBody}`);
+    return null;
+  }
   const data = await res.json();
   return data?.data?.markdown || data?.markdown || null;
 }

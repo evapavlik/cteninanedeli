@@ -5,7 +5,8 @@
 Čtení textů na neděli — webová aplikace pro Církev československou husitskou (CČSH). Zobrazuje nedělní biblická čtení s AI anotacemi, teologickým průvodcem a inspirací z postil Karla Farského.
 
 - **Autorka:** Eva Pavlíková
-- **Vytvořeno v:** [Lovable](https://lovable.dev), prošlo refaktoringem (cache helper, custom hooks, cleanup UI)
+- **Původně vytvořeno v:** [Lovable](https://lovable.dev), prošlo refaktoringem a migrací na vlastní infrastrukturu (Vercel + Supabase)
+- **Aktuální workflow:** kombinace Lovable (prototypování UI) + přímá práce s kódem (GitHub + Claude Code). Hlavní vývoj probíhá v kódu.
 - **Uživatelé:** lektoři (čtení textů) a kazatelé (inspirace pro kázání). Do budoucna může přibýt další funkcionalita i obsah.
 - **Klíčová hodnota:** jednoduchost pro uživatele. Raději aplikace, která dělá málo věcí skvěle, než přeplněná aplikace. Pokud bude funkcí příliš, může se rozdělit do více samostatných aplikací.
 
@@ -16,7 +17,7 @@
 | Frontend | React 18 + TypeScript + Vite (port 8080) |
 | Styling | Tailwind CSS + shadcn/ui, fonty Literata (serif) + Playfair Display SC (nadpisy) |
 | Backend | Supabase — PostgreSQL, Edge Functions (Deno), pg_cron |
-| AI | Google Gemini 3 Flash (přes Lovable AI gateway) |
+| AI | Google Gemini 3 Flash (vlastní API klíč v Supabase secrets) |
 | Scraping | Firecrawl |
 | Testy | Vitest + Testing Library |
 | PWA | vite-plugin-pwa + Workbox |
@@ -102,7 +103,7 @@ scripts/
 - **Nemazat shadcn/ui komponenty** bez ověření — po refaktoringu zůstalo přesně 5 používaných
 - **biblical-refs.ts** je single source of truth pro normalizaci biblických odkazů — netvořit kopie
 - **CACHE_VERSION** v `src/lib/cache.ts` — při změně struktury cache zvýšit
-- **Lovable** může přidat UI komponenty zpět do `src/components/ui/` — je to normální
+- **Lovable** se občas používá na prototypy — může přidat UI komponenty zpět do `src/components/ui/`, je to normální
 - Edge funkce běží v **Deno** (ne Node) — importy přes URL, ne npm
 
 ## Supabase
@@ -112,41 +113,21 @@ scripts/
 - **Postily matching:** GIN index na `biblical_references` + PostgreSQL overlap operator (`&&`)
 - **RLS:** všechny tabulky veřejně čitelné, zápis jen přes service role
 
-## Aktuální stav: Migrace na nový Supabase (únor 2026)
+## Infrastruktura (dokončeno únor 2026)
 
-Projekt se stěhuje z Lovable hostingu na **Vercel + vlastní Supabase**. Stav:
+Projekt běží na vlastní infrastruktuře — **Vercel** (frontend) + **vlastní Supabase** (backend). Migrace z Lovable hostingu je kompletní.
 
-- [x] Nový Supabase projekt: `uedluysdwvcdrhjiotjc`
-- [x] Migrace schématu (10 migrací aplikováno)
-- [x] Edge funkce nasazeny (annotate-reading, warm-cache, import-corpus, import-postily)
-- [x] Secrets nastaveny (GEMINI_API_KEY, FIRECRAWL_API_KEY)
-- [x] Corpus + postily importovány
-- [ ] **Import readings_cache + ai_cache** — CSV import nefungoval, udělat přes SQL INSERT nebo Supabase API
-- [ ] **pg_cron nastavení** — SQL pro warm-cache cron (viz níže)
-- [ ] **Vercel deployment** — napojení na GitHub, env proměnné
-
-pg_cron SQL (spustit po importu dat):
-```sql
-SELECT cron.schedule(
-  'warm-cache-daily',
-  '0 4 * * *',
-  $$
-  SELECT net.http_post(
-    url := 'https://uedluysdwvcdrhjiotjc.supabase.co/functions/v1/warm-cache',
-    headers := jsonb_build_object(
-      'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key', true),
-      'Content-Type', 'application/json'
-    ),
-    body := '{}'::jsonb
-  );
-  $$
-);
-```
+- **Hosting:** Vercel (napojeno na GitHub, automatický deploy)
+- **Supabase projekt:** `uedluysdwvcdrhjiotjc`
+- **Edge funkce:** annotate-reading, warm-cache, import-corpus, import-postily
+- **Secrets:** GEMINI_API_KEY, FIRECRAWL_API_KEY (v Supabase)
+- **pg_cron:** warm-cache běží denně v 4:00 UTC
+- **Data:** migrace schématu (10 migrací), corpus, postily, readings_cache, ai_cache — vše importováno
 
 ## Spolupráce s Evou
 
 - **Jazyk:** Eva komunikuje česky, neformálně, na tykačku. Odpovídej stejně — česky, stručně, bez formálností.
-- **Lovable + Claude = tým:** Eva staví UI a nové funkce v Lovable. Claude pomáhá s refaktoringem, architekturou, čištěním kódu a složitějšími úpravami, které Lovable nezvládne. Neděláme UI od nuly — vylepšujeme to, co Lovable vygeneroval.
+- **Lovable + Claude Code = tým:** Eva občas prototypuje UI v Lovable, hlavní vývoj probíhá přes GitHub + Claude Code. Claude pomáhá s implementací, refaktoringem, architekturou a složitějšími úpravami.
 - **Diskuse před implementací:** Eva ráda probere možnosti, než se pustí do kódu. Často začíná brainstormingem. Neptej se hned na technické detaily — nejdřív pomoz prozkoumat nápady.
 - **Produkt > kód:** Eva přemýšlí z pohledu uživatele (lektoři, kazatelé CČSH), ne z pohledu vývojáře. Při vysvětlování mluv o tom, co uživatel uvidí, ne o implementačních detailech.
 - **Ověřuj před odpovědí:** Než odpovíš na technickou otázku, ověř si fakta v kódu. Neodpovídej z paměti — přečti si relevantní soubor. Typické chyby z minulosti: tvrzení o tom, jak funguje cache (plní se cronem, ne on-demand), tvrzení že export nemá smysl (měl), opakované ptaní se na věci, které jsme už vyřešili. Radši řekni „ověřím" než abys střílel od boku.

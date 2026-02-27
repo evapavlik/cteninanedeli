@@ -107,10 +107,41 @@ scripts/
 
 ## Supabase
 
-- **Project ID:** `wvjicgclccnrcxtjiebk`
+- **Project ID:** `uedluysdwvcdrhjiotjc`
 - **Klíčové tabulky:** readings_cache, ai_cache, postily, corpus_documents, theological_profiles
 - **Postily matching:** GIN index na `biblical_references` + PostgreSQL overlap operator (`&&`)
 - **RLS:** všechny tabulky veřejně čitelné, zápis jen přes service role
+
+## Aktuální stav: Migrace na nový Supabase (únor 2026)
+
+Projekt se stěhuje z Lovable hostingu na **Vercel + vlastní Supabase**. Stav:
+
+- [x] Nový Supabase projekt: `uedluysdwvcdrhjiotjc`
+- [x] Migrace schématu (10 migrací aplikováno)
+- [x] Edge funkce nasazeny (annotate-reading, warm-cache, import-corpus, import-postily)
+- [x] Secrets nastaveny (GEMINI_API_KEY, FIRECRAWL_API_KEY)
+- [x] Corpus + postily importovány
+- [ ] **Import readings_cache + ai_cache** — CSV import nefungoval, udělat přes SQL INSERT nebo Supabase API
+- [ ] **pg_cron nastavení** — SQL pro warm-cache cron (viz níže)
+- [ ] **Vercel deployment** — napojení na GitHub, env proměnné
+
+pg_cron SQL (spustit po importu dat):
+```sql
+SELECT cron.schedule(
+  'warm-cache-daily',
+  '0 4 * * *',
+  $$
+  SELECT net.http_post(
+    url := 'https://uedluysdwvcdrhjiotjc.supabase.co/functions/v1/warm-cache',
+    headers := jsonb_build_object(
+      'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key', true),
+      'Content-Type', 'application/json'
+    ),
+    body := '{}'::jsonb
+  );
+  $$
+);
+```
 
 ## Spolupráce s Evou
 
@@ -118,6 +149,7 @@ scripts/
 - **Lovable + Claude = tým:** Eva staví UI a nové funkce v Lovable. Claude pomáhá s refaktoringem, architekturou, čištěním kódu a složitějšími úpravami, které Lovable nezvládne. Neděláme UI od nuly — vylepšujeme to, co Lovable vygeneroval.
 - **Diskuse před implementací:** Eva ráda probere možnosti, než se pustí do kódu. Často začíná brainstormingem. Neptej se hned na technické detaily — nejdřív pomoz prozkoumat nápady.
 - **Produkt > kód:** Eva přemýšlí z pohledu uživatele (lektoři, kazatelé CČSH), ne z pohledu vývojáře. Při vysvětlování mluv o tom, co uživatel uvidí, ne o implementačních detailech.
+- **Ověřuj před odpovědí:** Než odpovíš na technickou otázku, ověř si fakta v kódu. Neodpovídej z paměti — přečti si relevantní soubor. Typické chyby z minulosti: tvrzení o tom, jak funguje cache (plní se cronem, ne on-demand), tvrzení že export nemá smysl (měl), opakované ptaní se na věci, které jsme už vyřešili. Radši řekni „ověřím" než abys střílel od boku.
 - **Iterativní přístup:** Pracujeme po krocích — plán → schválení → implementace → ověření. Nedělej velké změny bez odsouhlasení.
 - **Vývojářští kamarádi:** Eva má kolem sebe vývojáře, kteří jí radí s technickými věcmi. Občas přijde s jejich nápady. Beri to jako validní vstup.
 - **Učení se:** Eva se chce v technologiích neustále zlepšovat. Při vysvětlování přidej krátké „proč" — vysvětli principy, ne jen řešení. Nebuď přednáškový, ale posunuj znalosti krok za krokem.

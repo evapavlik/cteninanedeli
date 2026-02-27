@@ -119,7 +119,7 @@ Deno.serve(async (req) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, supabaseKey);
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
   const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
 
   const log: string[] = [];
@@ -220,8 +220,8 @@ Deno.serve(async (req) => {
     }
 
     // --- Step 3: Pre-generate AI outputs ---
-    if (!LOVABLE_API_KEY) {
-      addLog("LOVABLE_API_KEY not set, skipping AI pre-generation");
+    if (!GEMINI_API_KEY) {
+      addLog("GEMINI_API_KEY not set, skipping AI pre-generation");
       return new Response(JSON.stringify({ success: true, sundayTitle, log }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -293,7 +293,7 @@ Deno.serve(async (req) => {
       }
 
       const body: Record<string, unknown> = {
-        model: "google/gemini-3-flash-preview",
+        model: "gemini-2.0-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userContent },
@@ -304,10 +304,10 @@ Deno.serve(async (req) => {
       }
 
       addLog(`Generating AI "${mode}"…`);
-      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const res = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          Authorization: `Bearer ${GEMINI_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
@@ -325,7 +325,7 @@ Deno.serve(async (req) => {
         try {
           const parsed = JSON.parse(content);
           await supabase.from("ai_cache").upsert(
-            { text_hash: textHash, mode, profile_slug: profileSlug, result: parsed, model_used: "google/gemini-3-flash-preview" },
+            { text_hash: textHash, mode, profile_slug: profileSlug, result: parsed, model_used: "gemini-2.0-flash" },
             { onConflict: "text_hash,mode,profile_slug" }
           );
           addLog(`Cached AI ${mode}`);
@@ -334,7 +334,7 @@ Deno.serve(async (req) => {
         }
       } else {
         await supabase.from("ai_cache").upsert(
-          { text_hash: textHash, mode, profile_slug: profileSlug, result: { annotated: content }, model_used: "google/gemini-3-flash-preview" },
+          { text_hash: textHash, mode, profile_slug: profileSlug, result: { annotated: content }, model_used: "gemini-2.0-flash" },
           { onConflict: "text_hash,mode,profile_slug" }
         );
         addLog(`Cached AI annotate (${content.length} chars)`);

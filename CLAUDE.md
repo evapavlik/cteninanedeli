@@ -50,8 +50,8 @@ Frontend → readings_cache → useReadings hook → useAIData hook → UI
 
 ## Konvence kódu
 
-- **UI texty, komentáře, commit messages:** česky
-- **Kód (proměnné, funkce, hooks):** anglicky
+- **UI texty:** česky (to, co vidí uživatel)
+- **Kód, komentáře, commit messages:** anglicky
 - Komponenty: PascalCase, named exports, props typované interfacem (`*Props` suffix)
 - Hooks: `use*` prefix, v `src/hooks/`
 - Supabase funkce: Deno runtime, sdílené moduly v `_shared/`

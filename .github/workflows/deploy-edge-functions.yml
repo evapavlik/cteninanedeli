@@ -25,11 +25,15 @@ jobs:
 
       - name: Set secrets
         run: |
-          supabase secrets set \
-            GEMINI_API_KEY="${{ secrets.GEMINI_API_KEY }}" \
-            FIRECRAWL_API_KEY="${{ secrets.FIRECRAWL_API_KEY }}"
+          # Nastaví jen ty secrets, které jsou definované v GitHub repo secrets.
+          # Prázdná hodnota = secret v GitHub není nastavený → nepřepisuj Supabase.
+          [ -n "$GEMINI_API_KEY" ]    && supabase secrets set GEMINI_API_KEY="$GEMINI_API_KEY"
+          [ -n "$FIRECRAWL_API_KEY" ] && supabase secrets set FIRECRAWL_API_KEY="$FIRECRAWL_API_KEY"
+          true  # krok nesmí selhat pokud žádný secret nebyl nastaven
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
 
       - name: Deploy functions
         run: |

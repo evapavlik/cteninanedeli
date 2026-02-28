@@ -1,12 +1,12 @@
 /**
- * Deterministický parser sekce "Nad písmem" z Českého zápasu.
- * Nevyžaduje žádné AI — pracuje na extrahovaném textu z PDF.
+ * Deterministic parser for the "Nad písmem" section of Český zápas.
+ * No AI required — operates on plain text extracted from PDF.
  *
- * Struktura sekce:
+ * Section structure:
  *   Nad Písmem
- *   [Název kázání] [Biblická reference, např. J 3,1-17]
- *   [Text kázání...]
- *   Jméno Příjmení
+ *   [Sermon title] [Biblical reference, e.g. J 3,1-17]
+ *   [Sermon body...]
+ *   FirstName LastName
  */
 
 export interface ParsedArticle {
@@ -20,13 +20,13 @@ export interface ParsedArticle {
 }
 
 /**
- * Regex pro biblické reference v češtině.
- * Pokrývá: J 3,1-17 · Mt 4,1-11 · Gn 12,1-4a · Ž 22,1 · Kor 1,18-31 atd.
+ * Regex for Czech-style biblical references.
+ * Covers: J 3,1-17 · Mt 4,1-11 · Gn 12,1-4a · Ž 22,1 · Kor 1,18-31 etc.
  */
 const BIBLICAL_REF_RE =
   /\b([JRŽA-Z][a-záčďéěíňóřšťúůýž]{0,4})\s+(\d+),(\d+(?:[-–]\d+)?[abc]?)\b/g;
 
-/** Extrahuje všechny biblické reference z textu */
+/** Extracts all biblical references from a string. */
 export function parseBiblicalRefs(text: string): string[] {
   const refs: string[] = [];
   const re = new RegExp(BIBLICAL_REF_RE.source, "g");
@@ -37,29 +37,30 @@ export function parseBiblicalRefs(text: string): string[] {
   return refs;
 }
 
-/** Řádky, které signalizují začátek nové sekce CZ */
+/** Lines that signal the start of a new CZ section. */
 const SECTION_BOUNDARY_RE =
   /^(Ze\s+sbor|Z\s+teologie|Bohoslužb|Oznámen|Přehled|Rozhovor|Zpráv|Inzerce|Vydavatel|Ročník\s+\d|Nad\s+p[ií]smem|EDITORIAL|OBSAH|Na\s+okraj|Dopis|Ohlédnut)/i;
 
 /**
- * Parsuje sekci "Nad písmem" z extrahovaného textu PDF.
- * Vrátí null, pokud sekce není nalezena.
+ * Parses the "Nad písmem" section from extracted PDF text.
+ * Returns null if the section is not found.
  */
 export function parseNadPismem(
   rawText: string,
   year: number,
   issueNumber: number,
 ): ParsedArticle | null {
-  // Normalizace: spojení dělení slov pomlčkou (časté při extrakci z PDF)
-  // Např. "při-\nchází" → "přichází"
+  // Normalize: rejoin words hyphenated across line breaks (common in PDF extraction)
+  // e.g. "při-\nchází" → "přichází"
   const text = rawText
     .replace(/([a-záčďéěíňóřšťúůýž])-\n([a-záčďéěíňóřšťúůýž])/g, "$1$2")
     .replace(/\r\n/g, "\n");
 
   const lines = text.split("\n");
 
-  // Najdeme řádek začínající "Nad Písmem" / "Nad písmem" (ať už je záhlaví samo, nebo
-  // za ním hned na stejném řádku název: "Nad Písmem Dokážeme říct Ne? (L 4,1–13)")
+  // Find the line starting with "Nad Písmem" / "Nad písmem".
+  // Handles both: header on its own line, and header+title on the same line
+  // e.g. "Nad Písmem Dokážeme říct Ne? (L 4,1–13)"
   const NAD_PISMEM_RE = /^nad\s+p[ií]smem\s*/i;
   const headerIdx = lines.findIndex((l) => NAD_PISMEM_RE.test(l.trim()));
   if (headerIdx === -1) return null;
@@ -70,53 +71,55 @@ export function parseNadPismem(
   let titleIdx: number;
   let titleLine: string;
   if (restAfterHeader.length > 0) {
-    // Záhlaví a název jsou na jednom řádku
+    // Header and title are on the same line
     titleIdx = headerIdx;
     titleLine = restAfterHeader;
   } else {
-    // Záhlaví je samo; první neprázdný řádek po něm je název
+    // Header is alone; first non-empty line after it is the title
     titleIdx = headerIdx + 1;
     while (titleIdx < lines.length && lines[titleIdx].trim() === "") titleIdx++;
     if (titleIdx >= lines.length) return null;
     titleLine = lines[titleIdx].trim();
   }
 
-  // Extrahujeme biblické reference z řádku názvu
+  // Extract biblical references from the title line
   const refsInTitle = parseBiblicalRefs(titleLine);
   let title = titleLine;
   let biblical_refs_raw: string | null = null;
 
   if (refsInTitle.length > 0) {
-    // Název = vše před první referencí; odstraníme případnou závorku "... (L 4,1–13)"
+    // Title = everything before the first reference; strip trailing opening bracket
+    // e.g. "Dokážeme říct Ne? (L 4,1–13)" → "Dokážeme říct Ne?"
     const firstRefPos = titleLine.indexOf(refsInTitle[0]);
     title = titleLine.substring(0, firstRefPos).trim().replace(/\s*[([\s]+$/, "");
     biblical_refs_raw = refsInTitle.join("; ");
   }
 
-  // Sbíráme řádky těla — dokud nenarazíme na novou sekci nebo limit
+  // Collect body lines until we hit a new section header or the safety limit
   const bodyLines: string[] = [];
   for (let i = titleIdx + 1; i < lines.length; i++) {
     const trimmed = lines[i].trim();
-    // Nadpis sekce nikdy neobsahuje tečku uprostřed ("rozhovor. Hned…" je tělo, ne sekce)
+    // A real section header never contains a mid-sentence period
+    // ("rozhovor. Hned…" is body text, not the "Rozhovor" section header)
     const looksLikeSectionHeader =
       trimmed.length > 0 &&
       SECTION_BOUNDARY_RE.test(trimmed) &&
       !/\.\s/.test(trimmed);
     if (looksLikeSectionHeader) break;
     bodyLines.push(lines[i]);
-    if (bodyLines.length >= 400) break; // bezpečnostní limit
+    if (bodyLines.length >= 400) break; // safety limit
   }
 
-  // Ořezání prázdných řádků na konci
+  // Trim trailing empty lines
   while (bodyLines.length > 0 && bodyLines[bodyLines.length - 1].trim() === "") {
     bodyLines.pop();
   }
 
   if (bodyLines.length === 0) return null;
 
-  // Poslední neprázdný řádek = podpis autora.
-  // Někdy je autor na stejném řádku jako závěrečná věta: "také uvěřili. Lucie Haltofová"
-  // — detekujeme to a rozdělíme.
+  // Last non-empty line is the author's name.
+  // Sometimes the author appears on the same line as the closing sentence:
+  // "také uvěřili. Lucie Haltofová" — detect and split.
   const lastBodyLine = bodyLines[bodyLines.length - 1].trim();
   const NAME_SUFFIX_RE =
     /^(.+[.!?…])\s+([A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž]+(?:\s+[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž]+){1,3})\s*$/;
@@ -132,7 +135,7 @@ export function parseNadPismem(
     content = bodyLines.slice(0, -1).join("\n").trim();
   }
 
-  // Pokus o extrakci liturgického kontextu (např. "2. neděle postní")
+  // Attempt to extract liturgical context (e.g. "2. neděle postní")
   const liturgicalMatch = content.match(
     /\b(\d+\.\s+ned[eě]l[ei]\s+\w+|Hod\s+Bo[žz][íi]\s+\w+|[Vv]elikonoční\s+ned[eě]l[ai]|[Kk]větnou\s+ned[eě]l[ei]|[Ss]lavnost\s+\w+|[Pp]ůst[ní]*\s+ned[eě]l[ei])/,
   );

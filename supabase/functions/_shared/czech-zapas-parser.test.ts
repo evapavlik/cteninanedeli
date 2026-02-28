@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { parseNadPismem, parseBiblicalRefs } from "./czech-zapas-parser";
 
-// Reálný text ze sekce "Nad písmem" — Český zápas 2026/9
+// Real text from the "Nad písmem" section — Český zápas 2026/9
 const SAMPLE_NAD_PISMEM = `Nad Písmem
 Narození z Ducha J 3,1-17
 Milé sestry a milí bratři,
@@ -67,7 +67,7 @@ obnoveni Duchem, toto světlo rozpoznají a vstoupí do
 království Božího.
 Kateřina Kašparová`;
 
-// Reálný text — CZ 2026/10 — autorka na stejném řádku jako závěr věty
+// Real text — CZ 2026/10 — author on same line as closing sentence
 const SAMPLE_SETKANI = `NAD PÍSMEM
 Setkání u studně Jan 4,3-42
 Milé sestry a bratři,
@@ -115,7 +115,7 @@ lidé z města, celý zástup, aby se přesvěd-
 čili, aby sami uviděli, a díky Jeho slovu
 také uvěřili. Lucie Haltofová`;
 
-// Reálný text — CZ 2026/? — reference s en-dash, autorka na vlastním řádku
+// Real text — CZ 2026/? — reference with en-dash, author on its own line
 const SAMPLE_OBROZENI = `Nad PíSMEM
 Obrození shůry Jan 3,1–17
 Nikodém - člověk upřímný, přemýš-
@@ -140,7 +140,7 @@ stupně prostupuje naše postoje, myšlení,
 slova, oblasti zájmů, vztah k Bohu i lidem.
 Světluše Košíčková`;
 
-// Reálný text — reference v závorce, autor za "Amen."
+// Real text — reference in parentheses, author after "Amen."
 const SAMPLE_DOKAŽEME = `Nad Písmem Dokážeme říct jasně a zřetelně Ne? (L 4,1–13)
 Vážené sestry, vážení bratři, pokoj vám!
 Ježíš plný Ducha svatého odchází na poušť, kde tráví čtyřicet dní.

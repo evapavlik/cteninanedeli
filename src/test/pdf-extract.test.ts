@@ -71,27 +71,41 @@ describe("extractPdfText", () => {
     return extractPdfText(makeFile());
   }
 
-  it("joins items on the same page with spaces", async () => {
-    const text = await callExtract(makeMockPdf([[{ str: "Nad" }, { str: "písmem" }]]));
+  it("joins items on the same line with spaces", async () => {
+    const text = await callExtract(makeMockPdf([[
+      { str: "Nad", hasEOL: false },
+      { str: "písmem", hasEOL: true },
+    ]]));
     expect(text).toBe("Nad písmem");
+  });
+
+  it("inserts newline when hasEOL is true", async () => {
+    const text = await callExtract(makeMockPdf([[
+      { str: "Nad písmem", hasEOL: true },
+      { str: "Titulek kázání", hasEOL: true },
+    ]]));
+    expect(text).toBe("Nad písmem\nTitulek kázání");
   });
 
   it("joins multiple pages with newlines", async () => {
     const text = await callExtract(makeMockPdf([
-      [{ str: "Strana jedna" }],
-      [{ str: "Strana dva" }],
+      [{ str: "Strana jedna", hasEOL: false }],
+      [{ str: "Strana dva", hasEOL: false }],
     ]));
     expect(text).toBe("Strana jedna\nStrana dva");
   });
 
   it("handles empty pages without crashing", async () => {
-    const text = await callExtract(makeMockPdf([[], [{ str: "Obsah" }]]));
+    const text = await callExtract(makeMockPdf([[], [{ str: "Obsah", hasEOL: false }]]));
     expect(text).toBe("\nObsah");
   });
 
-  it("treats items without str as empty string", async () => {
-    const text = await callExtract(makeMockPdf([[{ str: "OK" }, {} as { str: string }]]));
-    expect(text).toBe("OK ");
+  it("skips items without str", async () => {
+    const text = await callExtract(makeMockPdf([[
+      { str: "OK", hasEOL: false },
+      {} as { str: string; hasEOL: boolean },
+    ]]));
+    expect(text).toBe("OK");
   });
 
   it("sets GlobalWorkerOptions.workerSrc to the mocked worker URL", async () => {

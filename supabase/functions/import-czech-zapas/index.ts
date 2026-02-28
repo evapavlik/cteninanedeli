@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
           imported: 0,
           skipped: 0,
           articles: [],
-          message: "Sekce „Nad písmem" nebyla v PDF nalezena.",
+          message: `Sekce „Nad písmem" nebyla v PDF nalezena.`,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );

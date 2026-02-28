@@ -103,38 +103,11 @@ Vrať POUZE JSON pole. Pokud nenajdeš žádný vhodný článek, vrať [].`;
   }
 }
 
-/** Extrahuje biblické reference z textu pomocí Gemini */
-async function extractBiblicalRefs(
-  content: string,
-  rawRef: string | null | undefined,
-  geminiKey: string,
-): Promise<string[]> {
-  if (rawRef?.trim()) return [rawRef.trim()];
-
-  const prompt =
-    `Z následujícího textu extrahuj všechny explicitní biblické reference. Vrať JSON pole řetězců ve formátu "Zkratka kap,verš" (např. "Mt 4,1-11", "Gn 12,1-4a"). Pokud nejsou žádné, vrať []. Vrať POUZE JSON pole.\n\nTEXT:\n${content.substring(0, 3000)}`;
-
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { response_mime_type: "application/json" },
-      }),
-    },
-  );
-
-  if (!res.ok) return [];
-  const data = await res.json();
-  const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "[]";
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : (parsed.refs ?? parsed.references ?? []);
-  } catch {
-    return [];
-  }
+/** Normalizuje biblické reference z výstupu segmentPdf — bez dalšího API volání */
+function extractBiblicalRefs(rawRef: string | null | undefined): string[] {
+  if (!rawRef?.trim()) return [];
+  // Gemini může vrátit čárkou oddělený seznam nebo jeden odkaz
+  return rawRef.split(/[;,]/).map((r) => r.trim()).filter(Boolean);
 }
 
 Deno.serve(async (req) => {
@@ -235,8 +208,8 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Extract biblical references
-      const refs = await extractBiblicalRefs(article.content, article.biblical_refs_raw, GEMINI_KEY);
+      // Extract biblical references (z výstupu segmentPdf, bez extra API volání)
+      const refs = extractBiblicalRefs(article.biblical_refs_raw);
 
       const row = {
         article_number: nextNum,

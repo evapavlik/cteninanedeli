@@ -37,5 +37,6 @@ jobs:
           supabase functions deploy warm-cache --no-verify-jwt
           supabase functions deploy import-corpus --no-verify-jwt
           supabase functions deploy import-postily --no-verify-jwt
+          supabase functions deploy import-czech-zapas --no-verify-jwt
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}

@@ -17,7 +17,7 @@
 | Frontend | React 18 + TypeScript + Vite (port 8080) |
 | Styling | Tailwind CSS + shadcn/ui, fonty Literata (serif) + Playfair Display SC (nadpisy) |
 | Backend | Supabase — PostgreSQL, Edge Functions (Deno), pg_cron |
-| AI | Google Gemini 3 Flash (vlastní API klíč v Supabase secrets) |
+| AI | Google Gemini 2.0 Flash (vlastní API klíč v Supabase secrets) |
 | Scraping | Firecrawl |
 | Testy | Vitest + Testing Library |
 | PWA | vite-plugin-pwa + Workbox |

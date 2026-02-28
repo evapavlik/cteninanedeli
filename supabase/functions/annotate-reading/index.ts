@@ -1,8 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildTheologicalContext, buildContextPrompt, ANNOTATE_SYSTEM_PROMPT } from "../_shared/corpus.ts";
-import { findMatchingPostily } from "../_shared/postily.ts";
-import { buildPostilyPrompt, formatPostilyContext } from "../_shared/prompts.ts";
+import { findMatchingPostily, findMatchingCzechZapas } from "../_shared/postily.ts";
+import { buildPostilyPrompt, formatPostilyContext, buildCzechZapasPrompt, formatCzechZapasContext } from "../_shared/prompts.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -55,7 +55,7 @@ serve(async (req) => {
   }
 
   try {
-    const { text, mode } = await req.json();
+    const { text, mode, liturgicalContext } = await req.json();
 
     // Validate text parameter
     if (!text || typeof text !== 'string') {
@@ -74,7 +74,7 @@ serve(async (req) => {
     }
 
     // Validate mode parameter
-    if (mode && !['annotate', 'context', 'postily'].includes(mode)) {
+    if (mode && !['annotate', 'context', 'postily', 'czech_zapas'].includes(mode)) {
       return new Response(
         JSON.stringify({ error: 'Invalid mode parameter' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -90,11 +90,12 @@ serve(async (req) => {
 
     const isContext = mode === "context";
     const isPostily = mode === "postily";
+    const isCzechZapas = mode === "czech_zapas";
     const profileSlug = "ccsh";
 
     // 1. Check AI cache first (before loading corpus — saves a DB call on cache hit)
     const textHash = await hashText(text);
-    const cacheMode = isPostily ? "postily" : isContext ? "context" : "annotate";
+    const cacheMode = isPostily ? "postily" : isCzechZapas ? "czech_zapas" : isContext ? "context" : "annotate";
 
     const { data: cached } = await supabase
       .from("ai_cache")
@@ -113,6 +114,11 @@ serve(async (req) => {
       }
       if (isPostily) {
         return new Response(JSON.stringify({ postily: cached.result }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (isCzechZapas) {
+        return new Response(JSON.stringify({ czech_zapas: cached.result }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
@@ -217,6 +223,99 @@ serve(async (req) => {
         return new Response(JSON.stringify({ postily: fallback }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
+      }
+    }
+
+    // Mode "czech_zapas": find matching modern articles and generate AI insights (with optional Farský tension)
+    if (isCzechZapas) {
+      const czMatches = await findMatchingCzechZapas(supabase, text, liturgicalContext);
+
+      if (czMatches.length === 0) {
+        return new Response(JSON.stringify({ czech_zapas: { czech_zapas: [] } }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const topCzMatches = czMatches.slice(0, 2);
+      const czContext = formatCzechZapasContext(topCzMatches);
+
+      // Optionally include a Farský postila for the same reading (for tension/continuity)
+      let farskySnippet: string | undefined;
+      try {
+        const postilyMatches = await findMatchingPostily(supabase, text);
+        if (postilyMatches.length > 0) {
+          const m = postilyMatches[0];
+          const excerpt = m.content.length > 800 ? m.content.substring(0, 800) + "…" : m.content;
+          farskySnippet = `Postila č. ${m.postil_number}: „${m.title}"\n${m.source_ref}\n---\n${excerpt}`;
+        }
+      } catch (e) {
+        console.error("Failed to load postily for czech_zapas tension:", e);
+      }
+
+      const czMessages = [
+        { role: "system", content: buildCzechZapasPrompt(czContext, farskySnippet) },
+        { role: "user", content: text },
+      ];
+
+      const czResponse = await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${GEMINI_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "gemini-2.0-flash",
+            messages: czMessages,
+            response_format: { type: "json_object" },
+          }),
+        }
+      );
+
+      if (!czResponse.ok) {
+        const t = await czResponse.text();
+        console.error("AI error for czech_zapas:", czResponse.status, t);
+        // Fallback: return raw matches without AI insights
+        const fallback = {
+          czech_zapas: topCzMatches.map((m) => ({
+            article_number: m.article_number,
+            title: m.title,
+            author: m.author,
+            source_ref: m.source_ref,
+            year: m.year,
+            matched_ref: m.matched_ref,
+            quotes: [],
+            author_perspective: "",
+            tension_with_farsky: null,
+            preaching_angle: "",
+            full_text: m.content,
+          })),
+        };
+        return new Response(JSON.stringify({ czech_zapas: fallback }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const czData = await czResponse.json();
+      const czContent = czData.choices?.[0]?.message?.content || "";
+
+      try {
+        const parsed = JSON.parse(czContent);
+        await supabase.from("ai_cache").upsert(
+          { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: parsed, model_used: "gemini-2.0-flash" },
+          { onConflict: "text_hash,mode,profile_slug" }
+        );
+        console.log("Cached czech_zapas result");
+        return new Response(JSON.stringify({ czech_zapas: parsed }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch {
+        console.error("Failed to parse czech_zapas JSON:", czContent);
+        return new Response(
+          JSON.stringify({ error: "Nepodařilo se zpracovat moderní zdroje" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
     }
 

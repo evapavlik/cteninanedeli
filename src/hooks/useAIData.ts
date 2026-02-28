@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { saveCache, loadCache } from "@/lib/cache";
 import type { ReadingContextEntry } from "@/components/ReadingContext";
-import type { PreachingInspirationData } from "@/components/PreachingInspiration";
+import type { PreachingInspirationData, CzechZapasInsight } from "@/components/PreachingInspiration";
 
 const CONTEXT_CACHE_KEY = "ccsh-context-cache";
 const ANNOTATE_CACHE_KEY = "ccsh-annotate-cache";
 const POSTILY_CACHE_KEY = "ccsh-postily-cache";
+const CZ_CACHE_KEY = "ccsh-czech-zapas-cache";
 
 /**
  * Hook that manages AI-generated data (context, postily, annotations).
@@ -34,6 +35,13 @@ export function useAIData(
   });
   const [isLoadingPostily, setIsLoadingPostily] = useState(false);
 
+  // --- Czech Zápas ---
+  const [czData, setCzData] = useState<{ czech_zapas: CzechZapasInsight[] } | null>(() => {
+    if (sundayTitle) return loadCache<{ czech_zapas: CzechZapasInsight[] }>(CZ_CACHE_KEY, sundayTitle);
+    return null;
+  });
+  const [isLoadingCz, setIsLoadingCz] = useState(false);
+
   // --- Annotate ---
   const [annotatedMarkdown, setAnnotatedMarkdown] = useState<string | null>(() => {
     if (sundayTitle) return loadCache<string>(ANNOTATE_CACHE_KEY, sundayTitle);
@@ -46,6 +54,7 @@ export function useAIData(
     if (invalidationEpoch === 0) return; // skip initial render
     setContextData(null);
     setPostilyData(null);
+    setCzData(null);
     setAnnotatedMarkdown(null);
   }, [invalidationEpoch]);
 
@@ -118,6 +127,42 @@ export function useAIData(
     fetchPostily();
   }, [markdown, sundayTitle, invalidationEpoch]);
 
+  // Fetch czech_zapas automatically
+  useEffect(() => {
+    if (!markdown || czData) return;
+
+    if (sundayTitle) {
+      const cached = loadCache<{ czech_zapas: CzechZapasInsight[] }>(CZ_CACHE_KEY, sundayTitle);
+      if (cached) {
+        setCzData(cached);
+        return;
+      }
+    }
+
+    const fetchCzechZapas = async () => {
+      setIsLoadingCz(true);
+      try {
+        const { supabase } = await import("@/integrations/supabase/client");
+        const { data, error } = await supabase.functions.invoke("annotate-reading", {
+          body: { text: markdown, mode: "czech_zapas", liturgicalContext: sundayTitle },
+        });
+        if (error) throw error;
+        const czResult = data?.czech_zapas;
+        const czArray = Array.isArray(czResult) ? czResult : czResult?.czech_zapas;
+        if (czArray && czArray.length > 0) {
+          const normalized = { czech_zapas: czArray };
+          setCzData(normalized);
+          if (sundayTitle) saveCache(CZ_CACHE_KEY, sundayTitle, normalized);
+        }
+      } catch (e) {
+        console.error("Czech zapas fetch error:", e);
+      } finally {
+        setIsLoadingCz(false);
+      }
+    };
+    fetchCzechZapas();
+  }, [markdown, sundayTitle, invalidationEpoch]);
+
   // Toggle annotations on demand
   const handleAnnotate = useCallback(async () => {
     if (!markdown || isAnnotating) return;
@@ -156,6 +201,8 @@ export function useAIData(
     isLoadingContext,
     postilyData,
     isLoadingPostily,
+    czData,
+    isLoadingCz,
     annotatedMarkdown,
     isAnnotating,
     handleAnnotate,

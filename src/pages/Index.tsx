@@ -19,6 +19,7 @@ const Index = () => {
   const {
     contextData, isLoadingContext,
     postilyData, isLoadingPostily,
+    czData, isLoadingCz,
     annotatedMarkdown, isAnnotating, handleAnnotate,
   } = useAIData(markdown, sundayTitle, invalidationEpoch);
 
@@ -163,13 +164,14 @@ const Index = () => {
                   onOpenChange={setIsGuideOpen}
                   initialIndex={activeReadingIndex}
                   onOpenInspiration={() => setIsInspirationOpen(true)}
-                  hasInspiration={!!postilyData}
+                  hasInspiration={!!postilyData || !!czData}
                 />
               )}
 
-              {postilyData && (
+              {(postilyData || czData) && (
                 <PreachingInspiration
                   data={postilyData}
+                  czData={czData}
                   open={isInspirationOpen}
                   onOpenChange={setIsInspirationOpen}
                 />
@@ -188,8 +190,8 @@ const Index = () => {
                   hasGuide={!!contextData}
                   isLoadingGuide={isLoadingContext}
                   onOpenInspiration={() => { trackEvent("open_inspiration"); setIsInspirationOpen(true); }}
-                  hasInspiration={!!postilyData}
-                  isLoadingInspiration={isLoadingPostily}
+                  hasInspiration={!!postilyData || !!czData}
+                  isLoadingInspiration={isLoadingPostily || isLoadingCz}
                 />
 
                 {/* Section progress indicator */}

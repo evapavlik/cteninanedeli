@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildTheologicalContext, buildContextPrompt, ANNOTATE_SYSTEM_PROMPT } from "../_shared/corpus.ts";
-import { findMatchingPostily } from "../_shared/postily.ts";
-import { buildPostilyPrompt, formatPostilyContext } from "../_shared/prompts.ts";
+import { findMatchingPostily, findMatchingCzechZapas } from "../_shared/postily.ts";
+import { buildPostilyPrompt, formatPostilyContext, buildCzechZapasPrompt, formatCzechZapasContext } from "../_shared/prompts.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -257,7 +257,16 @@ Deno.serve(async (req) => {
       addLog(`Warning: could not load postily — ${(e as Error).message}`);
     }
 
-    async function generateAndCache(mode: "context" | "annotate" | "postily") {
+    // Try to find matching modern Český zápas articles
+    let czMatches: Awaited<ReturnType<typeof findMatchingCzechZapas>> = [];
+    try {
+      czMatches = await findMatchingCzechZapas(supabase, readingsMarkdown, sundayTitle);
+      addLog(`Found ${czMatches.length} Czech zápas article(s)`);
+    } catch (e) {
+      addLog(`Warning: could not load czech_zapas — ${(e as Error).message}`);
+    }
+
+    async function generateAndCache(mode: "context" | "annotate" | "postily" | "czech_zapas") {
       const { data: existing } = await supabase
         .from("ai_cache")
         .select("id")
@@ -291,6 +300,15 @@ Deno.serve(async (req) => {
         const topMatches = postilyMatches.slice(0, 2);
         const postilyContext = formatPostilyContext(topMatches);
         systemPrompt = buildPostilyPrompt(postilyContext);
+        isJson = true;
+      } else if (mode === "czech_zapas") {
+        if (czMatches.length === 0) {
+          addLog(`Skipping "${mode}" — no matching Czech zápas articles`);
+          return;
+        }
+        const topCzMatches = czMatches.slice(0, 2);
+        const czContext = formatCzechZapasContext(topCzMatches);
+        systemPrompt = buildCzechZapasPrompt(czContext, farskySnippet);
         isJson = true;
       } else {
         systemPrompt = ANNOTATE_SYSTEM_PROMPT;
@@ -349,6 +367,7 @@ Deno.serve(async (req) => {
       generateAndCache("context"),
       generateAndCache("annotate"),
       generateAndCache("postily"),
+      generateAndCache("czech_zapas"),
     ]);
 
     addLog("Warm-cache complete ✓");

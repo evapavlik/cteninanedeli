@@ -61,6 +61,13 @@ export default function AdminImport() {
     try {
       const pdfText = await extractPdfText(file);
 
+      // DEBUG — remove after diagnosis
+      const nadIdx = pdfText.toLowerCase().indexOf("nad");
+      console.log("[import] total chars:", pdfText.length);
+      console.log("[import] text around 'nad' (±200 chars):\n",
+        nadIdx >= 0 ? pdfText.slice(Math.max(0, nadIdx - 50), nadIdx + 200) : "(not found)");
+      console.log("[import] first 500 chars:\n", pdfText.slice(0, 500));
+
       const { data, error: fnError } = await supabase.functions.invoke("import-czech-zapas", {
         body: { pdfText, year: yearNum, issueNumber: issueNum },
       });

@@ -24,6 +24,7 @@ export default function AdminImport() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [debugText, setDebugText] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -57,9 +58,11 @@ export default function AdminImport() {
       return;
     }
 
+    setDebugText(null);
     setLoading(true);
     try {
       const pdfText = await extractPdfText(file);
+      setDebugText(pdfText.slice(0, 800));
 
       const { data, error: fnError } = await supabase.functions.invoke("import-czech-zapas", {
         body: { pdfText, year: yearNum, issueNumber: issueNum },
@@ -156,9 +159,21 @@ export default function AdminImport() {
 
           {/* Error */}
           {error && (
-            <div className="flex items-start gap-2 text-sm text-red-600 bg-red-50 dark:bg-red-950/30 dark:text-red-400 rounded-lg px-3 py-2">
-              <XCircle className="h-4 w-4 mt-0.5 shrink-0" />
-              {error}
+            <div className="space-y-2">
+              <div className="flex items-start gap-2 text-sm text-red-600 bg-red-50 dark:bg-red-950/30 dark:text-red-400 rounded-lg px-3 py-2">
+                <XCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                {error}
+              </div>
+              {debugText && (
+                <div className="space-y-1">
+                  <p className="text-xs text-foreground/40">Extrahovaný text (prvních 800 znaků) — zkopíruj a pošli vývojáři:</p>
+                  <textarea
+                    readOnly
+                    value={debugText}
+                    className="w-full h-40 text-xs font-mono px-2 py-1.5 rounded border border-border bg-muted resize-none"
+                  />
+                </div>
+              )}
             </div>
           )}
 

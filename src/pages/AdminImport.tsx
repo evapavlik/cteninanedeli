@@ -95,7 +95,15 @@ export default function AdminImport() {
         body: payload,
       });
 
-      if (fnError) throw new Error(fnError.message);
+      if (fnError) {
+        let msg = fnError.message;
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const body = await (fnError as any).context?.json?.();
+          if (body?.error) msg = body.error;
+        } catch { /* ignore parse errors */ }
+        throw new Error(msg);
+      }
       setResult(data as ImportResult);
     } catch (err) {
       setError((err as Error).message);

@@ -110,7 +110,7 @@ scripts/
 - **biblical-refs.ts** je single source of truth pro normalizaci biblických odkazů — netvořit kopie
 - **CACHE_VERSION** v `src/lib/cache.ts` — při změně struktury cache zvýšit
 - **Lovable** se občas používá na prototypy — může přidat UI komponenty zpět do `src/components/ui/`, je to normální
-- Edge funkce běží v **Deno** (ne Node) — importy přes URL, ne npm
+- Edge funkce běží v **Deno** (ne Node) — importy přes URL, ne npm. Bundle limit ~20 MB (Deno Deploy) — velké npm balíčky (pdfjs-dist, sharp…) způsobí deploy error. Těžká výpočetní zátěž (PDF parsing, zpracování obrázků) patří do prohlížeče, ne do edge funkce.
 
 ## Supabase
 
@@ -139,6 +139,7 @@ Projekt běží na vlastní infrastruktuře — **Vercel** (frontend) + **vlastn
 - **Diskuse před implementací:** Eva ráda probere možnosti, než se pustí do kódu. Často začíná brainstormingem. Neptej se hned na technické detaily — nejdřív pomoz prozkoumat nápady.
 - **Produkt > kód:** Eva přemýšlí z pohledu uživatele (lektoři, kazatelé CČSH), ne z pohledu vývojáře. Při vysvětlování mluv o tom, co uživatel uvidí, ne o implementačních detailech.
 - **Ověřuj před odpovědí:** Než odpovíš na technickou otázku, ověř si fakta v kódu. Neodpovídej z paměti — přečti si relevantní soubor. Typické chyby z minulosti: tvrzení o tom, jak funguje cache (plní se cronem, ne on-demand), tvrzení že export nemá smysl (měl), opakované ptaní se na věci, které jsme už vyřešili. Radši řekni „ověřím" než abys střílel od boku.
+- **Architektura respektuje deployment kontext:** Před volbou knihovny nebo přístupu zkontroluj, kde kód poběží a jaká jsou tam omezení (bundle size pro edge funkce, API rate limity, runtime rozdíly). Předvídatelná omezení se řeší v návrhu, ne po deploy failuře. Typický příklad: pdfjs-dist v edge funkci → 31 MB bundle → limit překročen → zbytečná iterace.
 - **Iterativní přístup:** Pracujeme po krocích — plán → schválení → implementace → ověření. Nedělej velké změny bez odsouhlasení.
 - **Vývojářští kamarádi:** Eva má kolem sebe vývojáře, kteří jí radí s technickými věcmi. Občas přijde s jejich nápady. Beri to jako validní vstup.
 - **Učení se:** Eva se chce v technologiích neustále zlepšovat. Při vysvětlování přidej krátké „proč" — vysvětli principy, ne jen řešení. Nebuď přednáškový, ale posunuj znalosti krok za krokem.

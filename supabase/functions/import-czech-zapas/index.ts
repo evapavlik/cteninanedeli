@@ -1,15 +1,14 @@
 /**
  * import-czech-zapas — Edge Function
  *
- * Přijme PDF čísla Českého zápasu (jako base64 nebo veřejnou URL),
- * deterministicky najde sekci "Nad písmem" a uloží kázání do tabulky
- * czech_zapas_articles. Nevyžaduje žádné AI / Gemini.
+ * Accepts plain text of a Český zápas issue (extracted client-side),
+ * deterministically finds the "Nad písmem" section and saves the sermon
+ * to the czech_zapas_articles table. No AI / Gemini / large dependencies.
  *
  * POST /import-czech-zapas
  * {
- *   pdfBase64?: string,   // PDF soubor jako base64
- *   pdfUrl?:   string,   // veřejná URL PDF souboru
- *   year:      number,
+ *   pdfText:     string,  // plain text extracted from PDF (client-side via pdfjs-dist)
+ *   year:        number,
  *   issueNumber: number,
  * }
  */
@@ -21,32 +20,6 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-/** Extrahuje plain text z PDF (base64) pomocí pdfjs-dist */
-async function extractPdfText(base64: string): Promise<string> {
-  // Dekódujeme base64 → Uint8Array
-  const binary = atob(base64);
-  const data = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) data[i] = binary.charCodeAt(i);
-
-  // pdfjs-dist – legacy build funguje v Deno bez workerů
-  // deno-lint-ignore no-explicit-any
-  const pdfjsLib: any = await import("npm:pdfjs-dist/legacy/build/pdf.mjs");
-  pdfjsLib.GlobalWorkerOptions.workerSrc = "";
-
-  const pdf = await pdfjsLib.getDocument({ data, disableFontFace: true }).promise;
-  const pages: string[] = [];
-
-  for (let p = 1; p <= pdf.numPages; p++) {
-    const page = await pdf.getPage(p);
-    const content = await page.getTextContent();
-    // deno-lint-ignore no-explicit-any
-    const pageText = content.items.map((item: any) => item.str).join(" ");
-    pages.push(pageText);
-  }
-
-  return pages.join("\n");
-}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -60,9 +33,8 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { pdfBase64, pdfUrl, year, issueNumber } = body as {
-      pdfBase64?: string;
-      pdfUrl?: string;
+    const { pdfText, year, issueNumber } = body as {
+      pdfText: string;
       year: number;
       issueNumber: number;
     };
@@ -74,41 +46,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Resolve PDF base64
-    let b64 = pdfBase64;
-
-    if (!b64 && pdfUrl) {
-      const dlRes = await fetch(pdfUrl, {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-          "Accept": "application/pdf,*/*",
-        },
-      });
-      if (!dlRes.ok) {
-        throw new Error(`Nepodařilo se stáhnout PDF: HTTP ${dlRes.status}`);
-      }
-      const arrayBuffer = await dlRes.arrayBuffer();
-      const bytes = new Uint8Array(arrayBuffer);
-      let binary = "";
-      const chunkSize = 8192;
-      for (let i = 0; i < bytes.length; i += chunkSize) {
-        binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
-      }
-      b64 = btoa(binary);
-    }
-
-    if (!b64) {
-      return new Response(JSON.stringify({ error: "Chybí pdfBase64 nebo pdfUrl" }), {
+    if (!pdfText?.trim()) {
+      return new Response(JSON.stringify({ error: "Chybí pdfText" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Extrahujeme text z PDF
-    const pdfText = await extractPdfText(b64);
-
-    // Deterministicky parsujeme sekci "Nad písmem"
+    // Deterministically parse the "Nad písmem" section
     const article = parseNadPismem(pdfText, year, issueNumber);
 
     if (!article) {
@@ -168,12 +113,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         imported: 1,
         skipped: 0,
-        articles: [{
-          title: article.title,
-          author: article.author,
-          refs: article.biblical_references,
-          ok: true,
-        }],
+        articles: [{ title: article.title, author: article.author, refs: article.biblical_references, ok: true }],
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );

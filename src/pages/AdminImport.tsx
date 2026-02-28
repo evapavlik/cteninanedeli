@@ -1,8 +1,6 @@
 import { useState, useRef } from "react";
-import { Upload, Link, FileText, CheckCircle, XCircle, Loader2, BookOpen } from "lucide-react";
+import { Upload, FileText, CheckCircle, XCircle, Loader2, BookOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-
-type InputMode = "file" | "url";
 
 interface ImportedArticle {
   title: string;
@@ -25,10 +23,30 @@ function detectYearAndIssue(filename: string): { year: string; issue: string } |
   return null;
 }
 
+/** Extracts plain text from a PDF File using pdfjs-dist (runs in browser). */
+async function extractPdfText(file: File): Promise<string> {
+  // Dynamic import keeps pdfjs-dist out of the main bundle
+  const pdfjsLib = await import("pdfjs-dist");
+  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+    "pdfjs-dist/build/pdf.worker.min.mjs",
+    import.meta.url,
+  ).toString();
+
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+
+  const pages: string[] = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    pages.push(content.items.map((item: any) => item.str ?? "").join(" "));
+  }
+  return pages.join("\n");
+}
+
 export default function AdminImport() {
-  const [mode, setMode] = useState<InputMode>("file");
   const [file, setFile] = useState<File | null>(null);
-  const [url, setUrl] = useState("");
   const [year, setYear] = useState("");
   const [issue, setIssue] = useState("");
   const [loading, setLoading] = useState(false);
@@ -62,35 +80,17 @@ export default function AdminImport() {
       setError("Zadejte prosím ročník a číslo.");
       return;
     }
-    if (mode === "file" && !file) {
+    if (!file) {
       setError("Vyberte prosím PDF soubor.");
-      return;
-    }
-    if (mode === "url" && !url.trim()) {
-      setError("Zadejte prosím URL PDF.");
       return;
     }
 
     setLoading(true);
     try {
-      const payload: Record<string, unknown> = {
-        year: yearNum,
-        issueNumber: issueNum,
-      };
-
-      if (mode === "file" && file) {
-        const buffer = await file.arrayBuffer();
-        const bytes = new Uint8Array(buffer);
-        // Convert to base64
-        let binary = "";
-        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-        payload.pdfBase64 = btoa(binary);
-      } else {
-        payload.pdfUrl = url.trim();
-      }
+      const pdfText = await extractPdfText(file);
 
       const { data, error: fnError } = await supabase.functions.invoke("import-czech-zapas", {
-        body: payload,
+        body: { pdfText, year: yearNum, issueNumber: issueNum },
       });
 
       if (fnError) {
@@ -125,75 +125,34 @@ export default function AdminImport() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
 
-          {/* Input mode toggle */}
-          <div className="flex rounded-lg border border-border overflow-hidden text-sm">
-            <button
-              type="button"
-              onClick={() => { setMode("file"); setError(null); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 transition-colors ${
-                mode === "file"
-                  ? "bg-foreground text-background"
-                  : "bg-background text-foreground/60 hover:text-foreground"
-              }`}
+          {/* PDF file upload */}
+          <div>
+            <label className="block text-sm font-medium mb-2">PDF soubor</label>
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-foreground/40 transition-colors"
             >
-              <Upload className="h-4 w-4" />
-              Nahrát soubor
-            </button>
-            <button
-              type="button"
-              onClick={() => { setMode("url"); setError(null); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 transition-colors ${
-                mode === "url"
-                  ? "bg-foreground text-background"
-                  : "bg-background text-foreground/60 hover:text-foreground"
-              }`}
-            >
-              <Link className="h-4 w-4" />
-              Zadat URL
-            </button>
+              {file ? (
+                <div className="flex items-center justify-center gap-2 text-sm">
+                  <FileText className="h-5 w-5 text-foreground/60" />
+                  <span className="font-medium">{file.name}</span>
+                  <span className="text-foreground/40">({(file.size / 1024 / 1024).toFixed(1)} MB)</span>
+                </div>
+              ) : (
+                <div className="text-foreground/50 text-sm">
+                  <Upload className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                  Klikni nebo přetáhni PDF soubor
+                </div>
+              )}
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,application/pdf"
+              onChange={handleFileChange}
+              className="hidden"
+            />
           </div>
-
-          {/* PDF input */}
-          {mode === "file" ? (
-            <div>
-              <label className="block text-sm font-medium mb-2">PDF soubor</label>
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-foreground/40 transition-colors"
-              >
-                {file ? (
-                  <div className="flex items-center justify-center gap-2 text-sm">
-                    <FileText className="h-5 w-5 text-foreground/60" />
-                    <span className="font-medium">{file.name}</span>
-                    <span className="text-foreground/40">({(file.size / 1024 / 1024).toFixed(1)} MB)</span>
-                  </div>
-                ) : (
-                  <div className="text-foreground/50 text-sm">
-                    <Upload className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                    Klikni nebo přetáhni PDF soubor
-                  </div>
-                )}
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,application/pdf"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-            </div>
-          ) : (
-            <div>
-              <label className="block text-sm font-medium mb-2">URL PDF souboru</label>
-              <input
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://www.ccsh.cz/..."
-                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-foreground/20"
-              />
-            </div>
-          )}
 
           {/* Year + Issue */}
           <div className="grid grid-cols-2 gap-4">

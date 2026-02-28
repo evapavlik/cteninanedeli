@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { Upload, FileText, CheckCircle, XCircle, Loader2, BookOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { extractPdfText, detectYearAndIssue } from "@/lib/pdf-extract";
 
 interface ImportedArticle {
   title: string;
@@ -14,35 +15,6 @@ interface ImportResult {
   skipped: number;
   articles: ImportedArticle[];
   message?: string;
-}
-
-function detectYearAndIssue(filename: string): { year: string; issue: string } | null {
-  const base = filename.replace(/\.pdf$/i, "").replace(/^.*[\\/]/, "");
-  const m = base.match(/(\d{4})[-_.]?(\d{1,2})/);
-  if (m) return { year: m[1], issue: m[2] };
-  return null;
-}
-
-/** Extracts plain text from a PDF File using pdfjs-dist (runs in browser). */
-async function extractPdfText(file: File): Promise<string> {
-  // Dynamic import keeps pdfjs-dist out of the main bundle
-  const pdfjsLib = await import("pdfjs-dist");
-  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-    "pdfjs-dist/build/pdf.worker.min.mjs",
-    import.meta.url,
-  ).toString();
-
-  const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
-
-  const pages: string[] = [];
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    pages.push(content.items.map((item: any) => item.str ?? "").join(" "));
-  }
-  return pages.join("\n");
 }
 
 export default function AdminImport() {

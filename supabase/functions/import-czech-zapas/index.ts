@@ -2,8 +2,8 @@
  * import-czech-zapas — Edge Function
  *
  * Přijme PDF čísla Českého zápasu (jako base64 nebo veřejnou URL),
- * nechá Gemini AI rozložit ho na jednotlivé články a uloží je do tabulky
- * czech_zapas_articles.
+ * deterministicky najde sekci "Nad písmem" a uloží kázání do tabulky
+ * czech_zapas_articles. Nevyžaduje žádné AI / Gemini.
  *
  * POST /import-czech-zapas
  * {
@@ -11,116 +11,46 @@
  *   pdfUrl?:   string,   // veřejná URL PDF souboru
  *   year:      number,
  *   issueNumber: number,
- *   hint?:     string    // pokyn pro AI: kde v čísle hledat (str., téma, autor...)
  * }
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { parseNadPismem } from "../_shared/czech-zapas-parser.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface Article {
-  title: string;
-  author: string | null;
-  content_type: "kazani" | "clanek" | "komentar";
-  liturgical_context: string | null;
-  biblical_refs_raw: string | null;
-  content: string;
-}
+/** Extrahuje plain text z PDF (base64) pomocí pdfjs-dist */
+async function extractPdfText(base64: string): Promise<string> {
+  // Dekódujeme base64 → Uint8Array
+  const binary = atob(base64);
+  const data = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) data[i] = binary.charCodeAt(i);
 
-/** Gemini multimodal call — přečte PDF a vrátí pole článků */
-async function segmentPdf(
-  pdfBase64: string,
-  year: number,
-  issueNumber: number,
-  hint: string | undefined,
-  geminiKey: string,
-): Promise<Article[]> {
-  const hintSection = hint
-    ? `\nPOKYN (zaměř se zejména na toto): ${hint}\n`
-    : "";
+  // pdfjs-dist – legacy build funguje v Deno bez workerů
+  // deno-lint-ignore no-explicit-any
+  const pdfjsLib: any = await import("npm:pdfjs-dist/legacy/build/pdf.mjs");
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "";
 
-  const prompt =
-    `Jsi asistent pro zpracování textů z týdeníku Český zápas (CČSH - Církev československá husitská).
-Toto je číslo ${issueNumber}/${year}.
-${hintSection}
-Identifikuj jednotlivé OBSAHOVÉ články a vrať je jako JSON pole.
-Zahrň pouze:
-- kázání / promluvy / homilie  → content_type: "kazani"
-- teologické a duchovní články → content_type: "clanek"
-- komentáře k čtením / zamyšlení → content_type: "komentar"
+  const pdf = await pdfjsLib.getDocument({ data, disableFontFace: true }).promise;
+  const pages: string[] = [];
 
-VYNECH: redakční oznámení, inzeráty, zprávy ze sborů, personální oznámení, záhlaví stránek, obsah čísla.
-
-Pro každý článek vrať JSON objekt:
-{
-  "title": "Přesný název článku",
-  "author": "Jméno autora nebo null",
-  "content_type": "kazani" nebo "clanek" nebo "komentar",
-  "liturgical_context": "Název neděle nebo svátku (např. '2. neděle postní') nebo null",
-  "biblical_refs_raw": "Biblický odkaz z záhlaví článku nebo null (např. 'Mt 4,1-11')",
-  "content": "Celý text článku doslova, bez záhlaví a zápatí stránek"
-}
-
-Vrať POUZE JSON pole. Pokud nenajdeš žádný vhodný článek, vrať [].`;
-
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [
-              { inline_data: { mime_type: "application/pdf", data: pdfBase64 } },
-              { text: prompt },
-            ],
-          },
-        ],
-        generationConfig: { response_mime_type: "application/json" },
-      }),
-    },
-  );
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`Gemini PDF API error ${res.status}: ${body.substring(0, 200)}`);
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    // deno-lint-ignore no-explicit-any
+    const pageText = content.items.map((item: any) => item.str).join(" ");
+    pages.push(pageText);
   }
 
-  const data = await res.json();
-  const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "[]";
-
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : (parsed.articles ?? parsed.clanky ?? []);
-  } catch {
-    throw new Error(`Gemini vrátil nevalidní JSON: ${raw.substring(0, 300)}`);
-  }
-}
-
-/** Normalizuje biblické reference z výstupu segmentPdf — bez dalšího API volání */
-function extractBiblicalRefs(rawRef: string | null | undefined): string[] {
-  if (!rawRef?.trim()) return [];
-  // Gemini může vrátit čárkou oddělený seznam nebo jeden odkaz
-  return rawRef.split(/[;,]/).map((r) => r.trim()).filter(Boolean);
+  return pages.join("\n");
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
-  }
-
-  const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY");
-  if (!GEMINI_KEY) {
-    return new Response(JSON.stringify({ error: "GEMINI_API_KEY není nastaveno" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
   }
 
   const supabase = createClient(
@@ -130,12 +60,11 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { pdfBase64, pdfUrl, year, issueNumber, hint } = body as {
+    const { pdfBase64, pdfUrl, year, issueNumber } = body as {
       pdfBase64?: string;
       pdfUrl?: string;
       year: number;
       issueNumber: number;
-      hint?: string;
     };
 
     if (!year || !issueNumber) {
@@ -149,7 +78,6 @@ Deno.serve(async (req) => {
     let b64 = pdfBase64;
 
     if (!b64 && pdfUrl) {
-      // Download PDF from URL
       const dlRes = await fetch(pdfUrl, {
         headers: {
           "User-Agent":
@@ -177,12 +105,20 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Segment PDF into articles
-    const rawArticles = await segmentPdf(b64, year, issueNumber, hint, GEMINI_KEY);
+    // Extrahujeme text z PDF
+    const pdfText = await extractPdfText(b64);
 
-    if (rawArticles.length === 0) {
+    // Deterministicky parsujeme sekci "Nad písmem"
+    const article = parseNadPismem(pdfText, year, issueNumber);
+
+    if (!article) {
       return new Response(
-        JSON.stringify({ imported: 0, skipped: 0, articles: [], message: "Gemini nenašel žádné vhodné články." }),
+        JSON.stringify({
+          imported: 0,
+          skipped: 0,
+          articles: [],
+          message: "Sekce „Nad písmem" nebyla v PDF nalezena.",
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -194,54 +130,51 @@ Deno.serve(async (req) => {
       .order("article_number", { ascending: false })
       .limit(1)
       .maybeSingle();
-    let nextNum = (lastRow?.article_number ?? 0) + 1;
+    const nextNum = (lastRow?.article_number ?? 0) + 1;
 
     const sourceRef = `Český zápas, ročník ${year}, číslo ${issueNumber}`;
-    const results: Array<{ title: string; author: string | null; refs: string[]; ok: boolean }> = [];
-    let imported = 0;
-    let skipped = 0;
 
-    for (const article of rawArticles) {
-      if (!article.title || !article.content) {
-        skipped++;
-        results.push({ title: article.title ?? "(bez názvu)", author: null, refs: [], ok: false });
-        continue;
-      }
+    const row = {
+      article_number: nextNum,
+      title: article.title,
+      author: article.author ?? null,
+      biblical_references: article.biblical_references,
+      biblical_refs_raw: article.biblical_refs_raw ?? null,
+      liturgical_context: article.liturgical_context ?? null,
+      content_type: article.content_type,
+      year,
+      issue_number: issueNumber,
+      source_ref: sourceRef,
+      content: article.content,
+      is_active: true,
+    };
 
-      // Extract biblical references (z výstupu segmentPdf, bez extra API volání)
-      const refs = extractBiblicalRefs(article.biblical_refs_raw);
+    const { error } = await supabase
+      .from("czech_zapas_articles")
+      .upsert(row, { onConflict: "article_number" });
 
-      const row = {
-        article_number: nextNum,
-        title: article.title,
-        author: article.author ?? null,
-        biblical_references: refs,
-        biblical_refs_raw: article.biblical_refs_raw ?? null,
-        liturgical_context: article.liturgical_context ?? null,
-        content_type: article.content_type ?? "kazani",
-        year,
-        issue_number: issueNumber,
-        source_ref: sourceRef,
-        content: article.content,
-        is_active: true,
-      };
-
-      const { error } = await supabase
-        .from("czech_zapas_articles")
-        .upsert(row, { onConflict: "article_number" });
-
-      if (error) {
-        skipped++;
-        results.push({ title: article.title, author: article.author ?? null, refs, ok: false });
-      } else {
-        imported++;
-        nextNum++;
-        results.push({ title: article.title, author: article.author ?? null, refs, ok: true });
-      }
+    if (error) {
+      return new Response(
+        JSON.stringify({
+          imported: 0,
+          skipped: 1,
+          articles: [{ title: article.title, author: article.author, refs: article.biblical_references, ok: false }],
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     return new Response(
-      JSON.stringify({ imported, skipped, articles: results }),
+      JSON.stringify({
+        imported: 1,
+        skipped: 0,
+        articles: [{
+          title: article.title,
+          author: article.author,
+          refs: article.biblical_references,
+          ok: true,
+        }],
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {

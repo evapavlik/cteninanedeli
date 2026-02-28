@@ -1,6 +1,6 @@
 /**
  * import-czech-zapas.mjs
- * Importuje články z Českého zápasu do Supabase tabulky `czech_zapas_articles`.
+ * Importuje kázání z Českého zápasu do Supabase tabulky `czech_zapas_articles`.
  *
  * Použití:
  *   node scripts/import-czech-zapas.mjs <soubor.json>
@@ -16,18 +16,18 @@
  *     "issue_number": 12,
  *     "content_type": "kazani",          // "kazani" | "clanek" | "komentar"
  *     "liturgical_context": "2. neděle postní",  // nebo null
- *     "biblical_refs_raw": "Mt 4,1-11",   // nebo null — AI doplní z textu
+ *     "biblical_refs_raw": "Mt 4,1-11",   // nebo null
  *     "content": "Plný text článku..."
  *   }
  * ]
  *
- * Formát PDF: celé číslo Českého zápasu. AI automaticky rozloží na jednotlivé články.
+ * Formát PDF: celé číslo Českého zápasu. Skript deterministicky najde sekci
+ * "Nad písmem" a importuje kázání — bez AI.
  * Rok a číslo se detekují z názvu souboru/URL (např. cz2024-12.pdf) nebo je zadejte ručně.
  *
  * Vyžaduje proměnné prostředí:
  *   VITE_SUPABASE_URL  — Supabase project URL
  *   SUPABASE_SERVICE_ROLE_KEY — service role key (pro zápis)
- *   GEMINI_API_KEY — pro extrakci biblických odkazů a segmentaci PDF (povinné pro PDF)
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -57,7 +57,6 @@ loadEnv();
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error("Chyba: VITE_SUPABASE_URL a SUPABASE_SERVICE_ROLE_KEY musí být nastaveny.");
@@ -112,130 +111,89 @@ async function extractTextFromPdf(filePathOrUrl) {
 }
 
 /**
- * Segmentuje text PDF čísla na jednotlivé články pomocí Gemini AI.
- * Vrátí pole článků připravených pro import.
+ * Extrahuje biblické reference z textu pomocí regexu.
+ * Vrátí pole odkazů, např. ["J 3,1-17", "Mt 4,1-11"]
  */
-async function segmentPdfToArticles(text, year, issueNumber) {
-  if (!GEMINI_API_KEY) {
-    console.error("Chyba: GEMINI_API_KEY musí být nastaveno pro zpracování PDF.");
-    process.exit(1);
+function parseBiblicalRefs(text) {
+  const refs = [];
+  const re = /\b([JRŽA-Z][a-záčďéěíňóřšťúůýž]{0,4})\s+(\d+),(\d+(?:[–-]\d+)?[abc]?)\b/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    refs.push(m[0]);
   }
-
-  // Gemini má limit ~1M tokenů; PDF Českého zápasu (~20 stran) by mělo vejít celé.
-  // Bezpečně ořežeme na 80 000 znaků.
-  const textChunk = text.length > 80000 ? text.substring(0, 80000) + "\n\n[TEXT ZKRÁCEN]" : text;
-
-  const prompt = `Jsi asistent pro zpracování textů z týdeníku Český zápas (CČSH - Církev československá husitská).
-Níže je text extrahovaný z PDF čísla ${issueNumber}/${year}.
-
-Identifikuj jednotlivé OBSAHOVÉ články a vrať je jako JSON pole. Zahrň pouze:
-- kázání / promluvy / homilie (content_type: "kazani")
-- teologické a duchovní články (content_type: "clanek")
-- komentáře k čtením / zamyšlení (content_type: "komentar")
-
-VYNECH: redakční oznámení, inzeráty, zprávy ze sborů, tabulky příspěvků, obsah čísla, záhlaví a zápatí stránek, personální oznámení, nekrology kratší než 200 slov.
-
-Pro každý článek vrať JSON objekt:
-{
-  "title": "Přesný název článku",
-  "author": "Jméno autora nebo null (pokud není uveden)",
-  "content_type": "kazani" nebo "clanek" nebo "komentar",
-  "liturgical_context": "Název neděle nebo svátku (např. '2. neděle postní', 'Hod Boží vánoční') nebo null",
-  "biblical_refs_raw": "Biblický odkaz citovaný v záhlaví/nadpisu článku nebo null",
-  "content": "Celý text článku doslova"
+  return refs;
 }
 
-Vrať POUZE JSON pole (bez markdown backticks, bez vysvětlení). Pokud nenajdeš žádný vhodný článek, vrať [].
-
-TEXT Z PDF:
-${textChunk}`;
-
-  console.log("  → Odesílám text Gemini AI k segmentaci na články...");
-
-  const res = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${GEMINI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "gemini-2.0-flash",
-      messages: [{ role: "user", content: prompt }],
-      response_format: { type: "json_object" },
-    }),
-  });
-
-  if (!res.ok) {
-    const errText = await res.text();
-    console.error(`  ✗ Gemini API error ${res.status}: ${errText.substring(0, 200)}`);
-    process.exit(1);
-  }
-
-  const data = await res.json();
-  const content = data.choices?.[0]?.message?.content || "[]";
-
-  try {
-    const parsed = JSON.parse(content);
-    // Gemini may return { articles: [...] } or just [...]
-    const articles = Array.isArray(parsed)
-      ? parsed
-      : (parsed.articles || parsed.items || parsed.clanek || parsed.clanky || []);
-
-    // Inject year and issue_number into every article
-    return articles.map((a) => ({
-      ...a,
-      year,
-      issue_number: issueNumber,
-    }));
-  } catch (e) {
-    console.error("  ✗ Nepodařilo se zparsovat odpověď Gemini:", content.substring(0, 300));
-    process.exit(1);
-  }
-}
+/** Řádky signalizující novou sekci CZ */
+const SECTION_BOUNDARY_RE =
+  /^(Ze\s+sbor|Z\s+teologie|Bohoslužb|Oznámen|Přehled|Rozhovor|Zpráv|Inzerce|Vydavatel|Ročník\s+\d|Nad\s+p[ií]smem|EDITORIAL|OBSAH|Na\s+okraj|Dopis|Ohlédnut)/i;
 
 /**
- * Extrahuje biblické reference z textu pomocí Gemini AI.
- * Vrátí pole normalizovaných odkazů, např. ["Mt 4,1-11", "Lk 9,28-36"]
+ * Deterministicky parsuje sekci "Nad písmem" z extrahovaného textu PDF.
+ * Nevyžaduje AI. Vrátí článek nebo null, pokud sekce není nalezena.
  */
-async function extractBiblicalRefs(text, rawRef) {
-  // If raw ref is explicitly provided and non-empty, try to parse it first
-  if (rawRef && rawRef.trim()) {
-    return [rawRef.trim()];
+function parseNadPismem(rawText, year, issueNumber) {
+  // Spojení dělení slov pomlčkou (časté při extrakci z PDF)
+  const text = rawText
+    .replace(/([a-záčďéěíňóřšťúůýž])-\n([a-záčďéěíňóřšťúůýž])/g, "$1$2")
+    .replace(/\r\n/g, "\n");
+
+  const lines = text.split("\n");
+
+  // Najít záhlaví sekce
+  const headerIdx = lines.findIndex((l) => /^nad\s+p[ií]smem\s*$/i.test(l.trim()));
+  if (headerIdx === -1) return null;
+
+  // První neprázdný řádek = název + biblická reference
+  let titleIdx = headerIdx + 1;
+  while (titleIdx < lines.length && lines[titleIdx].trim() === "") titleIdx++;
+  if (titleIdx >= lines.length) return null;
+
+  const titleLine = lines[titleIdx].trim();
+  const refsInTitle = parseBiblicalRefs(titleLine);
+  let title = titleLine;
+  let biblical_refs_raw = null;
+
+  if (refsInTitle.length > 0) {
+    const firstRefPos = titleLine.indexOf(refsInTitle[0]);
+    title = titleLine.substring(0, firstRefPos).trim();
+    biblical_refs_raw = refsInTitle.join("; ");
   }
 
-  if (!GEMINI_API_KEY) {
-    console.warn("  ⚠ GEMINI_API_KEY není nastaveno — biblical_refs zůstanou prázdné.");
-    return [];
+  // Sbíráme tělo článku
+  const bodyLines = [];
+  for (let i = titleIdx + 1; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+    if (trimmed.length > 0 && SECTION_BOUNDARY_RE.test(trimmed)) break;
+    bodyLines.push(lines[i]);
+    if (bodyLines.length >= 400) break;
   }
 
-  const prompt = `Z následujícího textu kázání/článku extrahuj všechny explicitní biblické reference (citáty nebo přímé odkazy na konkrétní verše). Vrať JSON pole řetězců ve formátu "Zkratka kap,verš" (např. "Mt 4,1-11", "Gn 12,1-4a", "Ř 8,28"). Pokud nejsou žádné explicitní reference, vrať prázdné pole []. Vrať POUZE JSON pole, žádný další text.\n\nTEXT:\n${text.substring(0, 3000)}`;
-
-  const res = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${GEMINI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "gemini-2.0-flash",
-      messages: [{ role: "user", content: prompt }],
-      response_format: { type: "json_object" },
-    }),
-  });
-
-  if (!res.ok) {
-    console.warn(`  ⚠ Gemini error ${res.status} — biblical_refs zůstanou prázdné.`);
-    return [];
+  while (bodyLines.length > 0 && bodyLines[bodyLines.length - 1].trim() === "") {
+    bodyLines.pop();
   }
 
-  const data = await res.json();
-  const content = data.choices?.[0]?.message?.content || "[]";
-  try {
-    const parsed = JSON.parse(content);
-    return Array.isArray(parsed) ? parsed : (parsed.refs || parsed.references || []);
-  } catch {
-    return [];
-  }
+  if (bodyLines.length === 0) return null;
+
+  const author = bodyLines[bodyLines.length - 1].trim() || null;
+  const content = bodyLines.slice(0, bodyLines.length - 1).join("\n").trim();
+
+  const liturgicalMatch = content.match(
+    /\b(\d+\.\s+ned[eě]l[ei]\s+\w+|Hod\s+Bo[žz][íi]\s+\w+|[Vv]elikonoční\s+ned[eě]l[ai]|[Pp]ůst[ní]*\s+ned[eě]l[ei])/,
+  );
+  const liturgical_context = liturgicalMatch ? liturgicalMatch[0].trim() : null;
+
+  return {
+    title,
+    author,
+    biblical_refs_raw,
+    biblical_references: refsInTitle,
+    content_type: "kazani",
+    liturgical_context,
+    content,
+    year,
+    issue_number: issueNumber,
+  };
 }
 
 /**
@@ -326,15 +284,16 @@ async function main() {
       process.exit(1);
     }
 
-    // Segment into articles using Gemini
-    articles = await segmentPdfToArticles(pdfText, year, issueNumber);
+    // Deterministicky parsujeme sekci "Nad písmem"
+    const parsed = parseNadPismem(pdfText, year, issueNumber);
 
-    if (!articles || articles.length === 0) {
-      console.log("  ⚠ Gemini nenašel žádné vhodné články v tomto PDF.");
+    if (!parsed) {
+      console.log("  ⚠ Sekce „Nad písmem" nebyla v PDF nalezena.");
       process.exit(0);
     }
 
-    console.log(`  → Gemini identifikoval ${articles.length} článků\n`);
+    articles = [parsed];
+    console.log(`  → Nalezena sekce „Nad písmem": „${parsed.title}"\n`);
 
   } else {
     // ── JSON mode ─────────────────────────────────────────────────────────
@@ -368,10 +327,11 @@ async function main() {
     console.log(`  [${nextNum}] ${article.title} (${sourceRef})`);
     if (article.author) console.log(`         Autor: ${article.author}`);
 
-    // Extract biblical references
-    process.stdout.write("    → Extrahuji biblické reference... ");
-    const refs = await extractBiblicalRefs(article.content, article.biblical_refs_raw);
-    console.log(refs.length > 0 ? refs.join(", ") : "(žádné nalezeny)");
+    // Biblical references — z názvu nebo z textu (regex)
+    const refs = article.biblical_references?.length
+      ? article.biblical_references
+      : parseBiblicalRefs(article.biblical_refs_raw || article.content?.substring(0, 500) || "");
+    console.log(`    → Biblické reference: ${refs.length > 0 ? refs.join(", ") : "(žádné nalezeny)"}`);
 
     const row = {
       article_number: nextNum,

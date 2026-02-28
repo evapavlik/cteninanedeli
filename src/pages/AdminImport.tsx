@@ -31,7 +31,6 @@ export default function AdminImport() {
   const [url, setUrl] = useState("");
   const [year, setYear] = useState("");
   const [issue, setIssue] = useState("");
-  const [hint, setHint] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -77,7 +76,6 @@ export default function AdminImport() {
       const payload: Record<string, unknown> = {
         year: yearNum,
         issueNumber: issueNum,
-        hint: hint.trim() || undefined,
       };
 
       if (mode === "file" && file) {
@@ -95,7 +93,15 @@ export default function AdminImport() {
         body: payload,
       });
 
-      if (fnError) throw new Error(fnError.message);
+      if (fnError) {
+        let msg = fnError.message;
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const body = await (fnError as any).context?.json?.();
+          if (body?.error) msg = body.error;
+        } catch { /* ignore parse errors */ }
+        throw new Error(msg);
+      }
       setResult(data as ImportResult);
     } catch (err) {
       setError((err as Error).message);
@@ -113,7 +119,7 @@ export default function AdminImport() {
           <BookOpen className="h-7 w-7 text-foreground/70" />
           <div>
             <h1 className="text-xl font-semibold">Import z Českého zápasu</h1>
-            <p className="text-sm text-foreground/50">Nahraj číslo CZ — AI rozloží na články a uloží do databáze</p>
+            <p className="text-sm text-foreground/50">Nahraj číslo CZ — automaticky najde sekci „Nad písmem" a uloží kázání</p>
           </div>
         </div>
 
@@ -217,23 +223,6 @@ export default function AdminImport() {
             </div>
           </div>
 
-          {/* Hint */}
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Pokyn pro AI <span className="text-foreground/40 font-normal">(volitelné)</span>
-            </label>
-            <p className="text-xs text-foreground/50 mb-2">
-              Popiš, kde v čísle kázání najít — strana, téma, autor, nedělní kontext...
-            </p>
-            <textarea
-              value={hint}
-              onChange={(e) => setHint(e.target.value)}
-              rows={3}
-              placeholder={`např. „Kázání na 2. neděli postní je na str. 3, autorka Jana Nováková, text Mt 4,1-11. Ostatní články ignoruj."`}
-              className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-foreground/20 resize-none"
-            />
-          </div>
-
           {/* Error */}
           {error && (
             <div className="flex items-start gap-2 text-sm text-red-600 bg-red-50 dark:bg-red-950/30 dark:text-red-400 rounded-lg px-3 py-2">
@@ -251,7 +240,7 @@ export default function AdminImport() {
             {loading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                AI zpracovává PDF...
+                Zpracovávám PDF...
               </>
             ) : (
               "Importovat"

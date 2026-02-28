@@ -188,7 +188,13 @@ Deno.serve(async (req) => {
         throw new Error(`Nepodařilo se stáhnout PDF: HTTP ${dlRes.status}`);
       }
       const arrayBuffer = await dlRes.arrayBuffer();
-      b64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      const bytes = new Uint8Array(arrayBuffer);
+      let binary = "";
+      const chunkSize = 8192;
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+      }
+      b64 = btoa(binary);
     }
 
     if (!b64) {

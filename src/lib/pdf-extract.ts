@@ -20,8 +20,16 @@ export async function extractPdfText(file: File): Promise<string> {
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    pages.push(content.items.map((item: any) => item.str ?? "").join(" "));
+    // Reconstruct line breaks using hasEOL — each TextItem knows whether
+    // the PDF renderer placed a line break after it. Without this, all text
+    // on a page merges into one long string and the parser can't find headings.
+    let pageText = "";
+    for (const item of content.items as Array<{ str?: string; hasEOL?: boolean }>) {
+      if (!item.str) continue;
+      pageText += item.str;
+      pageText += item.hasEOL ? "\n" : " ";
+    }
+    pages.push(pageText.trimEnd());
   }
   return pages.join("\n");
 }

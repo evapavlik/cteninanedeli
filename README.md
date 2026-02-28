@@ -49,7 +49,7 @@ cyklus.ccsh.cz
 | Frontend | React 18, TypeScript, Vite |
 | Styling | Tailwind CSS, shadcn/ui, Literata + Playfair Display SC |
 | Backend | Supabase (PostgreSQL, Edge Functions, pg_cron) |
-| AI | Google Gemini 3 Flash (přes Lovable AI gateway) |
+| AI | Google Gemini 2.0 Flash |
 | Scraping | Firecrawl |
 | PWA | vite-plugin-pwa + Workbox |
 | Testy | Vitest, Testing Library |

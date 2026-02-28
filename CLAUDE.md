@@ -61,10 +61,14 @@ Frontend → readings_cache → useReadings hook → useAIData hook → UI
 
 ```
 src/
-├── pages/Index.tsx              # Hlavní stránka (orchestrace)
+├── pages/
+│   ├── Index.tsx                # Hlavní stránka (orchestrace)
+│   └── NotFound.tsx             # 404 stránka
 ├── hooks/
 │   ├── useReadings.ts           # Fetch čtení + invalidace cache
-│   └── useAIData.ts             # AI data (context, postily, anotace)
+│   ├── useAIData.ts             # AI data (context, postily, anotace)
+│   ├── use-mobile.tsx           # Detekce mobilního breakpointu (768px)
+│   └── use-toast.ts             # Toast notifikace (stav)
 ├── components/
 │   ├── AnnotatedText.tsx        # Text se značkami pro přednes
 │   ├── ReadingToolbar.tsx       # Ovládací panel
@@ -72,12 +76,14 @@ src/
 │   ├── PreachingInspiration.tsx # Farského postily (bottom sheet)
 │   ├── LectorGuide.tsx          # 7 tipů pro lektory
 │   ├── SectionProgress.tsx      # Indikátor aktuálního čtení
-│   ├── AmbonMode.tsx            # Auto-scroll režim pro ambon
+│   ├── AmbonMode.tsx            # Auto-scroll režim pro ambon (zatím neintegrován)
 │   └── ui/                      # shadcn/ui (používá se jen 5: sheet, sonner, tooltip, toaster, toast)
 ├── lib/
 │   ├── cache.ts                 # Generický localStorage cache helper
+│   ├── utils.ts                 # cn() helper (clsx + tailwind-merge)
 │   ├── api/firecrawl.ts         # Stahování čtení
-│   └── analytics.ts             # Sledování událostí
+│   └── analytics.ts             # Sledování událostí (trackEvent)
+├── test/                        # Vitest testy (setup.ts, cache, ai-labels…)
 └── integrations/supabase/       # Klient + generované typy
 
 supabase/
@@ -123,6 +129,8 @@ Projekt běží na vlastní infrastruktuře — **Vercel** (frontend) + **vlastn
 - **Secrets:** GEMINI_API_KEY, FIRECRAWL_API_KEY (v Supabase)
 - **pg_cron:** warm-cache běží denně v 4:00 UTC
 - **Data:** migrace schématu (10 migrací), corpus, postily, readings_cache, ai_cache — vše importováno
+- **Analytics:** Vercel Web Analytics (`@vercel/analytics/react` v `src/App.tsx`)
+- **CI/CD:** GitHub Actions (`.github/workflows/deploy-edge-functions.yml`) — deploy edge funkcí při push do `main` (cesta `supabase/functions/**`), podporuje i ruční spuštění
 
 ## Spolupráce s Evou
 

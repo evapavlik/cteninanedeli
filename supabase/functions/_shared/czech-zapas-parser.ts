@@ -24,7 +24,7 @@ export interface ParsedArticle {
  * Pokrývá: J 3,1-17 · Mt 4,1-11 · Gn 12,1-4a · Ž 22,1 · Kor 1,18-31 atd.
  */
 const BIBLICAL_REF_RE =
-  /\b([JRŽA-Z][a-záčďéěíňóřšťúůýž]{0,4})\s+(\d+),(\d+(?:[–-]\d+)?[abc]?)\b/g;
+  /\b([JRŽA-Z][a-záčďéěíňóřšťúůýž]{0,4})\s+(\d+),(\d+(?:[-–]\d+)?[abc]?)\b/g;
 
 /** Extrahuje všechny biblické reference z textu */
 export function parseBiblicalRefs(text: string): string[] {
@@ -87,7 +87,12 @@ export function parseNadPismem(
   const bodyLines: string[] = [];
   for (let i = titleIdx + 1; i < lines.length; i++) {
     const trimmed = lines[i].trim();
-    if (trimmed.length > 0 && SECTION_BOUNDARY_RE.test(trimmed)) break;
+    // Nadpis sekce nikdy neobsahuje tečku uprostřed ("rozhovor. Hned…" je tělo, ne sekce)
+    const looksLikeSectionHeader =
+      trimmed.length > 0 &&
+      SECTION_BOUNDARY_RE.test(trimmed) &&
+      !/\.\s/.test(trimmed);
+    if (looksLikeSectionHeader) break;
     bodyLines.push(lines[i]);
     if (bodyLines.length >= 400) break; // bezpečnostní limit
   }
@@ -99,9 +104,23 @@ export function parseNadPismem(
 
   if (bodyLines.length === 0) return null;
 
-  // Poslední neprázdný řádek = podpis autora
-  const author = bodyLines[bodyLines.length - 1].trim() || null;
-  const content = bodyLines.slice(0, bodyLines.length - 1).join("\n").trim();
+  // Poslední neprázdný řádek = podpis autora.
+  // Někdy je autor na stejném řádku jako závěrečná věta: "také uvěřili. Lucie Haltofová"
+  // — detekujeme to a rozdělíme.
+  const lastBodyLine = bodyLines[bodyLines.length - 1].trim();
+  const NAME_SUFFIX_RE =
+    /^(.+[.!?…])\s+([A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž]+(?:\s+[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž]+){1,3})\s*$/;
+  const nameSuffixMatch = NAME_SUFFIX_RE.exec(lastBodyLine);
+
+  let author: string | null;
+  let content: string;
+  if (nameSuffixMatch) {
+    author = nameSuffixMatch[2];
+    content = [...bodyLines.slice(0, -1), nameSuffixMatch[1]].join("\n").trim();
+  } else {
+    author = lastBodyLine || null;
+    content = bodyLines.slice(0, -1).join("\n").trim();
+  }
 
   // Pokus o extrakci liturgického kontextu (např. "2. neděle postní")
   const liturgicalMatch = content.match(

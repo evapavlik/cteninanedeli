@@ -67,6 +67,79 @@ obnoveni Duchem, toto světlo rozpoznají a vstoupí do
 království Božího.
 Kateřina Kašparová`;
 
+// Reálný text — CZ 2026/10 — autorka na stejném řádku jako závěr věty
+const SAMPLE_SETKANI = `NAD PÍSMEM
+Setkání u studně Jan 4,3-42
+Milé sestry a bratři,
+přenesme se do starověkého Izraele: je
+horké poledne a ke studni přichází osamo-
+cená žena. Rozhlíží se. Nechce se potkat
+se svými sousedy, lidmi z vesnice. Žena
+s divokou minulostí, poraněnou duší,
+možná zklamaná životem.
+U studny potkává člověka a zapřede s ním
+rozhovor. Hned je jí jasné, že to není jen
+tak někdo, je to prorok. Ježíš… Mesiáš.
+Překvapí ji hlubokými myšlenkami, zjeví
+duchovní pravdy… ale především ji za-
+skočí svou laskavostí a zájmem. Nikoho
+takového nikdy nepoznala.
+A když pak rozkryl její vlastní nitro, po-
+znala, že se jí dotknul Bůh. Ví o ní
+všechno, přesto ji nekárá, neodsuzuje. Má
+jak na dlani celý její život. Ví, proč chodí
+ke studni v čase, kdy tam nikdo jiný není.
+Že žila s pěti muži a ten, co s ním žije teď,
+není její manžel…
+Toto setkání s Ježíšem proměnilo její
+život. Vnitřní zábrany, které způsobovaly
+strach z lidí, odcizenost a obavy, zmizely.
+Už není ostýchavá, ale radostná a od-
+vážná. Běží do vesnice a nadšeně všem
+vypráví o Ježíši. Reakce na setkání s Ježí-
+šem je nadšení, úleva a radost, potřeba
+sdílení (tedy misie).
+My křesťané máme často dobré biblické
+základy, teologické povědomí – kdo je
+Ježíš, jaké to prameny budou prýštit z na-
+šeho nitra a co je ta voda života, po které
+už nikdy nebudeme žíznit.
+Nejde ale ani tak o to „správně věřit". Te-
+prve až osobní setkání s Ježíšem může
+proměnit náš život. Potřebujeme se –
+stejně jako samařská žena – s Ježíšem se-
+tkat. To nás změní. A následně naše sbory
+a třeba i celou církev.
+… a díky svědectví samařské ženy vyšli
+lidé z města, celý zástup, aby se přesvěd-
+čili, aby sami uviděli, a díky Jeho slovu
+také uvěřili. Lucie Haltofová`;
+
+// Reálný text — CZ 2026/? — reference s en-dash, autorka na vlastním řádku
+const SAMPLE_OBROZENI = `Nad PíSMEM
+Obrození shůry Jan 3,1–17
+Nikodém - člověk upřímný, přemýš-
+livý, hledající, toužící po pravém poznání
+i životu podle Boží vůle. Doposud byla
+jeho životní cesta jasně daná: studovat
+Zákon Boží a žít podle něj; být dobrým
+věřícím před Bohem, stejně jako učitelem
+a příkladem pro druhé. Však si svým způ-
+sobem života zasloužil nejedno uznání.
+Byl váženým občanem Jeruzaléma. Jako
+členu nejvyšší rady mu byla svěřena moc
+spolurozhodovat ve věcech víry, mravů,
+a tak ovlivňovat veřejný život.
+Text Janova evangelia, určený k zamyš-
+lení pro tuto neděli, o Nikodémově obro-
+zení shůry mlčí. Protože nejde ani tak
+o něj, ale o Ježíše, o jeho nabídku a o nás.
+Ježíš snáší hříchy nás všech, fandí nám a raduje
+se ze zázraku znovuzrození, které po-
+stupně prostupuje naše postoje, myšlení,
+slova, oblasti zájmů, vztah k Bohu i lidem.
+Světluše Košíčková`;
+
 describe("parseBiblicalRefs", () => {
   it("najde referenci ve formátu 'J 3,1-17'", () => {
     expect(parseBiblicalRefs("J 3,1-17")).toEqual(["J 3,1-17"]);
@@ -83,6 +156,14 @@ describe("parseBiblicalRefs", () => {
 
   it("vrátí prázdné pole pro text bez referencí", () => {
     expect(parseBiblicalRefs("Milé sestry a milí bratři")).toEqual([]);
+  });
+
+  it("najde referenci ve formátu 'Jan 4,3-42' (plné jméno knihy)", () => {
+    expect(parseBiblicalRefs("Jan 4,3-42")).toEqual(["Jan 4,3-42"]);
+  });
+
+  it("najde referenci s en-dash 'Jan 3,1–17'", () => {
+    expect(parseBiblicalRefs("Jan 3,1–17")).toEqual(["Jan 3,1–17"]);
   });
 });
 
@@ -116,6 +197,67 @@ describe("parseNadPismem", () => {
   it("vrátí null pro text bez sekce Nad písmem", () => {
     const result = parseNadPismem("Ze sborů\nNějaký text...", 2026, 9);
     expect(result).toBeNull();
+  });
+
+  describe("Setkání u studně (Haltofová) — autorka na posledním řádku za větou", () => {
+    it("rozpozná název a referenci", () => {
+      const result = parseNadPismem(SAMPLE_SETKANI, 2026, 10);
+      expect(result).not.toBeNull();
+      expect(result!.title).toBe("Setkání u studně");
+      expect(result!.biblical_refs_raw).toBe("Jan 4,3-42");
+      expect(result!.biblical_references).toEqual(["Jan 4,3-42"]);
+    });
+
+    it("oddělí autorku od závěrečné věty", () => {
+      const result = parseNadPismem(SAMPLE_SETKANI, 2026, 10);
+      expect(result!.author).toBe("Lucie Haltofová");
+    });
+
+    it("obsah obsahuje závěrečnou větu, ale ne podpis", () => {
+      const result = parseNadPismem(SAMPLE_SETKANI, 2026, 10);
+      expect(result!.content).toContain("také uvěřili.");
+      expect(result!.content).not.toContain("Lucie Haltofová");
+    });
+
+    it("obsah začíná oslovením", () => {
+      const result = parseNadPismem(SAMPLE_SETKANI, 2026, 10);
+      expect(result!.content).toMatch(/^Milé sestry a bratři/);
+    });
+
+    it("liturgický kontext je null (nezmíněna konkrétní neděle)", () => {
+      const result = parseNadPismem(SAMPLE_SETKANI, 2026, 10);
+      expect(result!.liturgical_context).toBeNull();
+    });
+
+    it("zvládne hlavičku velkými písmeny NAD PÍSMEM", () => {
+      const result = parseNadPismem(SAMPLE_SETKANI, 2026, 10);
+      expect(result).not.toBeNull();
+    });
+  });
+
+  describe("Obrození shůry (Košíčková) — reference s en-dash, autorka na vlastním řádku", () => {
+    it("rozpozná název a referenci s en-dash", () => {
+      const result = parseNadPismem(SAMPLE_OBROZENI, 2026, 11);
+      expect(result).not.toBeNull();
+      expect(result!.title).toBe("Obrození shůry");
+      expect(result!.biblical_refs_raw).toBe("Jan 3,1–17");
+      expect(result!.biblical_references).toEqual(["Jan 3,1–17"]);
+    });
+
+    it("správně rozpozná autorku na vlastním řádku", () => {
+      const result = parseNadPismem(SAMPLE_OBROZENI, 2026, 11);
+      expect(result!.author).toBe("Světluše Košíčková");
+    });
+
+    it("obsah neobsahuje podpis autorky", () => {
+      const result = parseNadPismem(SAMPLE_OBROZENI, 2026, 11);
+      expect(result!.content).not.toContain("Světluše Košíčková");
+    });
+
+    it("zvládne hlavičku se smíšenými písmeny Nad PíSMEM", () => {
+      const result = parseNadPismem(SAMPLE_OBROZENI, 2026, 11);
+      expect(result).not.toBeNull();
+    });
   });
 
   it("zvládne text s další sekcí za kázáním", () => {

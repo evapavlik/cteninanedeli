@@ -58,18 +58,28 @@ export function parseNadPismem(
 
   const lines = text.split("\n");
 
-  // Najdeme řádek "Nad Písmem" / "Nad písmem"
-  const headerIdx = lines.findIndex((l) =>
-    /^nad\s+p[ií]smem\s*$/i.test(l.trim())
-  );
+  // Najdeme řádek začínající "Nad Písmem" / "Nad písmem" (ať už je záhlaví samo, nebo
+  // za ním hned na stejném řádku název: "Nad Písmem Dokážeme říct Ne? (L 4,1–13)")
+  const NAD_PISMEM_RE = /^nad\s+p[ií]smem\s*/i;
+  const headerIdx = lines.findIndex((l) => NAD_PISMEM_RE.test(l.trim()));
   if (headerIdx === -1) return null;
 
-  // První neprázdný řádek po záhlaví = řádek s názvem a biblickou referencí
-  let titleIdx = headerIdx + 1;
-  while (titleIdx < lines.length && lines[titleIdx].trim() === "") titleIdx++;
-  if (titleIdx >= lines.length) return null;
+  const headerLine = lines[headerIdx].trim();
+  const restAfterHeader = headerLine.replace(NAD_PISMEM_RE, "").trim();
 
-  const titleLine = lines[titleIdx].trim();
+  let titleIdx: number;
+  let titleLine: string;
+  if (restAfterHeader.length > 0) {
+    // Záhlaví a název jsou na jednom řádku
+    titleIdx = headerIdx;
+    titleLine = restAfterHeader;
+  } else {
+    // Záhlaví je samo; první neprázdný řádek po něm je název
+    titleIdx = headerIdx + 1;
+    while (titleIdx < lines.length && lines[titleIdx].trim() === "") titleIdx++;
+    if (titleIdx >= lines.length) return null;
+    titleLine = lines[titleIdx].trim();
+  }
 
   // Extrahujeme biblické reference z řádku názvu
   const refsInTitle = parseBiblicalRefs(titleLine);
@@ -77,9 +87,9 @@ export function parseNadPismem(
   let biblical_refs_raw: string | null = null;
 
   if (refsInTitle.length > 0) {
-    // Název = vše před první referencí
+    // Název = vše před první referencí; odstraníme případnou závorku "... (L 4,1–13)"
     const firstRefPos = titleLine.indexOf(refsInTitle[0]);
-    title = titleLine.substring(0, firstRefPos).trim();
+    title = titleLine.substring(0, firstRefPos).trim().replace(/\s*[([\s]+$/, "");
     biblical_refs_raw = refsInTitle.join("; ");
   }
 

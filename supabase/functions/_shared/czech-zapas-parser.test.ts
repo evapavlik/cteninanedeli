@@ -140,6 +140,32 @@ stupně prostupuje naše postoje, myšlení,
 slova, oblasti zájmů, vztah k Bohu i lidem.
 Světluše Košíčková`;
 
+// Reálný text — reference v závorce, autor za "Amen."
+const SAMPLE_DOKAŽEME = `Nad Písmem Dokážeme říct jasně a zřetelně Ne? (L 4,1–13)
+Vážené sestry, vážení bratři, pokoj vám!
+Ježíš plný Ducha svatého odchází na poušť, kde tráví čtyřicet dní.
+Jednalo se o přípravu na veřejné působení, na vystoupení s úkolem,
+který na Ježíše čekal. Byl tam sám, jen v kontaktu se svým nebeským Otcem.
+Když uběhlo oněch čtyřicet dní, dostavil se ďábel se svými třemi pokusy.
+Vybízí Ježíše, aby využil svou moc k vlastnímu nasycení, nabízí mu vládu
+nad světem výměnou za to, že se mu Ježíš bude klanět. Nakonec nutí Ježíše,
+aby učinil pokus s připraveností andělů, kteří by ho měli chytit,
+když by se vrhnul ze střechy chrámu.
+Zajímavé jsou Ježíšovy reakce. Nepoužívá složité náboženské fráze,
+nevyhání pokušitele pomocí nějakých tajných slov, zaklínadel, neuvrhá ho
+do hlubin nebo tak něco. Ježíš klidně, bez zbytečných slov a gest ďábla odmítá.
+Cituje z Písma stručně a jasně. Říká zkrátka jednoduše a vytrvale ďáblovi své Ne!
+A ten posléze, když vidí, že jsou jeho pokusy marné, odchází s nepořízenou.
+Ale i my se nazýváme Božími dětmi, nebo ne? Myslím, že hlavní zákeřnost
+pokušení spočívá v tom, že si vůbec nevšimneme, že se jedná o dílo pokušitele.
+S pomocí našeho Spasitele Ježíše bychom se tedy měli celoživotně učit říkat
+svůdci, který na nás číhá: „Ne, v žádném případě, s tebou já se nebavím."
+Je to ale možné. Potřebujeme k tomu sílu, kterou nacházíme v Písmu, v rozhovo-
+rech s Pánem a ve společenství bratří a sester. A je ještě jedna věc, kterou
+pokušitel nemůže vystát, a to je láska. Láska k Bohu i k lidem, láska dávaná
+i přijímaná, přítomná všude tam, kde je opravdová a věrná Kristova Církev.
+Amen. Vladislav Pek`;
+
 describe("parseBiblicalRefs", () => {
   it("najde referenci ve formátu 'J 3,1-17'", () => {
     expect(parseBiblicalRefs("J 3,1-17")).toEqual(["J 3,1-17"]);
@@ -257,6 +283,36 @@ describe("parseNadPismem", () => {
     it("zvládne hlavičku se smíšenými písmeny Nad PíSMEM", () => {
       const result = parseNadPismem(SAMPLE_OBROZENI, 2026, 11);
       expect(result).not.toBeNull();
+    });
+  });
+
+  describe("Dokážeme říct Ne? (Pek) — reference v závorce, autor za Amen.", () => {
+    it("extrahuje název bez závorky", () => {
+      const result = parseNadPismem(SAMPLE_DOKAŽEME, 2026, 12);
+      expect(result).not.toBeNull();
+      expect(result!.title).toBe("Dokážeme říct jasně a zřetelně Ne?");
+    });
+
+    it("extrahuje referenci z závorky", () => {
+      const result = parseNadPismem(SAMPLE_DOKAŽEME, 2026, 12);
+      expect(result!.biblical_refs_raw).toBe("L 4,1–13");
+      expect(result!.biblical_references).toEqual(["L 4,1–13"]);
+    });
+
+    it("oddělí autora od Amen.", () => {
+      const result = parseNadPismem(SAMPLE_DOKAŽEME, 2026, 12);
+      expect(result!.author).toBe("Vladislav Pek");
+    });
+
+    it("obsah obsahuje Amen., ale ne autorovo jméno", () => {
+      const result = parseNadPismem(SAMPLE_DOKAŽEME, 2026, 12);
+      expect(result!.content).toContain("Amen.");
+      expect(result!.content).not.toContain("Vladislav Pek");
+    });
+
+    it("obsah začíná oslovením", () => {
+      const result = parseNadPismem(SAMPLE_DOKAŽEME, 2026, 12);
+      expect(result!.content).toMatch(/^Vážené sestry/);
     });
   });
 

@@ -229,7 +229,7 @@ export default function AdminImport() {
               value={hint}
               onChange={(e) => setHint(e.target.value)}
               rows={3}
-              placeholder="např. „Kázání na 2. neděli postní je na str. 3, autorka Jana Nováková, text Mt 4,1-11. Ostatní články ignoruj.""
+              placeholder={`např. „Kázání na 2. neděli postní je na str. 3, autorka Jana Nováková, text Mt 4,1-11. Ostatní články ignoruj."`}
               className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-foreground/20 resize-none"
             />
           </div>

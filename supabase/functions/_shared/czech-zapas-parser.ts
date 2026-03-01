@@ -58,15 +58,27 @@ export function parseNadPismem(
 
   const lines = text.split("\n");
 
-  // Find the line starting with "Nad Písmem" / "Nad písmem".
-  // Handles both: header on its own line, and header+title on the same line
-  // e.g. "Nad Písmem Dokážeme říct Ne? (L 4,1–13)"
-  const NAD_PISMEM_RE = /^nad\s+p[ií]smem\s*/i;
-  const headerIdx = lines.findIndex((l) => NAD_PISMEM_RE.test(l.trim()));
+  // Find the line containing "Nad Písmem" / "Nad písmem".
+  // Handles:
+  //   - header on its own line: "Nad Písmem"
+  //   - header + title on same line: "Nad Písmem Dokážeme říct Ne? (L 4,1–13)"
+  //   - header embedded mid-line: "...předchozí text Nad Písmem" (PDF sometimes
+  //     omits newlines before section headings due to hasEOL not being set)
+  //   - header with trailing colon: "Nad písmem:"
+  const NAD_PISMEM_RE = /nad\s+p[ií]smem[:\s]*/i;
+  // Prefer a line where the heading starts at the beginning
+  let headerIdx = lines.findIndex((l) => /^nad\s+p[ií]smem/i.test(l.trim()));
+  // Fallback: accept heading embedded anywhere in a line
+  if (headerIdx === -1) {
+    headerIdx = lines.findIndex((l) => NAD_PISMEM_RE.test(l));
+  }
   if (headerIdx === -1) return null;
 
   const headerLine = lines[headerIdx].trim();
-  const restAfterHeader = headerLine.replace(NAD_PISMEM_RE, "").trim();
+  const headingMatch = NAD_PISMEM_RE.exec(headerLine);
+  const restAfterHeader = headingMatch
+    ? headerLine.slice(headingMatch.index + headingMatch[0].length).trim()
+    : "";
 
   let titleIdx: number;
   let titleLine: string;

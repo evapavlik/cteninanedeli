@@ -62,7 +62,15 @@ export default function AdminImport() {
     setLoading(true);
     try {
       const pdfText = await extractPdfText(file);
-      setDebugText(pdfText.slice(0, 800));
+      // Debug: show start + context around "Nad písmem" if found later in doc
+      const nadPos = pdfText.search(/nad\s+p[ií]smem/i);
+      let debug = pdfText.slice(0, 2000);
+      if (nadPos > 2000) {
+        debug += `\n\n... (pozice ${nadPos}) ...\n\n` + pdfText.slice(Math.max(0, nadPos - 100), nadPos + 600);
+      } else if (nadPos === -1) {
+        debug += "\n\n[Text 'Nad písmem' nebyl v dokumentu nalezen]";
+      }
+      setDebugText(debug);
 
       const { data, error: fnError } = await supabase.functions.invoke("import-czech-zapas", {
         body: { pdfText, year: yearNum, issueNumber: issueNum },
@@ -159,21 +167,21 @@ export default function AdminImport() {
 
           {/* Error */}
           {error && (
-            <div className="space-y-2">
-              <div className="flex items-start gap-2 text-sm text-red-600 bg-red-50 dark:bg-red-950/30 dark:text-red-400 rounded-lg px-3 py-2">
-                <XCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                {error}
-              </div>
-              {debugText && (
-                <div className="space-y-1">
-                  <p className="text-xs text-foreground/40">Extrahovaný text (prvních 800 znaků) — zkopíruj a pošli vývojáři:</p>
-                  <textarea
-                    readOnly
-                    value={debugText}
-                    className="w-full h-40 text-xs font-mono px-2 py-1.5 rounded border border-border bg-muted resize-none"
-                  />
-                </div>
-              )}
+            <div className="flex items-start gap-2 text-sm text-red-600 bg-red-50 dark:bg-red-950/30 dark:text-red-400 rounded-lg px-3 py-2">
+              <XCircle className="h-4 w-4 mt-0.5 shrink-0" />
+              {error}
+            </div>
+          )}
+
+          {/* Debug textarea: show when error or section not found */}
+          {debugText && (error || (result && result.imported === 0)) && (
+            <div className="space-y-1">
+              <p className="text-xs text-foreground/40">Extrahovaný text — zkopíruj a pošli vývojáři (obsahuje start + oblast kolem "Nad písmem"):</p>
+              <textarea
+                readOnly
+                value={debugText}
+                className="w-full h-40 text-xs font-mono px-2 py-1.5 rounded border border-border bg-muted resize-none"
+              />
             </div>
           )}
 

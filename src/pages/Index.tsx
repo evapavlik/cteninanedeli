@@ -59,7 +59,7 @@ const Index = () => {
     });
   };
 
-  const themeIcon = theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />;
+  const themeIcon = theme === "light" ? <Moon className="h-6 w-6" /> : <Sun className="h-6 w-6" />;
   const themeLabel = theme === "light" ? "Noční režim" : "Denní režim";
 
   // Track which reading heading is currently in view via IntersectionObserver
@@ -102,14 +102,14 @@ const Index = () => {
   }, [displayMarkdown]);
 
   return (
-    <main className="min-h-screen bg-background flex flex-col" ref={scrollRef}>
+    <main className="min-h-screen bg-background flex flex-col pt-safe" ref={scrollRef}>
       <div className="mx-auto max-w-2xl px-5 py-10 md:px-6 md:py-20 flex-1" style={{ minHeight: 'calc(100vh - 140px)' }}>
         {/* Top controls: dark mode toggle + notification bell */}
-        <div className="flex justify-end items-center gap-1 mb-6">
+        <div className="flex justify-end items-center gap-2 mb-6">
           <NotificationButton />
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-full text-foreground/60 hover:text-foreground transition-colors"
+            className="p-2.5 rounded-full text-foreground/60 hover:text-foreground transition-colors"
             aria-label={themeLabel}
             title={themeLabel}
           >
@@ -235,7 +235,7 @@ const Index = () => {
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-border mt-12 py-8 text-center font-serif text-sm text-muted-foreground">
+      <footer className="border-t border-border mt-12 px-5 py-8 pb-safe text-center font-serif text-sm text-muted-foreground">
         <p>S láskou k poznání vytvořila Eva Pavlíková.</p>
         <p className="mt-2 text-xs text-muted-foreground/60">
           Texty čtení z{" "}

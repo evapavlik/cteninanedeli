@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { Bell, BellOff } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string;
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 const LS_KEY = "ccsh-push-subscribed";
 
 type NotifState = "unsupported" | "default" | "subscribed" | "denied" | "loading";
@@ -44,44 +43,27 @@ export function NotificationButton() {
         return;
       }
 
-      console.log("[Push] ANON KEY:", SUPABASE_ANON_KEY ? SUPABASE_ANON_KEY.substring(0, 20) + "…" : "MISSING/UNDEFINED");
-      console.log("[Push] URL:", SUPABASE_URL || "MISSING/UNDEFINED");
-
       const reg = await navigator.serviceWorker.ready;
-      console.log("[Push] SW registered:", reg.scope);
 
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
       });
-      console.log("[Push] Subscription created:", sub.endpoint);
 
       const json = sub.toJSON();
-      const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/push_subscriptions?on_conflict=endpoint`,
+      const { error } = await supabase.from("push_subscriptions").upsert(
         {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "apikey": SUPABASE_ANON_KEY,
-            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-            "Prefer": "resolution=merge-duplicates",
-          },
-          body: JSON.stringify({
-            endpoint: json.endpoint!,
-            p256dh: json.keys!.p256dh,
-            auth: json.keys!.auth,
-          }),
+          endpoint: json.endpoint!,
+          p256dh: json.keys!.p256dh,
+          auth: json.keys!.auth,
         },
+        { onConflict: "endpoint" },
       );
-      if (!res.ok) {
-        const body = await res.text().catch(() => "");
-        console.error("[Push] Supabase upsert error:", res.status, body);
+      if (error) {
+        console.error("[Push] Supabase upsert error:", error);
         setState("default");
         return;
       }
-
-      console.log("[Push] Subscription saved to DB ✓");
       localStorage.setItem(LS_KEY, "1");
       setState("subscribed");
     } catch (e) {
@@ -96,16 +78,10 @@ export function NotificationButton() {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
       if (sub) {
-        await fetch(
-          `${SUPABASE_URL}/rest/v1/push_subscriptions?endpoint=eq.${encodeURIComponent(sub.endpoint)}`,
-          {
-            method: "DELETE",
-            headers: {
-              "apikey": SUPABASE_ANON_KEY,
-              "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-            },
-          },
-        );
+        await supabase
+          .from("push_subscriptions")
+          .delete()
+          .eq("endpoint", sub.endpoint);
         await sub.unsubscribe();
       }
       localStorage.removeItem(LS_KEY);

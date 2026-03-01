@@ -324,4 +324,61 @@ describe("parseNadPismem", () => {
     expect(result!.author).toBe("Kateřina Kašparová");
     expect(result!.content).not.toContain("Ze sborů");
   });
+
+  describe("PDF extraction artifacts — merged columns, page headers", () => {
+    it("zastaví se na záhlaví stránky s ISSN", () => {
+      const textWithPageHeader = SAMPLE_NAD_PISMEM +
+        "\n4   •   Český zápas 10 • 5. března 2023 MK ČR E 127 ISSN 0323-1321 Český zápas Týdeník Církve" +
+        "\nZprávy ze sborů a další obsah magazínu...";
+      const result = parseNadPismem(textWithPageHeader, 2023, 10);
+
+      expect(result).not.toBeNull();
+      expect(result!.author).toBe("Kateřina Kašparová");
+      expect(result!.content).not.toContain("ISSN");
+      expect(result!.content).not.toContain("Zprávy ze sborů");
+    });
+
+    it("zastaví se na záhlaví s rozdělenými diakritikami (pdfjs artefakt)", () => {
+      const textWithSplitDiacritics = SAMPLE_NAD_PISMEM +
+        "\n4   •   Č eský zápas 10 • 5. b ř ezna 2023 MK Č R E 127 ISSN 0323-1321" +
+        "\nDalší text co tam nepatří";
+      const result = parseNadPismem(textWithSplitDiacritics, 2023, 10);
+
+      expect(result).not.toBeNull();
+      expect(result!.author).toBe("Kateřina Kašparová");
+      expect(result!.content).not.toContain("ISSN");
+    });
+
+    it("zastaví se na sekci 'Pro děti a mládež'", () => {
+      const textWithKids = SAMPLE_NAD_PISMEM + "\n\nPro děti a mládež\nNějaký obsah pro děti...";
+      const result = parseNadPismem(textWithKids, 2026, 9);
+
+      expect(result).not.toBeNull();
+      expect(result!.author).toBe("Kateřina Kašparová");
+      expect(result!.content).not.toContain("Pro děti");
+    });
+
+    it("zastaví se na sekci 'Z ekumeny'", () => {
+      const textWithEcumeny = SAMPLE_NAD_PISMEM + "\n\nZ ekumeny\nNějaký ekumenický text...";
+      const result = parseNadPismem(textWithEcumeny, 2026, 9);
+
+      expect(result).not.toBeNull();
+      expect(result!.author).toBe("Kateřina Kašparová");
+      expect(result!.content).not.toContain("Z ekumeny");
+    });
+
+    it("nezastaví se na slovu 'Zprávy' uvnitř věty", () => {
+      // "Zprávy" embedded in body text should NOT trigger section boundary
+      const textWithEmbeddedZpravy = `Nad Písmem
+Test kázání J 3,1-17
+Dobré zprávy. Evangelium přináší naději.
+Další věta kázání pokračuje.
+Jan Novák`;
+      const result = parseNadPismem(textWithEmbeddedZpravy, 2026, 9);
+
+      expect(result).not.toBeNull();
+      expect(result!.content).toContain("Dobré zprávy.");
+      expect(result!.author).toBe("Jan Novák");
+    });
+  });
 });

@@ -68,19 +68,32 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get next article_number
-    const { data: lastRow } = await supabase
-      .from("czech_zapas_articles")
-      .select("article_number")
-      .order("article_number", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const nextNum = (lastRow?.article_number ?? 0) + 1;
-
     const sourceRef = `Český zápas, ročník ${year}, číslo ${issueNumber}`;
 
+    // Dedup: check if this issue already has an article — if so, update it
+    const { data: existing } = await supabase
+      .from("czech_zapas_articles")
+      .select("article_number")
+      .eq("year", year)
+      .eq("issue_number", issueNumber)
+      .limit(1)
+      .maybeSingle();
+
+    let articleNumber: number;
+    if (existing) {
+      articleNumber = existing.article_number;
+    } else {
+      const { data: lastRow } = await supabase
+        .from("czech_zapas_articles")
+        .select("article_number")
+        .order("article_number", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      articleNumber = (lastRow?.article_number ?? 0) + 1;
+    }
+
     const row = {
-      article_number: nextNum,
+      article_number: articleNumber,
       title: article.title,
       author: article.author ?? null,
       biblical_references: article.biblical_references,
@@ -113,6 +126,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         imported: 1,
         skipped: 0,
+        updated: !!existing,
         articles: [{ title: article.title, author: article.author, refs: article.biblical_references, ok: true }],
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },

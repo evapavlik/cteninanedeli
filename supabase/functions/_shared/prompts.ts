@@ -27,7 +27,8 @@ ${postilyContext}`;
 
 /**
  * Prompt for generating preaching inspiration from modern Český zápas articles.
- * Optionally includes a Farský postila for the same reading to highlight continuity/tension.
+ * Uses the same field structure as buildPostilyPrompt (both are sermons, just from different authors/eras).
+ * Optionally includes a Farský postila to generate a cross-era tension sentence at the section level.
  */
 export function buildCzechZapasPrompt(
   czContext: string,
@@ -50,12 +51,13 @@ Tvým úkolem je vytvořit inspiraci pro kázání. Vrať JSON objekt s těmito 
   - "year": rok vzniku
   - "matched_ref": biblický odkaz, na který článek reaguje
   - "quotes": pole 1-3 nejsilnějších doslovných citátů z textu (každý max 2 věty)
-  - "author_perspective": 3-4 věty shrnující autorův pohled — co je jádro jeho výkladu
-  - "tension_with_farsky": ${farskyPostila ? '2-3 věty o tom, v čem se pohled liší nebo navazuje na Farského — kde je napětí, kde kontinuita' : 'null (Farského postila pro toto čtení není k dispozici)'}
+  - "insight": 3-4 věty shrnující autorův pohled — co je jádro jeho výkladu, čím je originální
+  - "relevance": 2-3 věty propojující autorovy myšlenky s dneškem — proč je aktuální, jak může inspirovat dnešní kázání
   - "preaching_angle": 1 věta navrhující konkrétní úhel pro kázání inspirovaný tímto textem
   - "full_text": celý text článku (zkopíruj doslova z kontextu níže)
+- "cross_era_tension": ${farskyPostila ? '1 věta vystihující klíčové napětí nebo kontinuitu mezi Farského historickým pohledem (1921–1924) a pohledem tohoto moderního autora na stejné biblické čtení' : 'null'}
 
-Vrať POUZE validní JSON, žádný markdown ani komentáře.${farskySection ? "" : "\nPole \"tension_with_farsky\" nastav na null."}
+Vrať POUZE validní JSON, žádný markdown ani komentáře.
 
 MODERNÍ ČLÁNKY Z ČESKÉHO ZÁPASU:
 ${czContext}`;

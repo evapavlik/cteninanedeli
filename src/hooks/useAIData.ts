@@ -36,8 +36,8 @@ export function useAIData(
   const [isLoadingPostily, setIsLoadingPostily] = useState(false);
 
   // --- Czech Zápas ---
-  const [czData, setCzData] = useState<{ czech_zapas: CzechZapasInsight[] } | null>(() => {
-    if (sundayTitle) return loadCache<{ czech_zapas: CzechZapasInsight[] }>(CZ_CACHE_KEY, sundayTitle);
+  const [czData, setCzData] = useState<{ czech_zapas: CzechZapasInsight[]; cross_era_tension?: string | null } | null>(() => {
+    if (sundayTitle) return loadCache<{ czech_zapas: CzechZapasInsight[]; cross_era_tension?: string | null }>(CZ_CACHE_KEY, sundayTitle);
     return null;
   });
   const [isLoadingCz, setIsLoadingCz] = useState(false);
@@ -149,8 +149,9 @@ export function useAIData(
         if (error) throw error;
         const czResult = data?.czech_zapas;
         const czArray = Array.isArray(czResult) ? czResult : czResult?.czech_zapas;
+        const crossEraTension = Array.isArray(czResult) ? null : (czResult?.cross_era_tension ?? null);
         if (czArray && czArray.length > 0) {
-          const normalized = { czech_zapas: czArray };
+          const normalized = { czech_zapas: czArray, cross_era_tension: crossEraTension };
           setCzData(normalized);
           if (sundayTitle) saveCache(CZ_CACHE_KEY, sundayTitle, normalized);
         }

@@ -28,8 +28,8 @@ export interface CzechZapasInsight {
   year: number;
   matched_ref: string;
   quotes: string[];
-  author_perspective: string;
-  tension_with_farsky?: string | null;
+  insight: string;
+  relevance: string;
   preaching_angle: string;
   full_text: string;
 }
@@ -40,7 +40,7 @@ export interface PreachingInspirationData {
 
 interface PreachingInspirationProps {
   data: PreachingInspirationData | null;
-  czData?: { czech_zapas: CzechZapasInsight[] } | null;
+  czData?: { czech_zapas: CzechZapasInsight[]; cross_era_tension?: string | null } | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -182,6 +182,21 @@ export function PreachingInspiration({ data, czData, open, onOpenChange }: Preac
           </>
         )}
 
+        {/* ── Cross-era tension — jen když existují oba zdroje ── */}
+        {hasPostily && hasCz && czData!.cross_era_tension && (
+          <div className="mt-8 flex items-start gap-3 rounded-xl border border-border/60 bg-accent/10 px-4 py-3.5">
+            <Scale className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+            <div className="min-w-0">
+              <p className="font-sans text-sm font-bold uppercase tracking-wider text-foreground/80 mb-1">
+                Napětí a kontinuita
+              </p>
+              <p className="text-foreground text-[1.05rem] leading-relaxed italic">
+                {czData!.cross_era_tension}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* ── Moderní Český zápas ── */}
         {hasCz && (
           <div className={hasPostily ? "mt-8 border-t pt-6" : ""}>
@@ -232,7 +247,7 @@ export function PreachingInspiration({ data, czData, open, onOpenChange }: Preac
                       </div>
                     )}
 
-                    {article.author_perspective && (
+                    {article.insight && (
                       <div className="flex gap-3">
                         <Lightbulb className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                         <div className="min-w-0">
@@ -240,21 +255,21 @@ export function PreachingInspiration({ data, czData, open, onOpenChange }: Preac
                             Autorův pohled
                           </p>
                           <p className="text-foreground text-[1.05rem] leading-relaxed">
-                            {article.author_perspective}
+                            {article.insight}
                           </p>
                         </div>
                       </div>
                     )}
 
-                    {article.tension_with_farsky && (
+                    {article.relevance && (
                       <div className="flex gap-3">
-                        <Scale className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                        <ArrowRight className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                         <div className="min-w-0">
                           <p className="font-sans text-sm font-bold uppercase tracking-wider text-foreground/80 mb-1">
-                            Napětí a kontinuita s Farským
+                            Aktuálnost pro dnešek
                           </p>
                           <p className="text-foreground text-[1.05rem] leading-relaxed">
-                            {article.tension_with_farsky}
+                            {article.relevance}
                           </p>
                         </div>
                       </div>

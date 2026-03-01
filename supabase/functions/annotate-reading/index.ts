@@ -286,11 +286,12 @@ serve(async (req) => {
             year: m.year,
             matched_ref: m.matched_ref,
             quotes: [],
-            author_perspective: "",
-            tension_with_farsky: null,
+            insight: "",
+            relevance: "",
             preaching_angle: "",
             full_text: m.content,
           })),
+          cross_era_tension: null,
         };
         return new Response(JSON.stringify({ czech_zapas: fallback }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -312,10 +313,26 @@ serve(async (req) => {
         });
       } catch {
         console.error("Failed to parse czech_zapas JSON:", czContent);
-        return new Response(
-          JSON.stringify({ error: "Nepodařilo se zpracovat moderní zdroje" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        // Fallback with raw data instead of 500
+        const fallback = {
+          czech_zapas: topCzMatches.map((m) => ({
+            article_number: m.article_number,
+            title: m.title,
+            author: m.author,
+            source_ref: m.source_ref,
+            year: m.year,
+            matched_ref: m.matched_ref,
+            quotes: [],
+            insight: "",
+            relevance: "",
+            preaching_angle: "",
+            full_text: m.content,
+          })),
+          cross_era_tension: null,
+        };
+        return new Response(JSON.stringify({ czech_zapas: fallback }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
     }
 

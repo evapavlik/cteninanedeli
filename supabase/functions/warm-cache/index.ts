@@ -88,6 +88,51 @@ function extractReadings(markdown: string, pageTitle: string): { sundayTitle: st
   };
 }
 
+/**
+ * Generate a two-sentence notification text via Gemini.
+ * Sentence 1: short inspirational hook about the reading content.
+ * Sentence 2: fixed invitation with correctly declined Sunday name.
+ */
+async function generateNotificationSentence(
+  readings: string,
+  sundayTitle: string,
+  geminiKey: string,
+): Promise<string | null> {
+  const systemPrompt =
+    `Jsi asistent pro Církev československou husitskou. Napiš přesně dvě věty pro push notifikaci mobilní aplikace pro lektory a kazatele.
+
+1. věta: Krátká, inspirativní, vystihuje duchovní jádro nedělního čtení. Konkrétní, nosná, max. 100 znaků.
+2. věta: Přesně tato struktura: "Nechte se pozvat k čtení na tuto neděli, která je [název neděle v 7. pádu]."
+
+Název neděle (v 1. pádu): "${sundayTitle}"
+Správně skloň název do 7. pádu. Příklady: "1. neděle postní" → "1. nedělí postní", "Květná neděle" → "Květnou nedělí", "Boží hod vánoční" → "Božím hodem vánočním".
+
+Výstup: pouze obě věty oddělené mezerou, bez uvozovek, bez číslování.`;
+
+  const res = await fetch(
+    "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${geminiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gemini-2.0-flash",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: readings },
+        ],
+      }),
+    },
+  );
+
+  if (!res.ok) return null;
+  const data = await res.json();
+  const text = data.choices?.[0]?.message?.content?.trim() || null;
+  return text;
+}
+
 async function hashText(text: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(text);
@@ -369,6 +414,29 @@ Deno.serve(async (req) => {
       generateAndCache("postily"),
       generateAndCache("czech_zapas"),
     ]);
+
+    // --- Step 4: Generate notification sentence (if not already set for this Sunday) ---
+    const { data: cachedRow } = await supabase
+      .from("readings_cache")
+      .select("notification_sentence")
+      .eq("sunday_title", sundayTitle)
+      .maybeSingle();
+
+    if (!cachedRow?.notification_sentence) {
+      addLog("Generating notification sentence…");
+      const notifSentence = await generateNotificationSentence(readingsMarkdown, sundayTitle, GEMINI_API_KEY);
+      if (notifSentence) {
+        await supabase
+          .from("readings_cache")
+          .update({ notification_sentence: notifSentence })
+          .eq("sunday_title", sundayTitle);
+        addLog(`Notification sentence saved: "${notifSentence.substring(0, 60)}…"`);
+      } else {
+        addLog("Warning: could not generate notification sentence");
+      }
+    } else {
+      addLog("Notification sentence already exists — skipping");
+    }
 
     addLog("Warm-cache complete ✓");
     return new Response(JSON.stringify({ success: true, sundayTitle, log }), {

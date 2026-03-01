@@ -5,6 +5,7 @@ import { useAIData } from "@/hooks/useAIData";
 import { trackEvent } from "@/lib/analytics";
 import { Loader2, Moon, Sun } from "lucide-react";
 import ccshChalice from "@/assets/ccsh-chalice.svg";
+import { NotificationButton } from "@/components/NotificationButton";
 
 // Lazy-load all heavy components to reduce initial JS
 const LectorGuide = lazy(() => import("@/components/LectorGuide").then(m => ({ default: m.LectorGuide })));
@@ -103,8 +104,9 @@ const Index = () => {
   return (
     <main className="min-h-screen bg-background flex flex-col" ref={scrollRef}>
       <div className="mx-auto max-w-2xl px-5 py-10 md:px-6 md:py-20 flex-1" style={{ minHeight: 'calc(100vh - 140px)' }}>
-        {/* Dark mode toggle */}
-        <div className="flex justify-end mb-6">
+        {/* Top controls: dark mode toggle + notification bell */}
+        <div className="flex justify-end items-center gap-1 mb-6">
+          <NotificationButton />
           <button
             onClick={toggleTheme}
             className="p-2 rounded-full text-foreground/60 hover:text-foreground transition-colors"

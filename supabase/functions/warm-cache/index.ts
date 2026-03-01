@@ -232,40 +232,58 @@ Deno.serve(async (req) => {
       addLog(`Scraping reading page: ${nextSunday.url}`);
       const rawMarkdown = await scrapeUrl(nextSunday.url, FIRECRAWL_API_KEY);
       if (!rawMarkdown) {
-        addLog("Failed to scrape reading page");
-        return new Response(JSON.stringify({ success: false, log }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        // Scraping failed — fall back to stale cache if available
+        if (cached) {
+          addLog("Scraping failed — falling back to stale cache for notification sentence");
+          const { data: fullCached } = await supabase
+            .from("readings_cache")
+            .select("markdown_content, sunday_title, notification_sentence")
+            .eq("id", cached.id)
+            .single();
+          if (fullCached?.notification_sentence) {
+            addLog("Notification sentence already exists in stale cache — nothing to do");
+            return new Response(JSON.stringify({ success: true, sundayTitle: fullCached.sunday_title, log }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          readingsMarkdown = fullCached!.markdown_content;
+          sundayTitle = fullCached!.sunday_title;
+        } else {
+          addLog("Failed to scrape reading page — no cache available");
+          return new Response(JSON.stringify({ success: false, log }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      } else {
+        const extracted = extractReadings(rawMarkdown, nextSunday.title);
+
+        // Validate: extracted readings must contain actual biblical text, not site navigation
+        if (!extracted.readings || extracted.readings.length < 100) {
+          addLog(`Extraction failed — readings too short (${extracted.readings?.length || 0} chars). Raw markdown starts with: ${rawMarkdown.substring(0, 100)}`);
+          return new Response(JSON.stringify({ success: false, log, error: "Extraction produced no valid readings" }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        readingsMarkdown = extracted.readings;
+        sundayTitle = extracted.sundayTitle;
+
+        // Save to readings_cache — delete old entries first, then insert
+        await supabase.from("readings_cache").delete().neq("sunday_title", sundayTitle);
+        await supabase.from("readings_cache").upsert(
+          {
+            sunday_title: sundayTitle,
+            url: nextSunday.url,
+            markdown_content: readingsMarkdown,
+            scraped_at: new Date().toISOString(),
+            sunday_date: nextSunday.date,
+          },
+          { onConflict: "sunday_title" }
+        );
+        addLog(`Saved readings to cache: "${sundayTitle}"`);
       }
-
-      const extracted = extractReadings(rawMarkdown, nextSunday.title);
-
-      // Validate: extracted readings must contain actual biblical text, not site navigation
-      if (!extracted.readings || extracted.readings.length < 100) {
-        addLog(`Extraction failed — readings too short (${extracted.readings?.length || 0} chars). Raw markdown starts with: ${rawMarkdown.substring(0, 100)}`);
-        return new Response(JSON.stringify({ success: false, log, error: "Extraction produced no valid readings" }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      readingsMarkdown = extracted.readings;
-      sundayTitle = extracted.sundayTitle;
-
-      // Save to readings_cache — delete old entries first, then insert
-      await supabase.from("readings_cache").delete().neq("sunday_title", sundayTitle);
-      await supabase.from("readings_cache").upsert(
-        {
-          sunday_title: sundayTitle,
-          url: nextSunday.url,
-          markdown_content: readingsMarkdown,
-          scraped_at: new Date().toISOString(),
-          sunday_date: nextSunday.date,
-        },
-        { onConflict: "sunday_title" }
-      );
-      addLog(`Saved readings to cache: "${sundayTitle}"`);
     }
 
     // --- Step 3: Pre-generate AI outputs ---

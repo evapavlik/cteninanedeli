@@ -235,7 +235,7 @@ const Index = () => {
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-border mt-12 px-5 py-8 pb-safe text-center font-serif text-sm text-muted-foreground">
+      <footer className="border-t border-border mt-12 px-5 pt-8 pb-safe text-center font-serif text-sm text-muted-foreground">
         <p>S láskou k poznání vytvořila Eva Pavlíková.</p>
         <p className="mt-2 text-xs text-muted-foreground/60">
           Texty čtení z{" "}

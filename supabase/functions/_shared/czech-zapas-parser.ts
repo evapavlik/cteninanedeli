@@ -73,12 +73,19 @@ export function parseNadPismem(
   //   - header embedded mid-line: "...předchozí text Nad Písmem" (PDF sometimes
   //     omits newlines before section headings due to hasEOL not being set)
   //   - header with trailing colon: "Nad písmem:"
+  //   - diacritic-split artifact: "Nad P í smem" (pdfjs + special Czech font)
   const NAD_PISMEM_RE = /nad\s+p[ií]smem[:\s]*/i;
+  // Ultra-flexible: allow spaces within "písmem" (pdfjs diacritic-split artifact)
+  const NAD_PISMEM_SPLIT_RE = /nad\s+p\s*[ií]\s*s\s*m\s*e\s*m/i;
   // Prefer a line where the heading starts at the beginning
   let headerIdx = lines.findIndex((l) => /^nad\s+p[ií]smem/i.test(l.trim()));
-  // Fallback: accept heading embedded anywhere in a line
+  // Fallback: heading embedded anywhere in a line
   if (headerIdx === -1) {
     headerIdx = lines.findIndex((l) => NAD_PISMEM_RE.test(l));
+  }
+  // Fallback: diacritic-split form ("Nad P í smem") — pdfjs artifact
+  if (headerIdx === -1) {
+    headerIdx = lines.findIndex((l) => NAD_PISMEM_SPLIT_RE.test(l));
   }
   if (headerIdx === -1) return null;
 

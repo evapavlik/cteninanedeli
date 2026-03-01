@@ -8,6 +8,37 @@
 // Vite resolves this at build time → copies worker to dist/assets and returns the URL.
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
+/**
+ * Repairs word splits caused by PDF fonts that store diacritical characters
+ * as separate glyphs — common in some Czech magazine PDFs (e.g. Český zápas).
+ *
+ * Some Czech characters (particularly those with háček: ř, š, č, ž, ě, ď, ň, ť)
+ * are stored in a separate font glyph, so pdfjs-dist outputs them as a separate
+ * text item and inserts a space between them and the surrounding letters.
+ * Result: "křesťany" → "k ř es ť any", "Nad Písmem" → "Nad P í smem".
+ *
+ * Safe because no Czech word consists solely of diacritical characters
+ * (á, č, ď, é, ě, í, ň, ó, ř, š, ť, ú, ů, ý, ž are never standalone words).
+ * Repeats until stable to handle consecutive splits ("k ř es ť any").
+ */
+function repairDiacriticSplits(text: string): string {
+  const D = "áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ";
+  const L = `[a-z${D}A-Z]`; // any letter (including Czech diacritics)
+
+  let result = text;
+  let prev = "";
+  while (prev !== result) {
+    prev = result;
+    // Mid-word split: letter SPACE 1-2-diacritics SPACE letter → remove both spaces
+    // e.g. "k ř ichází" → "křichází"
+    result = result.replace(new RegExp(`(${L}) ([${D}]{1,2}) (${L})`, "g"), "$1$2$3");
+    // Word-start split: (whitespace)(1-2-diacritics)(SPACE)(letter) → join
+    // e.g. "Č eský" → "Český"  (whitespace before "Č" is newline or space)
+    result = result.replace(new RegExp(`(\\s)([${D}]{1,2}) (${L})`, "g"), "$1$2$3");
+  }
+  return result;
+}
+
 /** Extracts plain text from a PDF File. Runs in the browser (not edge function). */
 export async function extractPdfText(file: File): Promise<string> {
   const pdfjsLib = await import("pdfjs-dist");
@@ -31,7 +62,10 @@ export async function extractPdfText(file: File): Promise<string> {
     }
     pages.push(pageText.trimEnd());
   }
-  return pages.join("\n");
+
+  // Repair diacritic splits before returning — some Czech PDFs store diacritical
+  // characters in a separate font, causing pdfjs to insert spurious spaces.
+  return repairDiacriticSplits(pages.join("\n"));
 }
 
 /** Detects year and issue number from a PDF filename (e.g. "cz_2024_12.pdf"). */

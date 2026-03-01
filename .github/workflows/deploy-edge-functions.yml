@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'supabase/functions/**'
+      - '.github/workflows/deploy-edge-functions.yml'
   workflow_dispatch: # allow manual trigger from GitHub UI
 
 jobs:

@@ -187,9 +187,49 @@ Deno.serve(async (req) => {
     addLog("Scraping cyklus.ccsh.cz index…");
     const indexMarkdown = await scrapeUrl(INDEX_URL, FIRECRAWL_API_KEY);
     if (!indexMarkdown) {
-      addLog("Failed to scrape index page");
-      return new Response(JSON.stringify({ success: false, log }), {
-        status: 500,
+      // Index scraping failed — fall back to most recent cached reading
+      addLog("Failed to scrape index page — falling back to most recent cache");
+      const { data: mostRecent } = await supabase
+        .from("readings_cache")
+        .select("markdown_content, sunday_title, notification_sentence")
+        .order("sunday_date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!mostRecent) {
+        addLog("No cached reading available — aborting");
+        return new Response(JSON.stringify({ success: false, log }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (mostRecent.notification_sentence) {
+        addLog(`Notification sentence already exists for "${mostRecent.sunday_title}" — nothing to do`);
+        return new Response(JSON.stringify({ success: true, sundayTitle: mostRecent.sunday_title, log }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (!GEMINI_API_KEY) {
+        addLog("GEMINI_API_KEY not set — cannot generate notification sentence");
+        return new Response(JSON.stringify({ success: false, log }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      addLog(`Generating notification sentence for cached "${mostRecent.sunday_title}"…`);
+      const notifSentence = await generateNotificationSentence(mostRecent.markdown_content, mostRecent.sunday_title, GEMINI_API_KEY);
+      if (notifSentence) {
+        await supabase
+          .from("readings_cache")
+          .update({ notification_sentence: notifSentence })
+          .eq("sunday_title", mostRecent.sunday_title);
+        addLog(`Notification sentence saved: "${notifSentence.substring(0, 60)}…"`);
+      }
+
+      return new Response(JSON.stringify({ success: true, sundayTitle: mostRecent.sunday_title, log }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

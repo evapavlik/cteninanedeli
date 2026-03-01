@@ -18,12 +18,12 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === "development" && componentTagger(),
     VitePWA({
+      strategies: "injectManifest",
+      srcDir: "src",
+      filename: "sw.ts",
       registerType: "autoUpdate",
       injectRegister: "script-defer",
       includeAssets: ["favicon.ico", "pwa-icon-192.png", "pwa-icon-512.png"],
-      workbox: {
-        navigateFallbackDenylist: [/^\/~oauth/],
-      },
       manifest: {
         name: "Čtení textů na neděli – CČSH",
         short_name: "Čtení na neděli",

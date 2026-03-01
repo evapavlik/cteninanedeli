@@ -44,13 +44,16 @@ export function NotificationButton() {
       }
 
       const reg = await navigator.serviceWorker.ready;
+      console.log("[Push] SW registered:", reg.scope);
+
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
       });
+      console.log("[Push] Subscription created:", sub.endpoint);
 
       const json = sub.toJSON();
-      await supabase.from("push_subscriptions").upsert(
+      const { error } = await supabase.from("push_subscriptions").upsert(
         {
           endpoint: json.endpoint!,
           p256dh: json.keys!.p256dh,
@@ -58,10 +61,17 @@ export function NotificationButton() {
         },
         { onConflict: "endpoint" },
       );
+      if (error) {
+        console.error("[Push] Supabase upsert error:", error);
+        setState("default");
+        return;
+      }
 
+      console.log("[Push] Subscription saved to DB ✓");
       localStorage.setItem(LS_KEY, "1");
       setState("subscribed");
-    } catch {
+    } catch (e) {
+      console.error("[Push] Subscribe error:", e);
       setState("default");
     }
   }

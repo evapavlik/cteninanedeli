@@ -115,9 +115,11 @@ scripts/
 ## Supabase
 
 - **Project ID:** `uedluysdwvcdrhjiotjc`
-- **Klíčové tabulky:** readings_cache, ai_cache, postily, corpus_documents, theological_profiles
+- **Klíčové tabulky:** readings_cache, ai_cache, postily, corpus_documents, theological_profiles, push_subscriptions
 - **Postily matching:** GIN index na `biblical_references` + PostgreSQL overlap operator (`&&`)
 - **RLS:** všechny tabulky veřejně čitelné, zápis jen přes service role
+- **push_subscriptions RLS:** anon může INSERT a DELETE, SELECT jen service_role. Důsledek: pro zápis z frontendu použij prostý INSERT (ne upsert) — upsert potřebuje SELECT pro detekci konfliktu, jinak selže s 42501 → HTTP 401. Chybu 23505 (unique_violation) považuj za úspěch.
+- **Diagnostika Supabase 401:** HTTP 401 s `proxy_status: "PostgREST; error=42501"` neznamená špatný JWT — znamená PostgreSQL `insufficient_privilege` (RLS nebo chybějící GRANT). JWT sekce v logu ukáže, jestli je role správně rozpoznaná.
 
 ## Infrastruktura (dokončeno únor 2026)
 
@@ -146,6 +148,8 @@ Projekt běží na vlastní infrastruktuře — **Vercel** (frontend) + **vlastn
 - **Debugování: diagnóza před řešením:** Při chybě nejdřív přečti relevantní soubory, pak spusť diagnostické dotazy (SQL SELECT, logy, …), a teprve potom navrhni jedno komplexní řešení. Nikdy nenavrhuj fix před tím, než víš přesně, co je špatně. Iterativní hádání (zkus X, zkus Y, zkus Z) je nepřijatelné.
 - **Jedno hotové řešení:** Při opravě databáze nebo konfigurace dávej jeden finální SQL/příkaz, ne sérii částečných pokusů. Pokud si nejsi jistý, nejdřív se zeptej diagnostickým dotazem, pak dej fix.
 - **Minimalizovat manuální kroky pro Evu:** Eva není programátor. Každý manuální krok v Supabase dashboardu, Vercelu nebo terminálu musí být nevyhnutelný a musí fungovat na první pokus. Pokud potřebuješ víc informací, ověř je sám (přečti kód), ne dotazy na Evu.
+- **Frontend → Supabase:** vždy přes Supabase JS klienta (`supabase.from(...)`) — nikdy přímý `fetch()` s ručním API klíčem. Klient má klíč správně nakonfigurovaný, ruční fetch je křehký a může selhat v produkci.
+- **iOS PWA push notifikace:** `Notification.requestPermission()` může vrátit `"default"` (dialog zavřen bez výběru) — to není `"denied"`. Pokud dostaneš `"default"`, nech tlačítko aktivní a umožni opakování.
 - **Učení se:** Eva se chce v technologiích neustále zlepšovat. Při vysvětlování přidej krátké „proč" — vysvětli principy, ne jen řešení. Nebuď přednáškový, ale posunuj znalosti krok za krokem.
 - **Teologický kontext:** Aplikace slouží CČSH — specifická česká církev s husitskou tradicí. Klíčové texty: Základy víry CČSH, postily Karla Farského. Při práci s teologickým obsahem buď citlivý a přesný.
 - **Vize a směr:** Aplikace se rozrůstá — nejen o nový obsah (další autoři z Českého zápasu), ale i o funkce (pomůcky pro kazatele). Eva přemýšlí o tom, jestli to časem bude jedna aplikace nebo více menších. Klíčové pravidlo: jednoduchost pro uživatele je nad vše. Při navrhování nových funkcí vždy zvažuj, jestli to aplikaci nekomplikuje.

@@ -38,8 +38,13 @@ export function NotificationButton() {
     setState("loading");
     try {
       const permission = await Notification.requestPermission();
-      if (permission !== "granted") {
+      if (permission === "denied") {
         setState("denied");
+        return;
+      }
+      if (permission !== "granted") {
+        // dialog was dismissed without choice — allow retry
+        setState("default");
         return;
       }
 
@@ -51,16 +56,14 @@ export function NotificationButton() {
       });
 
       const json = sub.toJSON();
-      const { error } = await supabase.from("push_subscriptions").upsert(
-        {
-          endpoint: json.endpoint!,
-          p256dh: json.keys!.p256dh,
-          auth: json.keys!.auth,
-        },
-        { onConflict: "endpoint" },
-      );
-      if (error) {
-        console.error("[Push] Supabase upsert error:", error);
+      const { error } = await supabase.from("push_subscriptions").insert({
+        endpoint: json.endpoint!,
+        p256dh: json.keys!.p256dh,
+        auth: json.keys!.auth,
+      });
+      // 23505 = unique_violation: endpoint already saved, treat as success
+      if (error && error.code !== "23505") {
+        console.error("[Push] Supabase insert error:", error);
         setState("default");
         return;
       }

@@ -45,9 +45,17 @@ export function parseBiblicalRefs(text: string): string[] {
   return refs;
 }
 
-/** Lines that signal the start of a new CZ section. */
+/** Lines that signal the start of a new CZ section (must be at start of line). */
 const SECTION_BOUNDARY_RE =
-  /^(Ze\s+sbor|Z\s+teologie|Bohoslužb|Oznámen|Přehled|Rozhovor|Zpráv|Inzerce|Vydavatel|Ročník\s+\d|Nad\s+p[ií]smem|EDITORIAL|OBSAH|Na\s+okraj|Dopis|Ohlédnut)/i;
+  /^(Ze\s+sbor|Z\s+teologie|Z\s+ekumen|Bohoslužb|Oznámen|Přehled|Rozhovor|Zpráv|Inzerce|Vydavatel|Ročník\s+\d|Nad\s+p[ií]smem|EDITORIAL|OBSAH|Na\s+okraj|Dopis|Ohlédnut|Pro\s+d[eě]ti|Pozvánk)/i;
+
+/**
+ * PDF extraction artifacts that signal we've left the sermon.
+ * Matches magazine page headers/footers, ISSN lines, etc.
+ * These can appear anywhere in a line (columns often merge in PDF extraction).
+ */
+const PAGE_BOUNDARY_RE =
+  /ISSN\s+\d|MK\s+[ČC]\s*R\s+E\s+\d|[ČC]\s*eský\s+zápas\s+\d+\s*•|\d+\s*•\s*[ČC]\s*eský/i;
 
 /**
  * Parses the "Nad písmem" section from extracted PDF text.
@@ -145,7 +153,8 @@ export function parseNadPismem(
     }
   }
 
-  // Collect body lines until we hit a new section header or the safety limit
+  // Collect body lines until we hit a new section header, page boundary, or safety limit.
+  // Typical "Nad písmem" sermons are 40–70 lines; 120 is generous.
   const bodyLines: string[] = [];
   for (let i = titleIdx + 1 + extraLinesConsumed; i < lines.length; i++) {
     const trimmed = lines[i].trim();
@@ -155,9 +164,11 @@ export function parseNadPismem(
       trimmed.length > 0 &&
       SECTION_BOUNDARY_RE.test(trimmed) &&
       !/\.\s/.test(trimmed);
-    if (looksLikeSectionHeader) break;
+    // PDF page headers/footers (ISSN, magazine name+number) can appear anywhere in a line
+    const looksLikePageBoundary = PAGE_BOUNDARY_RE.test(trimmed);
+    if (looksLikeSectionHeader || looksLikePageBoundary) break;
     bodyLines.push(lines[i]);
-    if (bodyLines.length >= 400) break; // safety limit
+    if (bodyLines.length >= 120) break; // safety limit
   }
 
   // Trim trailing empty lines

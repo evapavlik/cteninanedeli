@@ -124,9 +124,13 @@ function parseBiblicalRefs(text) {
   return refs;
 }
 
-/** Řádky signalizující novou sekci CZ */
+/** Řádky signalizující novou sekci CZ (musí být na začátku řádku) */
 const SECTION_BOUNDARY_RE =
-  /^(Ze\s+sbor|Z\s+teologie|Bohoslužb|Oznámen|Přehled|Rozhovor|Zpráv|Inzerce|Vydavatel|Ročník\s+\d|Nad\s+p[ií]smem|EDITORIAL|OBSAH|Na\s+okraj|Dopis|Ohlédnut)/i;
+  /^(Ze\s+sbor|Z\s+teologie|Z\s+ekumen|Bohoslužb|Oznámen|Přehled|Rozhovor|Zpráv|Inzerce|Vydavatel|Ročník\s+\d|Nad\s+p[ií]smem|EDITORIAL|OBSAH|Na\s+okraj|Dopis|Ohlédnut|Pro\s+d[eě]ti|Pozvánk)/i;
+
+/** PDF artefakty signalizující, že jsme mimo kázání (záhlaví/zápatí stránky, ISSN atd.) */
+const PAGE_BOUNDARY_RE =
+  /ISSN\s+\d|MK\s+[ČC]\s*R\s+E\s+\d|[ČC]\s*eský\s+zápas\s+\d+\s*•|\d+\s*•\s*[ČC]\s*eský/i;
 
 /**
  * Deterministicky parsuje sekci "Nad písmem" z extrahovaného textu PDF.
@@ -140,33 +144,80 @@ function parseNadPismem(rawText, year, issueNumber) {
 
   const lines = text.split("\n");
 
-  // Najít záhlaví sekce
-  const headerIdx = lines.findIndex((l) => /^nad\s+p[ií]smem\s*$/i.test(l.trim()));
+  // Najít záhlaví sekce — flexibilní detekce
+  const NAD_PISMEM_RE = /nad\s+p[ií]smem[:\s]*/i;
+  const NAD_PISMEM_SPLIT_RE = /nad\s+p\s*[ií]\s*s\s*m\s*e\s*m/i;
+  // Prefer heading at start of line
+  let headerIdx = lines.findIndex((l) => /^nad\s+p[ií]smem/i.test(l.trim()));
+  // Fallback: heading embedded anywhere in a line
+  if (headerIdx === -1) {
+    headerIdx = lines.findIndex((l) => NAD_PISMEM_RE.test(l));
+  }
+  // Fallback: diacritic-split form ("Nad P í smem")
+  if (headerIdx === -1) {
+    headerIdx = lines.findIndex((l) => NAD_PISMEM_SPLIT_RE.test(l));
+  }
   if (headerIdx === -1) return null;
 
-  // První neprázdný řádek = název + biblická reference
-  let titleIdx = headerIdx + 1;
-  while (titleIdx < lines.length && lines[titleIdx].trim() === "") titleIdx++;
-  if (titleIdx >= lines.length) return null;
+  const headerLine = lines[headerIdx].trim();
+  const headingMatch = NAD_PISMEM_RE.exec(headerLine);
+  const restAfterHeader = headingMatch
+    ? headerLine.slice(headingMatch.index + headingMatch[0].length).trim()
+    : "";
 
-  const titleLine = lines[titleIdx].trim();
-  const refsInTitle = parseBiblicalRefs(titleLine);
+  let titleIdx;
+  let titleLine;
+  if (restAfterHeader.length > 0) {
+    titleIdx = headerIdx;
+    titleLine = restAfterHeader;
+  } else {
+    titleIdx = headerIdx + 1;
+    while (titleIdx < lines.length && lines[titleIdx].trim() === "") titleIdx++;
+    if (titleIdx >= lines.length) return null;
+    titleLine = lines[titleIdx].trim();
+  }
+
+  let refsInTitle = parseBiblicalRefs(titleLine);
   let title = titleLine;
   let biblical_refs_raw = null;
 
   if (refsInTitle.length > 0) {
     const firstRefPos = titleLine.indexOf(refsInTitle[0]);
-    title = titleLine.substring(0, firstRefPos).trim();
+    title = titleLine.substring(0, firstRefPos).trim().replace(/\s*[([\s]+$/, "");
     biblical_refs_raw = refsInTitle.join("; ");
   }
 
-  // Sbíráme tělo článku
+  // Refs may be on the next non-empty line
+  let extraLinesConsumed = 0;
+  if (refsInTitle.length === 0) {
+    let refLineIdx = titleIdx + 1;
+    while (refLineIdx < lines.length && lines[refLineIdx].trim() === "") refLineIdx++;
+    if (refLineIdx < lines.length) {
+      const candidate = lines[refLineIdx].trim();
+      const refsOnNextLine = parseBiblicalRefs(candidate);
+      if (refsOnNextLine.length > 0) {
+        const stripped = candidate.replace(/\b([JRŽA-Z][a-záčďéěíňóřšťúůýž]{0,4})\s+(\d+),(\d+(?:[–-]\d+)?[abc]?)\b/g, "").replace(/[;,\s()[\]]+/g, "").trim();
+        if (stripped.length === 0) {
+          refsInTitle = refsOnNextLine;
+          biblical_refs_raw = refsOnNextLine.join("; ");
+          extraLinesConsumed = refLineIdx - titleIdx;
+        }
+      }
+    }
+  }
+
+  // Sbíráme tělo článku (typické kázání = 40–70 řádků; 120 je bezpečný limit)
   const bodyLines = [];
-  for (let i = titleIdx + 1; i < lines.length; i++) {
+  for (let i = titleIdx + 1 + extraLinesConsumed; i < lines.length; i++) {
     const trimmed = lines[i].trim();
-    if (trimmed.length > 0 && SECTION_BOUNDARY_RE.test(trimmed)) break;
+    const looksLikeSectionHeader =
+      trimmed.length > 0 &&
+      SECTION_BOUNDARY_RE.test(trimmed) &&
+      !/\.\s/.test(trimmed);
+    const looksLikePageBoundary = PAGE_BOUNDARY_RE.test(trimmed);
+    if (looksLikeSectionHeader || looksLikePageBoundary) break;
     bodyLines.push(lines[i]);
-    if (bodyLines.length >= 400) break;
+    if (bodyLines.length >= 120) break;
   }
 
   while (bodyLines.length > 0 && bodyLines[bodyLines.length - 1].trim() === "") {
@@ -175,8 +226,23 @@ function parseNadPismem(rawText, year, issueNumber) {
 
   if (bodyLines.length === 0) return null;
 
-  const author = bodyLines[bodyLines.length - 1].trim() || null;
-  const content = bodyLines.slice(0, bodyLines.length - 1).join("\n").trim();
+  // Last non-empty line is the author's name.
+  // Sometimes author appears on same line as closing sentence:
+  // "také uvěřili. Lucie Haltofová" — detect and split.
+  const lastBodyLine = bodyLines[bodyLines.length - 1].trim();
+  const NAME_SUFFIX_RE =
+    /^(.+[.!?…])\s+([A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž]+(?:\s+[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž]+){1,3})\s*$/;
+  const nameSuffixMatch = NAME_SUFFIX_RE.exec(lastBodyLine);
+
+  let author;
+  let content;
+  if (nameSuffixMatch) {
+    author = nameSuffixMatch[2];
+    content = [...bodyLines.slice(0, -1), nameSuffixMatch[1]].join("\n").trim();
+  } else {
+    author = lastBodyLine || null;
+    content = bodyLines.slice(0, -1).join("\n").trim();
+  }
 
   const liturgicalMatch = content.match(
     /\b(\d+\.\s+ned[eě]l[ei]\s+\w+|Hod\s+Bo[žz][íi]\s+\w+|[Vv]elikonoční\s+ned[eě]l[ai]|[Pp]ůst[ní]*\s+ned[eě]l[ei])/,

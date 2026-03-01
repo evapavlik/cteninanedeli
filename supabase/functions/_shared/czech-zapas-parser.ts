@@ -153,8 +153,12 @@ export function parseNadPismem(
     }
   }
 
-  // Collect body lines until we hit a new section header, page boundary, or safety limit.
-  // Typical "Nad písmem" sermons are 40–70 lines; 120 is generous.
+  // Collect body lines until we hit a new section header, page boundary,
+  // standalone author name, or safety limit.
+  // Typical "Nad písmem" sermons are 40–70 lines of body text, plus ~20 lines
+  // of liturgical preamble (readings, prayers, hymns) = 60–90 lines total.
+  const STANDALONE_NAME_RE =
+    /^[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž]+(?:\s+[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž]+){1,3}$/;
   const bodyLines: string[] = [];
   for (let i = titleIdx + 1 + extraLinesConsumed; i < lines.length; i++) {
     const trimmed = lines[i].trim();
@@ -167,6 +171,22 @@ export function parseNadPismem(
     // PDF page headers/footers (ISSN, magazine name+number) can appear anywhere in a line
     const looksLikePageBoundary = PAGE_BOUNDARY_RE.test(trimmed);
     if (looksLikeSectionHeader || looksLikePageBoundary) break;
+
+    // Detect standalone author name: 2–4 capitalized words, no punctuation,
+    // appearing after substantial body content (>= 20 lines).
+    // This catches the author line that marks the end of the sermon,
+    // even when no section boundary follows immediately.
+    if (
+      bodyLines.length >= 20 &&
+      trimmed.length > 3 &&
+      trimmed.length < 50 &&
+      STANDALONE_NAME_RE.test(trimmed) &&
+      !/[.!?,;:0-9]/.test(trimmed)
+    ) {
+      bodyLines.push(lines[i]); // include the name as the last body line
+      break;
+    }
+
     bodyLines.push(lines[i]);
     if (bodyLines.length >= 120) break; // safety limit
   }

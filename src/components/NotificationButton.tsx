@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { Bell, BellOff } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 const LS_KEY = "ccsh-push-subscribed";
 
 type NotifState = "unsupported" | "default" | "subscribed" | "denied" | "loading";
@@ -53,16 +54,26 @@ export function NotificationButton() {
       console.log("[Push] Subscription created:", sub.endpoint);
 
       const json = sub.toJSON();
-      const { error } = await supabase.from("push_subscriptions").upsert(
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/push_subscriptions?on_conflict=endpoint`,
         {
-          endpoint: json.endpoint!,
-          p256dh: json.keys!.p256dh,
-          auth: json.keys!.auth,
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+            "Prefer": "resolution=merge-duplicates",
+          },
+          body: JSON.stringify({
+            endpoint: json.endpoint!,
+            p256dh: json.keys!.p256dh,
+            auth: json.keys!.auth,
+          }),
         },
-        { onConflict: "endpoint" },
       );
-      if (error) {
-        console.error("[Push] Supabase upsert error:", error);
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        console.error("[Push] Supabase upsert error:", res.status, body);
         setState("default");
         return;
       }
@@ -82,7 +93,16 @@ export function NotificationButton() {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
       if (sub) {
-        await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+        await fetch(
+          `${SUPABASE_URL}/rest/v1/push_subscriptions?endpoint=eq.${encodeURIComponent(sub.endpoint)}`,
+          {
+            method: "DELETE",
+            headers: {
+              "apikey": SUPABASE_ANON_KEY,
+              "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+            },
+          },
+        );
         await sub.unsubscribe();
       }
       localStorage.removeItem(LS_KEY);

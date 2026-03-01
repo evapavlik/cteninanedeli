@@ -44,6 +44,9 @@ export function NotificationButton() {
         return;
       }
 
+      console.log("[Push] ANON KEY:", SUPABASE_ANON_KEY ? SUPABASE_ANON_KEY.substring(0, 20) + "…" : "MISSING/UNDEFINED");
+      console.log("[Push] URL:", SUPABASE_URL || "MISSING/UNDEFINED");
+
       const reg = await navigator.serviceWorker.ready;
       console.log("[Push] SW registered:", reg.scope);
 

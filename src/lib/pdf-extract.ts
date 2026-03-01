@@ -56,7 +56,7 @@ export async function extractPdfText(file: File): Promise<string> {
     // on a page merges into one long string and the parser can't find headings.
     let pageText = "";
     for (const item of content.items as Array<{ str?: string; hasEOL?: boolean }>) {
-      if (!item.str) continue;
+      if (item.str == null) continue;
       pageText += item.str;
       pageText += item.hasEOL ? "\n" : " ";
     }

@@ -206,7 +206,9 @@ function parseNadPismem(rawText, year, issueNumber) {
     }
   }
 
-  // Sbíráme tělo článku (typické kázání = 40–70 řádků; 120 je bezpečný limit)
+  // Sbíráme tělo článku (typické kázání = 40–70 řádků + ~20 řádků liturgického úvodu)
+  const STANDALONE_NAME_RE =
+    /^[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž]+(?:\s+[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž]+){1,3}$/;
   const bodyLines = [];
   for (let i = titleIdx + 1 + extraLinesConsumed; i < lines.length; i++) {
     const trimmed = lines[i].trim();
@@ -216,6 +218,19 @@ function parseNadPismem(rawText, year, issueNumber) {
       !/\.\s/.test(trimmed);
     const looksLikePageBoundary = PAGE_BOUNDARY_RE.test(trimmed);
     if (looksLikeSectionHeader || looksLikePageBoundary) break;
+
+    // Detect standalone author name after substantial body content
+    if (
+      bodyLines.length >= 20 &&
+      trimmed.length > 3 &&
+      trimmed.length < 50 &&
+      STANDALONE_NAME_RE.test(trimmed) &&
+      !/[.!?,;:0-9]/.test(trimmed)
+    ) {
+      bodyLines.push(lines[i]);
+      break;
+    }
+
     bodyLines.push(lines[i]);
     if (bodyLines.length >= 120) break;
   }

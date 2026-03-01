@@ -2,11 +2,19 @@
  * Deterministic parser for the "Nad písmem" section of Český zápas.
  * No AI required — operates on plain text extracted from PDF.
  *
- * Section structure:
- *   Nad Písmem
- *   [Sermon title] [Biblical reference, e.g. J 3,1-17]
- *   [Sermon body...]
- *   FirstName LastName
+ * Section structure (two common variants):
+ *   Variant A — title and ref on same line:
+ *     Nad Písmem
+ *     [Sermon title] [Biblical reference, e.g. J 3,1–13]
+ *     [Sermon body...]
+ *     FirstName LastName
+ *
+ *   Variant B — ref on its own line (common in recent issues):
+ *     Nad Písmem
+ *     [Sermon title]
+ *     [Biblical reference, e.g. J 3,1-17]
+ *     [Sermon body...]
+ *     FirstName LastName
  */
 
 export interface ParsedArticle {
@@ -58,15 +66,27 @@ export function parseNadPismem(
 
   const lines = text.split("\n");
 
-  // Find the line starting with "Nad Písmem" / "Nad písmem".
-  // Handles both: header on its own line, and header+title on the same line
-  // e.g. "Nad Písmem Dokážeme říct Ne? (L 4,1–13)"
-  const NAD_PISMEM_RE = /^nad\s+p[ií]smem\s*/i;
-  const headerIdx = lines.findIndex((l) => NAD_PISMEM_RE.test(l.trim()));
+  // Find the line containing "Nad Písmem" / "Nad písmem".
+  // Handles:
+  //   - header on its own line: "Nad Písmem"
+  //   - header + title on same line: "Nad Písmem Dokážeme říct Ne? (L 4,1–13)"
+  //   - header embedded mid-line: "...předchozí text Nad Písmem" (PDF sometimes
+  //     omits newlines before section headings due to hasEOL not being set)
+  //   - header with trailing colon: "Nad písmem:"
+  const NAD_PISMEM_RE = /nad\s+p[ií]smem[:\s]*/i;
+  // Prefer a line where the heading starts at the beginning
+  let headerIdx = lines.findIndex((l) => /^nad\s+p[ií]smem/i.test(l.trim()));
+  // Fallback: accept heading embedded anywhere in a line
+  if (headerIdx === -1) {
+    headerIdx = lines.findIndex((l) => NAD_PISMEM_RE.test(l));
+  }
   if (headerIdx === -1) return null;
 
   const headerLine = lines[headerIdx].trim();
-  const restAfterHeader = headerLine.replace(NAD_PISMEM_RE, "").trim();
+  const headingMatch = NAD_PISMEM_RE.exec(headerLine);
+  const restAfterHeader = headingMatch
+    ? headerLine.slice(headingMatch.index + headingMatch[0].length).trim()
+    : "";
 
   let titleIdx: number;
   let titleLine: string;
@@ -83,21 +103,44 @@ export function parseNadPismem(
   }
 
   // Extract biblical references from the title line
-  const refsInTitle = parseBiblicalRefs(titleLine);
+  let refsInTitle = parseBiblicalRefs(titleLine);
   let title = titleLine;
   let biblical_refs_raw: string | null = null;
+  // How many extra lines after the title were consumed for the biblical ref
+  let extraLinesConsumed = 0;
 
   if (refsInTitle.length > 0) {
-    // Title = everything before the first reference; strip trailing opening bracket
-    // e.g. "Dokážeme říct Ne? (L 4,1–13)" → "Dokážeme říct Ne?"
+    // Refs are on the same line as the title
+    // e.g. "Dokážeme říct Ne? (L 4,1–13)" → title + ref on same line
     const firstRefPos = titleLine.indexOf(refsInTitle[0]);
     title = titleLine.substring(0, firstRefPos).trim().replace(/\s*[([\s]+$/, "");
     biblical_refs_raw = refsInTitle.join("; ");
+  } else {
+    // Refs may be on the next non-empty line (common in Český zápas layout):
+    //   Název textu       ← titleLine
+    //   J 3,1-17          ← refs on their own line
+    //   Milé sestry...    ← body
+    let refLineIdx = titleIdx + 1;
+    while (refLineIdx < lines.length && lines[refLineIdx].trim() === "") refLineIdx++;
+    if (refLineIdx < lines.length) {
+      const candidate = lines[refLineIdx].trim();
+      const refsOnNextLine = parseBiblicalRefs(candidate);
+      // Accept the line as a ref-only line if it consists entirely of refs
+      // (i.e. removing all refs leaves nothing meaningful behind)
+      if (refsOnNextLine.length > 0) {
+        const stripped = candidate.replace(new RegExp(BIBLICAL_REF_RE.source, "g"), "").replace(/[;,\s()[\]]+/g, "").trim();
+        if (stripped.length === 0) {
+          refsInTitle = refsOnNextLine;
+          biblical_refs_raw = refsOnNextLine.join("; ");
+          extraLinesConsumed = refLineIdx - titleIdx; // skip this line when collecting body
+        }
+      }
+    }
   }
 
   // Collect body lines until we hit a new section header or the safety limit
   const bodyLines: string[] = [];
-  for (let i = titleIdx + 1; i < lines.length; i++) {
+  for (let i = titleIdx + 1 + extraLinesConsumed; i < lines.length; i++) {
     const trimmed = lines[i].trim();
     // A real section header never contains a mid-sentence period
     // ("rozhovor. Hned…" is body text, not the "Rozhovor" section header)

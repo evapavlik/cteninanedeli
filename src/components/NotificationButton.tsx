@@ -101,7 +101,7 @@ export function NotificationButton() {
     <button
       onClick={isSubscribed ? unsubscribe : subscribe}
       disabled={isLoading || state === "denied"}
-      className="p-2 rounded-full text-foreground/60 hover:text-foreground transition-colors disabled:opacity-40"
+      className="p-2.5 rounded-full text-foreground/60 hover:text-foreground transition-colors disabled:opacity-40"
       aria-label={
         state === "denied"
           ? "Notifikace jsou zakázány v nastavení prohlížeče"
@@ -118,9 +118,9 @@ export function NotificationButton() {
       }
     >
       {isSubscribed ? (
-        <Bell className="h-5 w-5 text-foreground/80" />
+        <Bell className="h-6 w-6 text-foreground/80" />
       ) : (
-        <BellOff className="h-5 w-5" />
+        <BellOff className="h-6 w-6" />
       )}
     </button>
   );

@@ -105,10 +105,15 @@ serve(async (req) => {
         );
 
         if (res.ok || res.status !== 429 || attempt === MAX_RETRIES) {
+          if (!res.ok) {
+            const errBody = await res.text().catch(() => "(no body)");
+            console.log(`Gemini error ${res.status} (attempt ${attempt}/${MAX_RETRIES}): ${errBody.slice(0, 300)}`);
+            return new Response(errBody, { status: res.status, headers: res.headers });
+          }
           return res;
         }
 
-        const delay = 2000 * Math.pow(2, attempt - 1);
+        const delay = 5000 * Math.pow(2, attempt - 1);
         console.log(`Gemini 429, retry ${attempt}/${MAX_RETRIES} in ${delay}ms…`);
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
@@ -174,7 +179,7 @@ serve(async (req) => {
       ];
 
       const postilyBody = {
-        model: "gemini-2.0-flash",
+        model: "gemini-2.5-flash",
         messages: postilyMessages,
         response_format: { type: "json_object" },
       };
@@ -212,7 +217,7 @@ serve(async (req) => {
 
         // Cache the result
         await supabase.from("ai_cache").upsert(
-          { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: parsed, model_used: "gemini-2.0-flash" },
+          { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: parsed, model_used: "gemini-2.5-flash" },
           { onConflict: "text_hash,mode,profile_slug" }
         );
         console.log("Cached postily result");
@@ -275,7 +280,7 @@ serve(async (req) => {
       ];
 
       const czResponse = await geminiRequest({
-        model: "gemini-2.0-flash",
+        model: "gemini-2.5-flash",
         messages: czMessages,
         response_format: { type: "json_object" },
       });
@@ -311,7 +316,7 @@ serve(async (req) => {
       try {
         const parsed = JSON.parse(czContent);
         await supabase.from("ai_cache").upsert(
-          { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: parsed, model_used: "gemini-2.0-flash" },
+          { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: parsed, model_used: "gemini-2.5-flash" },
           { onConflict: "text_hash,mode,profile_slug" }
         );
         console.log("Cached czech_zapas result");
@@ -375,7 +380,7 @@ serve(async (req) => {
     ];
 
     const body: Record<string, unknown> = {
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       messages,
     };
 
@@ -415,7 +420,7 @@ serve(async (req) => {
 
         // Save to AI cache
         await supabase.from("ai_cache").upsert(
-          { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: parsed, model_used: "gemini-2.0-flash" },
+          { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: parsed, model_used: "gemini-2.5-flash" },
           { onConflict: "text_hash,mode,profile_slug" }
         );
         console.log("Cached context result");
@@ -434,7 +439,7 @@ serve(async (req) => {
 
     // Save annotate result to AI cache
     await supabase.from("ai_cache").upsert(
-      { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: { annotated: content }, model_used: "gemini-2.0-flash" },
+      { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: { annotated: content }, model_used: "gemini-2.5-flash" },
       { onConflict: "text_hash,mode,profile_slug" }
     );
     console.log("Cached annotate result");

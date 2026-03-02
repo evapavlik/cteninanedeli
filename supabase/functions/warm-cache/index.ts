@@ -120,7 +120,7 @@ Výstup: pouze obě věty oddělené mezerou, bez uvozovek, bez číslování.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gemini-2.0-flash",
+        model: "gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: readings },
@@ -494,7 +494,7 @@ Deno.serve(async (req) => {
       }
 
       const body: Record<string, unknown> = {
-        model: "gemini-2.0-flash",
+        model: "gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userContent },
@@ -533,7 +533,8 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        addLog(`AI error for "${mode}": ${res.status} (attempt ${attempt}/${MAX_RETRIES})`);
+        const errBody = await res.text().catch(() => "(no body)");
+        addLog(`AI error for "${mode}": ${res.status} (attempt ${attempt}/${MAX_RETRIES}) — ${errBody.slice(0, 200)}`);
         return;
       }
 
@@ -543,7 +544,7 @@ Deno.serve(async (req) => {
         try {
           const parsed = JSON.parse(content);
           await supabase.from("ai_cache").upsert(
-            { text_hash: textHash, mode, profile_slug: profileSlug, result: parsed, model_used: "gemini-2.0-flash" },
+            { text_hash: textHash, mode, profile_slug: profileSlug, result: parsed, model_used: "gemini-2.5-flash" },
             { onConflict: "text_hash,mode,profile_slug" }
           );
           addLog(`Cached AI ${mode}`);
@@ -552,7 +553,7 @@ Deno.serve(async (req) => {
         }
       } else {
         await supabase.from("ai_cache").upsert(
-          { text_hash: textHash, mode, profile_slug: profileSlug, result: { annotated: content }, model_used: "gemini-2.0-flash" },
+          { text_hash: textHash, mode, profile_slug: profileSlug, result: { annotated: content }, model_used: "gemini-2.5-flash" },
           { onConflict: "text_hash,mode,profile_slug" }
         );
         addLog(`Cached AI annotate (${content.length} chars)`);

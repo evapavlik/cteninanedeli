@@ -114,9 +114,15 @@ export function useAIData(
         const postilyResult = data?.postily;
         const postilyArray = Array.isArray(postilyResult) ? postilyResult : postilyResult?.postily;
         if (postilyArray && postilyArray.length > 0) {
-          const normalized: PreachingInspirationData = { postily: postilyArray };
-          setPostilyData(normalized);
-          if (sundayTitle) saveCache(POSTILY_CACHE_KEY, sundayTitle, normalized);
+          // Filter out entries without AI content (e.g. 429 fallback with empty fields)
+          const withInsights = postilyArray.filter(
+            (p: any) => p.insight || (p.quotes && p.quotes.length > 0),
+          );
+          if (withInsights.length > 0) {
+            const normalized: PreachingInspirationData = { postily: withInsights };
+            setPostilyData(normalized);
+            if (sundayTitle) saveCache(POSTILY_CACHE_KEY, sundayTitle, normalized);
+          }
         }
       } catch (e) {
         console.error("Postily fetch error:", e);
@@ -151,9 +157,15 @@ export function useAIData(
         const czArray = Array.isArray(czResult) ? czResult : czResult?.czech_zapas;
         const crossEraTension = Array.isArray(czResult) ? null : (czResult?.cross_era_tension ?? null);
         if (czArray && czArray.length > 0) {
-          const normalized = { czech_zapas: czArray, cross_era_tension: crossEraTension };
-          setCzData(normalized);
-          if (sundayTitle) saveCache(CZ_CACHE_KEY, sundayTitle, normalized);
+          // Filter out entries without AI content (e.g. 429 fallback with empty fields)
+          const withInsights = czArray.filter(
+            (a: any) => a.insight || (a.quotes && a.quotes.length > 0),
+          );
+          if (withInsights.length > 0) {
+            const normalized = { czech_zapas: withInsights, cross_era_tension: crossEraTension };
+            setCzData(normalized);
+            if (sundayTitle) saveCache(CZ_CACHE_KEY, sundayTitle, normalized);
+          }
         }
       } catch (e) {
         console.error("Czech zapas fetch error:", e);

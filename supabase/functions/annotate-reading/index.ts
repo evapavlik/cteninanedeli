@@ -88,6 +88,33 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    /** Fetch from Gemini with retry on 429 (exponential backoff). */
+    async function geminiRequest(body: Record<string, unknown>): Promise<Response> {
+      const MAX_RETRIES = 3;
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        const res = await fetch(
+          "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${GEMINI_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(body),
+          },
+        );
+
+        if (res.ok || res.status !== 429 || attempt === MAX_RETRIES) {
+          return res;
+        }
+
+        const delay = 2000 * Math.pow(2, attempt - 1);
+        console.log(`Gemini 429, retry ${attempt}/${MAX_RETRIES} in ${delay}ms…`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+      throw new Error("geminiRequest: unexpected fall-through");
+    }
+
     const isContext = mode === "context";
     const isPostily = mode === "postily";
     const isCzechZapas = mode === "czech_zapas";
@@ -152,17 +179,7 @@ serve(async (req) => {
         response_format: { type: "json_object" },
       };
 
-      const postilyResponse = await fetch(
-        "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${GEMINI_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(postilyBody),
-        }
-      );
+      const postilyResponse = await geminiRequest(postilyBody);
 
       if (!postilyResponse.ok) {
         const t = await postilyResponse.text();
@@ -257,21 +274,11 @@ serve(async (req) => {
         { role: "user", content: text },
       ];
 
-      const czResponse = await fetch(
-        "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${GEMINI_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "gemini-2.0-flash",
-            messages: czMessages,
-            response_format: { type: "json_object" },
-          }),
-        }
-      );
+      const czResponse = await geminiRequest({
+        model: "gemini-2.0-flash",
+        messages: czMessages,
+        response_format: { type: "json_object" },
+      });
 
       if (!czResponse.ok) {
         const t = await czResponse.text();
@@ -376,17 +383,7 @@ serve(async (req) => {
       body.response_format = { type: "json_object" };
     }
 
-    const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${GEMINI_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      }
-    );
+    const response = await geminiRequest(body);
 
     if (!response.ok) {
       if (response.status === 429) {

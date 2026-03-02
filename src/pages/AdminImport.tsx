@@ -62,14 +62,25 @@ export default function AdminImport() {
     setLoading(true);
     try {
       const pdfText = await extractPdfText(file);
-      // Debug: show start + context around "Nad písmem" if found later in doc
-      const nadPos = pdfText.search(/nad\s+p[ií]smem/i);
-      let debug = pdfText.slice(0, 2000);
-      if (nadPos > 2000) {
-        debug += `\n\n... (pozice ${nadPos}) ...\n\n` + pdfText.slice(Math.max(0, nadPos - 100), nadPos + 600);
-      } else if (nadPos === -1) {
-        debug += "\n\n[Text 'Nad písmem' nebyl v dokumentu nalezen]";
+      // Debug: find ALL occurrences of "Nad písmem" (any form) and show context
+      const splitRe = /nad\s+p\s*[ií]\s*s\s*m\s*e\s*m/gi;
+      const matches: { pos: number; isToc: boolean; line: string }[] = [];
+      let m: RegExpExecArray | null;
+      while ((m = splitRe.exec(pdfText)) !== null) {
+        const lineStart = pdfText.lastIndexOf("\n", m.index) + 1;
+        const lineEnd = pdfText.indexOf("\n", m.index);
+        const line = pdfText.slice(lineStart, lineEnd === -1 ? pdfText.length : lineEnd);
+        matches.push({ pos: m.index, isToc: line.includes("•"), line: line.slice(0, 200) });
       }
+      let debug = `[Délka textu: ${pdfText.length} znaků, nalezeno ${matches.length}× "Nad písmem"]\n\n`;
+      if (matches.length > 0) {
+        for (const hit of matches) {
+          debug += `--- pozice ${hit.pos} ${hit.isToc ? "[TOC – přeskočen]" : "[SEKCE]"} ---\n${hit.line}\n\n`;
+        }
+      } else {
+        debug += "[Text 'Nad písmem' nebyl v dokumentu nalezen v žádné formě]\n\n";
+      }
+      debug += "--- prvních 2000 znaků ---\n" + pdfText.slice(0, 2000);
       setDebugText(debug);
 
       const { data, error: fnError } = await supabase.functions.invoke("import-czech-zapas", {

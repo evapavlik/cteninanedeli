@@ -120,7 +120,7 @@ Výstup: pouze obě věty oddělené mezerou, bez uvozovek, bez číslování.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gemini-2.0-flash",
+        model: "gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: readings },
@@ -494,7 +494,7 @@ Deno.serve(async (req) => {
       }
 
       const body: Record<string, unknown> = {
-        model: "gemini-2.0-flash",
+        model: "gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userContent },
@@ -527,13 +527,14 @@ Deno.serve(async (req) => {
         }
 
         if (res.status === 429 && attempt < MAX_RETRIES) {
-          const delay = 5000 * Math.pow(2, attempt - 1); // 5s, 10s — respect Gemini 15 RPM
+          const delay = 15000 * Math.pow(2, attempt - 1); // 15s, 30s — respect Gemini 5 RPM
           addLog(`AI rate limited for "${mode}" (attempt ${attempt}/${MAX_RETRIES}), retrying in ${delay}ms…`);
           await new Promise((resolve) => setTimeout(resolve, delay));
           continue;
         }
 
-        addLog(`AI error for "${mode}": ${res.status} (attempt ${attempt}/${MAX_RETRIES})`);
+        const errBody = await res.text().catch(() => "(no body)");
+        addLog(`AI error for "${mode}": ${res.status} (attempt ${attempt}/${MAX_RETRIES}) — ${errBody.slice(0, 200)}`);
         return;
       }
 
@@ -543,7 +544,7 @@ Deno.serve(async (req) => {
         try {
           const parsed = JSON.parse(content);
           await supabase.from("ai_cache").upsert(
-            { text_hash: textHash, mode, profile_slug: profileSlug, result: parsed, model_used: "gemini-2.0-flash" },
+            { text_hash: textHash, mode, profile_slug: profileSlug, result: parsed, model_used: "gemini-2.5-flash" },
             { onConflict: "text_hash,mode,profile_slug" }
           );
           addLog(`Cached AI ${mode}`);
@@ -552,7 +553,7 @@ Deno.serve(async (req) => {
         }
       } else {
         await supabase.from("ai_cache").upsert(
-          { text_hash: textHash, mode, profile_slug: profileSlug, result: { annotated: content }, model_used: "gemini-2.0-flash" },
+          { text_hash: textHash, mode, profile_slug: profileSlug, result: { annotated: content }, model_used: "gemini-2.5-flash" },
           { onConflict: "text_hash,mode,profile_slug" }
         );
         addLog(`Cached AI annotate (${content.length} chars)`);
@@ -560,10 +561,10 @@ Deno.serve(async (req) => {
     }
 
     // Run AI generations sequentially with delays to avoid Gemini 429 rate limits
-    // Gemini free tier: 15 RPM — 5s gap ensures we stay well under the limit
+    // Gemini 2.5 Flash free tier: 5 RPM — 15s gap keeps us safely under the limit
     for (const mode of ["context", "annotate", "postily", "czech_zapas"] as const) {
       await generateAndCache(mode);
-      await new Promise((resolve) => setTimeout(resolve, 5000));
+      await new Promise((resolve) => setTimeout(resolve, 15000));
     }
 
     // --- Step 4: Generate notification sentence (if not already set for this Sunday) ---

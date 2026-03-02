@@ -505,22 +505,39 @@ Deno.serve(async (req) => {
       }
 
       addLog(`Generating AI "${mode}"…`);
-      const res = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${GEMINI_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
 
-      if (!res.ok) {
-        addLog(`AI error for "${mode}": ${res.status}`);
+      // Retry with exponential backoff on 429
+      const MAX_RETRIES = 3;
+      let content: string | null = null;
+
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        const res = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${GEMINI_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+        });
+
+        if (res.ok) {
+          const aiData = await res.json();
+          content = aiData.choices?.[0]?.message?.content || "";
+          break;
+        }
+
+        if (res.status === 429 && attempt < MAX_RETRIES) {
+          const delay = 2000 * Math.pow(2, attempt - 1);
+          addLog(`AI rate limited for "${mode}" (attempt ${attempt}/${MAX_RETRIES}), retrying in ${delay}ms…`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+
+        addLog(`AI error for "${mode}": ${res.status} (attempt ${attempt}/${MAX_RETRIES})`);
         return;
       }
 
-      const aiData = await res.json();
-      const content = aiData.choices?.[0]?.message?.content || "";
+      if (content === null) return;
 
       if (isJson) {
         try {
@@ -542,12 +559,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    await Promise.all([
-      generateAndCache("context"),
-      generateAndCache("annotate"),
-      generateAndCache("postily"),
-      generateAndCache("czech_zapas"),
-    ]);
+    // Run AI generations sequentially with delays to avoid Gemini 429 rate limits
+    for (const mode of ["context", "annotate", "postily", "czech_zapas"] as const) {
+      await generateAndCache(mode);
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
 
     // --- Step 4: Generate notification sentence (if not already set for this Sunday) ---
     const { data: cachedRow } = await supabase

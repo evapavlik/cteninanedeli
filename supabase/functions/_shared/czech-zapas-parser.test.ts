@@ -367,6 +367,51 @@ describe("parseNadPismem", () => {
       expect(result!.content).not.toContain("Z ekumeny");
     });
 
+    it("přeskočí TOC řádky a najde skutečnou sekci Nad písmem", () => {
+      // PDF has TOC lines like "EDITORIAL • ZE ŽIVOTA CÍRKVE • NAD PÍSMEM • TÉMA"
+      // at the top of each page. Parser must skip these and find the real section.
+      const textWithToc = `Týdeník Církve československé husitské
+Český zápas
+EDITORIAL • ZE ŽIVOTA CÍRKVE • MLÁDEŽ CČSH • NAD PÍSMEM • TÉMA MĚSÍCE: KŘESŤANSKÁ MEDITACE
+PRO DĚTI • ROZHOVOR • TÉMA MĚSÍCE • ZPRÁVY
+Nějaký editorial text...
+EDITORIAL • ZE ŽIVOTA CÍRKVE • MLÁDEŽ CČSH • NAD PÍSMEM • TÉMA MĚSÍCE
+Další strana...
+Nad Písmem
+Setkání u studně Jan 4,3-42
+Milé sestry a bratři,
+přenesme se do starověkého Izraele.
+Text kázání pokračuje.
+Další odstavec s myšlenkami.
+A ještě jeden odstavec.
+Závěr kázání s poselstvím.
+Lucie Haltofová`;
+      const result = parseNadPismem(textWithToc, 2023, 11);
+
+      expect(result).not.toBeNull();
+      expect(result!.title).toBe("Setkání u studně");
+      expect(result!.biblical_references).toEqual(["Jan 4,3-42"]);
+      expect(result!.author).toBe("Lucie Haltofová");
+    });
+
+    it("přeskočí TOC řádky i se split formou 'NAD PÍSM EM'", () => {
+      // Some PDFs split non-diacritic characters too
+      const textWithSplitToc = `EDITORIAL • ZE ŽIVOTA CÍRKVE • NAD PÍSM EM • TÉMA MĚSÍCE
+Nad Písmem
+Obrození shůry Jan 3,1–17
+Text kázání.
+Další odstavce textu kázání.
+Pokračování textu.
+Více textu zde.
+Ještě více textu kázání.
+Světluše Košíčková`;
+      const result = parseNadPismem(textWithSplitToc, 2023, 12);
+
+      expect(result).not.toBeNull();
+      expect(result!.title).toBe("Obrození shůry");
+      expect(result!.author).toBe("Světluše Košíčková");
+    });
+
     it("nezastaví se na slovu 'Zprávy' uvnitř věty", () => {
       // "Zprávy" embedded in body text should NOT trigger section boundary
       const textWithEmbeddedZpravy = `Nad Písmem

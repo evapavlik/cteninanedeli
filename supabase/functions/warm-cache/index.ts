@@ -527,7 +527,7 @@ Deno.serve(async (req) => {
         }
 
         if (res.status === 429 && attempt < MAX_RETRIES) {
-          const delay = 5000 * Math.pow(2, attempt - 1); // 5s, 10s — respect Gemini 15 RPM
+          const delay = 15000 * Math.pow(2, attempt - 1); // 15s, 30s — respect Gemini 5 RPM
           addLog(`AI rate limited for "${mode}" (attempt ${attempt}/${MAX_RETRIES}), retrying in ${delay}ms…`);
           await new Promise((resolve) => setTimeout(resolve, delay));
           continue;
@@ -561,10 +561,10 @@ Deno.serve(async (req) => {
     }
 
     // Run AI generations sequentially with delays to avoid Gemini 429 rate limits
-    // Gemini free tier: 15 RPM — 5s gap ensures we stay well under the limit
+    // Gemini 2.5 Flash free tier: 5 RPM — 15s gap keeps us safely under the limit
     for (const mode of ["context", "annotate", "postily", "czech_zapas"] as const) {
       await generateAndCache(mode);
-      await new Promise((resolve) => setTimeout(resolve, 5000));
+      await new Promise((resolve) => setTimeout(resolve, 15000));
     }
 
     // --- Step 4: Generate notification sentence (if not already set for this Sunday) ---

@@ -113,7 +113,7 @@ serve(async (req) => {
           return res;
         }
 
-        const delay = 5000 * Math.pow(2, attempt - 1);
+        const delay = 15000 * Math.pow(2, attempt - 1); // 15s, 30s — Gemini 2.5 Flash free tier: 5 RPM
         console.log(`Gemini 429, retry ${attempt}/${MAX_RETRIES} in ${delay}ms…`);
         await new Promise((resolve) => setTimeout(resolve, delay));
       }

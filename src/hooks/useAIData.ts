@@ -78,9 +78,13 @@ export function useAIData(
           body: { text: markdown, mode: "context" },
         });
         if (error) throw error;
-        if (data?.context?.readings) {
-          setContextData(data.context.readings);
-          if (sundayTitle) saveCache(CONTEXT_CACHE_KEY, sundayTitle, data.context.readings);
+        if (data?.context) {
+          // Gemini 2.5 may return plain array or {readings: [...]}
+          const readings = Array.isArray(data.context) ? data.context : data.context.readings;
+          if (readings) {
+            setContextData(readings);
+            if (sundayTitle) saveCache(CONTEXT_CACHE_KEY, sundayTitle, readings);
+          }
         }
       } catch (e) {
         console.error("Context fetch error:", e);

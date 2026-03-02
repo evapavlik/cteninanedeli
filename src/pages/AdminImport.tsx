@@ -63,7 +63,7 @@ export default function AdminImport() {
     try {
       const pdfText = await extractPdfText(file);
       // Debug: find ALL occurrences of "Nad písmem" (any form) and show context
-      const splitRe = /nad\s+p\s*[ií]\s*s\s*m\s*e\s*m/gi;
+      const splitRe = /n\s*a\s*d\s+p\s*[ií]\s*s\s*m\s*e\s*m/gi;
       const matches: { pos: number; isToc: boolean; line: string }[] = [];
       let m: RegExpExecArray | null;
       while ((m = splitRe.exec(pdfText)) !== null) {

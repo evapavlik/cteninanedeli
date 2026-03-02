@@ -32,7 +32,9 @@ export function SectionProgress({ activeIndex, total, labels, onSelect }: Sectio
               const headings = article.querySelectorAll("h2");
               const heading = headings[i];
               if (!heading) return;
-              const headerOffset = 120; // sticky toolbar + tabs height
+              // Dynamically measure the sticky header instead of hardcoding
+              const stickyEl = document.querySelector('.sticky.top-0');
+              const headerOffset = (stickyEl?.getBoundingClientRect().height ?? 120) + 8;
               const elementPosition = heading.getBoundingClientRect().top + window.scrollY;
               window.scrollTo({ top: elementPosition - headerOffset, behavior: "smooth" });
               onSelect?.(i);

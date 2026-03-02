@@ -85,20 +85,28 @@ export function parseNadPismem(
   const NAD_PISMEM_RE = /nad\s+p[ií]smem[:\s]*/i;
   // Ultra-flexible: allow spaces within "písmem" (pdfjs diacritic-split artifact)
   const NAD_PISMEM_SPLIT_RE = /nad\s+p\s*[ií]\s*s\s*m\s*e\s*m/i;
-  // Prefer a line where the heading starts at the beginning
-  let headerIdx = lines.findIndex((l) => /^nad\s+p[ií]smem/i.test(l.trim()));
-  // Fallback: heading embedded anywhere in a line
+  // Skip table-of-contents / navigation header lines that list section names
+  // separated by bullets, e.g. "EDITORIAL • ZE ŽIVOTA CÍRKVE • NAD PÍSMEM • TÉMA…"
+  const isTocLine = (line: string) => line.includes("•");
+
+  // Prefer a line where the heading starts at the beginning.
+  // Use the split-tolerant regex so "NAD PÍSM EM" (non-diacritic split) also matches.
+  let headerIdx = lines.findIndex(
+    (l) => /^nad\s+p\s*[ií]\s*s\s*m\s*e\s*m/i.test(l.trim()) && !isTocLine(l),
+  );
+  // Fallback: heading embedded anywhere in a line (but not in TOC lines)
   if (headerIdx === -1) {
-    headerIdx = lines.findIndex((l) => NAD_PISMEM_RE.test(l));
+    headerIdx = lines.findIndex((l) => NAD_PISMEM_RE.test(l) && !isTocLine(l));
   }
-  // Fallback: diacritic-split form ("Nad P í smem") — pdfjs artifact
+  // Fallback: diacritic-split form ("Nad P í smem") — pdfjs artifact (but not in TOC lines)
   if (headerIdx === -1) {
-    headerIdx = lines.findIndex((l) => NAD_PISMEM_SPLIT_RE.test(l));
+    headerIdx = lines.findIndex((l) => NAD_PISMEM_SPLIT_RE.test(l) && !isTocLine(l));
   }
   if (headerIdx === -1) return null;
 
   const headerLine = lines[headerIdx].trim();
-  const headingMatch = NAD_PISMEM_RE.exec(headerLine);
+  // Try standard regex first, then split-tolerant form
+  const headingMatch = NAD_PISMEM_RE.exec(headerLine) ?? NAD_PISMEM_SPLIT_RE.exec(headerLine);
   const restAfterHeader = headingMatch
     ? headerLine.slice(headingMatch.index + headingMatch[0].length).trim()
     : "";

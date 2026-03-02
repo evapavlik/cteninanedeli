@@ -35,8 +35,8 @@ export default function AdminImport() {
     if (f) {
       const detected = detectYearAndIssue(f.name);
       if (detected) {
-        if (!year) setYear(detected.year);
-        if (!issue) setIssue(detected.issue);
+        setYear(detected.year);
+        setIssue(detected.issue);
       }
     }
   }

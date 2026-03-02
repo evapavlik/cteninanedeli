@@ -75,6 +75,10 @@ const Index = () => {
       const headings = article.querySelectorAll("h2");
       if (headings.length === 0) return undefined;
 
+      // Measure sticky header so the observer triggers at the right scroll position
+      const stickyEl = document.querySelector('.sticky.top-0');
+      const topInset = stickyEl?.getBoundingClientRect().height ?? 120;
+
       const observer = new IntersectionObserver(
         (entries) => {
           for (const entry of entries) {
@@ -84,7 +88,7 @@ const Index = () => {
             }
           }
         },
-        { rootMargin: "-120px 0px -60% 0px", threshold: 0 },
+        { rootMargin: `-${topInset}px 0px -60% 0px`, threshold: 0 },
       );
 
       headings.forEach((h) => observer.observe(h));

@@ -180,6 +180,7 @@ Deno.serve(async (req) => {
     // --- Step 1: Find next Sunday from index page ---
     // Try Firecrawl first, then direct HTML fetch as fallback
     let nextSunday: { url: string; title: string; date: string } | null = null;
+    let fallbackHtml: string | null = null; // Stored when fallback single-page has readings inline
 
     if (FIRECRAWL_API_KEY) {
       addLog("Scraping cyklus.ccsh.cz index via Firecrawl…");
@@ -202,7 +203,8 @@ Deno.serve(async (req) => {
       if (indexHtml) {
         nextSunday = parseIndexFromHtml(indexHtml);
         if (nextSunday) {
-          addLog(`Fallback index: found "${nextSunday.title}" → ${nextSunday.url}`);
+          fallbackHtml = indexHtml; // Store for reading extraction (single-page format)
+          addLog(`Fallback index: found "${nextSunday.title}" (url=${nextSunday.url || "inline"})`);
         } else {
           addLog(`Fallback index: could not parse HTML (${indexHtml.length} chars). First 300: ${indexHtml.substring(0, 300)}`);
         }
@@ -298,7 +300,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Fallback: direct fetch of reading page HTML
+      // Fallback: direct fetch of a separate reading page URL
       if (!rawMarkdown && nextSunday.url) {
         addLog(`Trying fallback: direct fetch of reading page ${nextSunday.url}…`);
         const readingHtml = await fetchHtmlDirect(nextSunday.url);
@@ -308,12 +310,24 @@ Deno.serve(async (req) => {
             rawMarkdown = htmlExtracted.readings;
             scrapeSource = "direct-fetch";
             addLog(`Fallback reading page: extracted ${rawMarkdown.length} chars`);
-            // For direct-fetch, rawMarkdown is already in ## format — skip extractReadings below
           } else {
             addLog(`Fallback reading page: extraction too short (${htmlExtracted.readings?.length || 0} chars). HTML ${readingHtml.length} chars, first 300: ${readingHtml.substring(0, 300)}`);
           }
         } else {
           addLog("Fallback reading page: fetch failed");
+        }
+      }
+
+      // Fallback: single-page format — readings are in the already-fetched HTML
+      if (!rawMarkdown && !nextSunday.url && fallbackHtml) {
+        addLog("Single-page fallback: extracting readings from cached HTML…");
+        const htmlExtracted = extractReadingsFromHtml(fallbackHtml, nextSunday.title);
+        if (htmlExtracted.readings && htmlExtracted.readings.length >= 100) {
+          rawMarkdown = htmlExtracted.readings;
+          scrapeSource = "direct-fetch";
+          addLog(`Single-page fallback: extracted ${rawMarkdown.length} chars`);
+        } else {
+          addLog(`Single-page fallback: extraction too short (${htmlExtracted.readings?.length || 0} chars)`);
         }
       }
 

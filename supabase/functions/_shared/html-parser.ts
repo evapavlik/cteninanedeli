@@ -4,6 +4,12 @@
  * alternative to the Firecrawl-based scraping of cyklus.ccsh.cz.
  */
 
+/** Czech month names (genitive case as used in dates) → month number (1-12) */
+const CZECH_MONTHS: Record<string, number> = {
+  ledna: 1, února: 2, března: 3, dubna: 4, května: 5, června: 6,
+  července: 7, srpna: 8, září: 9, října: 10, listopadu: 11, prosince: 12,
+};
+
 /**
  * Fetch a URL via plain HTTP GET and return the HTML body.
  * Handles charset detection (UTF-8 vs windows-1250).
@@ -58,19 +64,56 @@ export function stripHtmlTags(html: string): string {
 }
 
 /**
- * Parse the ccsh.cz/cyklus.html index page to find the next upcoming Sunday.
- * Looks for links or text containing dates in DD.MM.YYYY format along with
- * Sunday names and reading page URLs.
+ * Parse ccsh.cz/cyklus.html to find the current Sunday's title and date.
+ * The page is a single page with all data: title in <h1>, date as
+ * "neděle DD. měsíce", and readings in <h2>/<h3>/<strong> sections.
+ * Returns url: "" to signal that readings are already on this page.
  *
- * Returns the same shape as the existing findNextSundayUrl() in warm-cache.
+ * Also supports index-style pages with <a> tags containing DD.MM.YYYY dates
+ * as a fallback strategy.
  */
 export function parseIndexFromHtml(html: string): { url: string; title: string; date: string } | null {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const currentYear = today.getFullYear();
 
+  // Strategy 1: Single-page format (ccsh.cz/cyklus.html)
+  // Title in <h1>, date as "neděle DD. měsíce" in page body
+  const h1Match = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+  if (h1Match) {
+    const title = stripHtmlTags(h1Match[1]).trim();
+    const textContent = stripHtmlTags(html);
+    // Match "neděle DD. měsíce" — Czech month names in genitive (března, dubna…)
+    const dateMatch = textContent.match(/ned[eě]le\s+(\d{1,2})\.\s*(\S+)/i);
+    if (dateMatch) {
+      const day = parseInt(dateMatch[1], 10);
+      const monthName = dateMatch[2].toLowerCase();
+      const month = CZECH_MONTHS[monthName];
+      if (month) {
+        // No year on page — try current year first
+        const currentYearDate = new Date(currentYear, month - 1, day);
+        let date: Date | null = null;
+        if (currentYearDate >= today) {
+          date = currentYearDate;
+        } else {
+          // Try next year only for Dec→Jan boundary (date must be within ~14 days)
+          const nextYearDate = new Date(currentYear + 1, month - 1, day);
+          const FOURTEEN_DAYS = 14 * 24 * 60 * 60 * 1000;
+          if (nextYearDate >= today && (nextYearDate.getTime() - today.getTime()) < FOURTEEN_DAYS) {
+            date = nextYearDate;
+          }
+        }
+        if (date) {
+          const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+          return { url: "", title, date: dateStr };
+        }
+      }
+    }
+  }
+
+  // Strategy 2: Index page with <a> tags containing dates (DD.MM.YYYY)
   let closest: { url: string; title: string; date: Date } | null = null;
 
-  // Strategy 1: Find <a> tags containing dates (DD.MM.YYYY) — typical index page pattern
   const linkRegex = /<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
   let match: RegExpExecArray | null;
 
@@ -87,7 +130,6 @@ export function parseIndexFromHtml(html: string): { url: string; title: string; 
     const date = new Date(year, month, day);
 
     if (date >= today && (!closest || date < closest.date)) {
-      // Extract Sunday name: text after the date, or the full link text
       const afterDate = linkContent.replace(/.*\d{4}\s*/, "").trim();
       const title = afterDate || linkContent;
       const resolvedUrl = href.startsWith("http") ? href : new URL(href, "https://www.ccsh.cz/").toString();
@@ -95,8 +137,7 @@ export function parseIndexFromHtml(html: string): { url: string; title: string; 
     }
   }
 
-  // Strategy 2: If no links with dates found, look for date patterns in plain text
-  // near headings or bold text that might indicate Sunday entries
+  // Strategy 3: Plain text with "Ne DD.MM.YYYY" patterns
   if (!closest) {
     const textContent = stripHtmlTags(html);
     const lineRegex = /Ne\s+(\d{1,2})\.(\d{1,2})\.(\d{4})\s*[^:\n]*:\s*(.+)/g;
@@ -131,9 +172,10 @@ export function extractReadingsFromHtml(html: string, pageTitle: string): { sund
   const sections: string[] = [];
 
   function extractSection(keyword: string): string | null {
-    // Match heading tags (h2-h4) or bold/strong containing the keyword, followed by content
+    // Match heading tags (h2-h4) or bold/strong containing the keyword, followed by content.
+    // Content terminates at: any <h1>-<h4> heading, or <b>/<strong> with known section keywords.
     const headingRegex = new RegExp(
-      `<(?:h[2-4]|b|strong)[^>]*>\\s*([^<]*${keyword}[^<]*)\\s*</(?:h[2-4]|b|strong)>([\\s\\S]*?)(?=<(?:h[2-4]|b|strong)[^>]*>\\s*[^<]*(?:čtení|Evangelium|Žalm)|$)`,
+      `<(?:h[2-4]|b|strong)[^>]*>\\s*([^<]*${keyword}[^<]*)\\s*</(?:h[2-4]|b|strong)>([\\s\\S]*?)(?=<h[1-4][^>]*>|<(?:b|strong)[^>]*>\\s*[^<]*(?:čtení|Evangelium|Žalm|Tužby|Modlitba|Přímluv)|$)`,
       "i"
     );
     const match = html.match(headingRegex);

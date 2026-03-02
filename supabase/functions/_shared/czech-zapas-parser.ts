@@ -2,19 +2,26 @@
  * Deterministic parser for the "Nad písmem" section of Český zápas.
  * No AI required — operates on plain text extracted from PDF.
  *
- * Section structure (two common variants):
- *   Variant A — title and ref on same line:
+ * Section structure (three common variants):
+ *   Variant A — title and ref on same line (forward):
  *     Nad Písmem
  *     [Sermon title] [Biblical reference, e.g. J 3,1–13]
  *     [Sermon body...]
  *     FirstName LastName
  *
- *   Variant B — ref on its own line (common in recent issues):
+ *   Variant B — ref on its own line (forward, common in recent issues):
  *     Nad Písmem
  *     [Sermon title]
  *     [Biblical reference, e.g. J 3,1-17]
  *     [Sermon body...]
  *     FirstName LastName
+ *
+ *   Variant C — reversed layout (heading after body, e.g. ČZ 11/2023):
+ *     [Sermon body...]
+ *     FirstName LastName
+ *     [Sermon title] [Biblical reference]
+ *     Nad Písmem
+ *     [Liturgical context, e.g. 3. neděle postní]
  */
 
 export interface ParsedArticle {
@@ -58,6 +65,123 @@ const PAGE_BOUNDARY_RE =
   /ISSN\s+\d|MK\s+[ČC]\s*R\s+E\s+\d|[ČC]\s*eský\s+zápas\s+\d+\s*•|\d+\s*•\s*[ČC]\s*eský/i;
 
 /**
+ * Parses the reversed "Nad písmem" layout where the heading appears AFTER the sermon.
+ * Layout: [body] → [author] → [title + ref] → [heading] → [liturgical context]
+ * Found in PDFs where column layout causes the heading to render below the sermon.
+ */
+function parseReversedNadPismem(
+  lines: string[],
+  headerIdx: number,
+  titleLineIdx: number,
+  titleLine: string,
+  titleRefs: string[],
+): ParsedArticle | null {
+  // Extract title (part before first biblical reference)
+  const firstRefPos = titleLine.indexOf(titleRefs[0]);
+  const title = titleLine.substring(0, firstRefPos).trim().replace(/\s*[([\s]+$/, "");
+  const biblical_refs_raw = titleRefs.join("; ");
+
+  // Author: look at the non-empty line before the title
+  let authorCandidateIdx = titleLineIdx - 1;
+  while (authorCandidateIdx >= 0 && lines[authorCandidateIdx].trim() === "")
+    authorCandidateIdx--;
+
+  const STANDALONE_NAME_RE =
+    /^[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž]+(?:\s+[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž]+){1,3}$/;
+  const NAME_SUFFIX_RE =
+    /^(.+[.!?…])\s+([A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž]+(?:\s+[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž]+){1,3})\s*$/;
+
+  let author: string | null = null;
+  let bodyEndIdx: number;
+
+  if (authorCandidateIdx >= 0) {
+    const candidateLine = lines[authorCandidateIdx].trim();
+    if (
+      STANDALONE_NAME_RE.test(candidateLine) &&
+      !/[.!?,;:0-9]/.test(candidateLine)
+    ) {
+      // Standalone author name on its own line
+      author = candidateLine;
+      bodyEndIdx = authorCandidateIdx - 1;
+    } else {
+      const nameSuffix = NAME_SUFFIX_RE.exec(candidateLine);
+      if (nameSuffix) {
+        // Author embedded after sentence ending: "...uvěřili. Lucie Haltofová"
+        author = nameSuffix[2];
+        bodyEndIdx = authorCandidateIdx; // include line in body, strip name later
+      } else {
+        // No recognizable author before title
+        author = null;
+        bodyEndIdx = titleLineIdx - 1;
+      }
+    }
+  } else {
+    bodyEndIdx = -1;
+  }
+
+  // Collect body lines backward until we hit a section/page boundary or TOC line
+  const bodyLines: string[] = [];
+  for (let i = bodyEndIdx; i >= 0; i--) {
+    const trimmed = lines[i].trim();
+    if (trimmed.length > 0) {
+      const looksLikeSectionHeader =
+        SECTION_BOUNDARY_RE.test(trimmed) && !/\.\s/.test(trimmed);
+      const looksLikePageBoundary = PAGE_BOUNDARY_RE.test(trimmed);
+      const looksLikeTocLine = trimmed.includes("•");
+      if (looksLikeSectionHeader || looksLikePageBoundary || looksLikeTocLine)
+        break;
+    }
+    bodyLines.unshift(lines[i]);
+    if (bodyLines.length >= 120) break;
+  }
+
+  // Trim leading/trailing empty lines
+  while (bodyLines.length > 0 && bodyLines[0].trim() === "") bodyLines.shift();
+  while (bodyLines.length > 0 && bodyLines[bodyLines.length - 1].trim() === "")
+    bodyLines.pop();
+
+  if (bodyLines.length === 0) return null;
+
+  // If author was embedded in last body line, strip the name
+  if (author && bodyEndIdx === authorCandidateIdx) {
+    const lastLine = bodyLines[bodyLines.length - 1].trim();
+    const nameSuffix = NAME_SUFFIX_RE.exec(lastLine);
+    if (nameSuffix) {
+      bodyLines[bodyLines.length - 1] = nameSuffix[1];
+    }
+  }
+  const content = bodyLines.join("\n").trim();
+
+  // Extract liturgical context from lines after heading
+  let liturgical_context: string | null = null;
+  for (
+    let i = headerIdx + 1;
+    i < Math.min(lines.length, headerIdx + 5);
+    i++
+  ) {
+    const trimmed = lines[i].trim();
+    if (trimmed === "") continue;
+    const liturgicalMatch = trimmed.match(
+      /\b(\d+\.\s+ned[eě]l[ei]\s+\S+|Hod\s+Bo[žz][íi]\s+\S+|[Vv]elikonoční\s+ned[eě]l[ai]|[Kk]květnou\s+ned[eě]l[ei]|[Ss]lavnost\s+\S+|[Pp]ůst[ní]*\s+ned[eě]l[ei])/,
+    );
+    if (liturgicalMatch) {
+      liturgical_context = liturgicalMatch[0].trim();
+      break;
+    }
+  }
+
+  return {
+    title,
+    author,
+    biblical_refs_raw,
+    biblical_references: titleRefs,
+    content_type: "kazani",
+    liturgical_context,
+    content,
+  };
+}
+
+/**
  * Parses the "Nad písmem" section from extracted PDF text.
  * Returns null if the section is not found.
  */
@@ -83,16 +207,17 @@ export function parseNadPismem(
   //   - header with trailing colon: "Nad písmem:"
   //   - diacritic-split artifact: "Nad P í smem" (pdfjs + special Czech font)
   const NAD_PISMEM_RE = /nad\s+p[ií]smem[:\s]*/i;
-  // Ultra-flexible: allow spaces within "písmem" (pdfjs diacritic-split artifact)
-  const NAD_PISMEM_SPLIT_RE = /nad\s+p\s*[ií]\s*s\s*m\s*e\s*m/i;
+  // Ultra-flexible: allow spaces within both "nad" and "písmem" (pdfjs artifact).
+  // Handles: "Nad P í smem", "NAD PÍSM EM", "N AD   P ÍSMEM" etc.
+  const NAD_PISMEM_SPLIT_RE = /n\s*a\s*d\s+p\s*[ií]\s*s\s*m\s*e\s*m/i;
   // Skip table-of-contents / navigation header lines that list section names
   // separated by bullets, e.g. "EDITORIAL • ZE ŽIVOTA CÍRKVE • NAD PÍSMEM • TÉMA…"
   const isTocLine = (line: string) => line.includes("•");
 
   // Prefer a line where the heading starts at the beginning.
-  // Use the split-tolerant regex so "NAD PÍSM EM" (non-diacritic split) also matches.
+  // Use the split-tolerant regex so "NAD PÍSM EM" and "N AD P ÍSMEM" also match.
   let headerIdx = lines.findIndex(
-    (l) => /^nad\s+p\s*[ií]\s*s\s*m\s*e\s*m/i.test(l.trim()) && !isTocLine(l),
+    (l) => /^n\s*a\s*d\s+p\s*[ií]\s*s\s*m\s*e\s*m/i.test(l.trim()) && !isTocLine(l),
   );
   // Fallback: heading embedded anywhere in a line (but not in TOC lines)
   if (headerIdx === -1) {
@@ -110,6 +235,24 @@ export function parseNadPismem(
   const restAfterHeader = headingMatch
     ? headerLine.slice(headingMatch.index + headingMatch[0].length).trim()
     : "";
+
+  // --- Detect reversed layout (Variant C) ---
+  // In some PDFs (e.g. ČZ 11/2023), the heading appears AFTER the sermon:
+  //   body → author → title+ref → "Nad písmem" → liturgical context
+  // Detect by checking if the non-empty line BEFORE the heading has biblical refs.
+  if (restAfterHeader.length === 0) {
+    let prevIdx = headerIdx - 1;
+    while (prevIdx >= 0 && lines[prevIdx].trim() === "") prevIdx--;
+    if (prevIdx >= 0) {
+      const prevLine = lines[prevIdx].trim();
+      if (prevLine.length > 0 && prevLine.length < 100) {
+        const prevRefs = parseBiblicalRefs(prevLine);
+        if (prevRefs.length > 0) {
+          return parseReversedNadPismem(lines, headerIdx, prevIdx, prevLine, prevRefs);
+        }
+      }
+    }
+  }
 
   let titleIdx: number;
   let titleLine: string;
@@ -225,6 +368,7 @@ export function parseNadPismem(
   }
 
   // Attempt to extract liturgical context (e.g. "2. neděle postní")
+  // Use \S+ instead of \w+ because \w doesn't match Czech diacritics (á, í, etc.)
   const liturgicalMatch = content.match(
     /\b(\d+\.\s+ned[eě]l[ei]\s+\w+|Hod\s+Bo[žz][íi]\s+\w+|[Vv]elikonoční\s+ned[eě]l[ai]|[Kk]větnou\s+ned[eě]l[ei]|[Ss]lavnost\s+\w+|[Pp]ůst[ní]*\s+ned[eě]l[ei])/,
   );

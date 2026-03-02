@@ -166,6 +166,51 @@ pokušitel nemůže vystát, a to je láska. Láska k Bohu i k lidem, láska dá
 i přijímaná, přítomná všude tam, kde je opravdová a věrná Kristova Církev.
 Amen. Vladislav Pek`;
 
+// Simulated text from ČZ 11/2023 — reversed layout: heading appears AFTER the sermon.
+// PDF column layout causes the section heading to render below the body.
+const SAMPLE_REVERSED = `Týdeník Církve československé husitské
+EDITORIAL • ZE ŽIVOTA CÍRKVE • MLÁDEŽ CČSH • NAD PÍSMEM • TÉMA MĚSÍCE
+Milé sestry a bratři,
+přenesme se do starověkého Izraele: je
+horké poledne a ke studni přichází osamo-
+cená žena. Rozhlíží se. Nechce se potkat
+se svými sousedy, lidmi z vesnice. Žena
+s divokou minulostí, poraněnou duší,
+možná zklamaná životem.
+U studny potkává člověka a zapřede s ním
+rozhovor. Hned je jí jasné, že to není jen
+tak někdo, je to prorok. Ježíš… Mesiáš.
+Překvapí ji hlubokými myšlenkami, zjeví
+duchovní pravdy ale především ji za-
+skočí svou laskavostí a zájmem.
+Toto setkání s Ježíšem proměnilo její
+život. Vnitřní zábrany zmizely.
+Už není ostýchavá, ale radostná.
+Běží do vesnice a nadšeně všem
+vypráví o Ježíši. A díky svědectví
+samařské ženy vyšli lidé z města
+a díky Jeho slovu také uvěřili.
+Lucie Haltofová
+Setkání u studně Jan 4,3-42
+N AD   P ÍSMEM
+3. neděle postní (Oculi)`;
+
+// Reversed layout with author embedded in last line (no standalone name)
+const SAMPLE_REVERSED_EMBEDDED = `EDITORIAL • ZE ŽIVOTA CÍRKVE • NAD PÍSMEM • TÉMA
+Milé sestry a bratři,
+text kázání začíná zde.
+Pokračuje na dalších řádcích.
+Obsahuje myšlenky a úvahy.
+Další odstavec s obsahem.
+A ještě více textu.
+Kázání pokračuje.
+Více textu kázání.
+Závěrečné myšlenky kázání
+a díky Jeho slovu také uvěřili. Lucie Haltofová
+Setkání u studně Jan 4,3-42
+N AD   P ÍSMEM
+3. neděle postní (Oculi)`;
+
 describe("parseBiblicalRefs", () => {
   it("najde referenci ve formátu 'J 3,1-17'", () => {
     expect(parseBiblicalRefs("J 3,1-17")).toEqual(["J 3,1-17"]);
@@ -410,6 +455,32 @@ Světluše Košíčková`;
       expect(result).not.toBeNull();
       expect(result!.title).toBe("Obrození shůry");
       expect(result!.author).toBe("Světluše Košíčková");
+    });
+
+    it("zvládne obrácený layout — heading za kázáním (ČZ 11/2023)", () => {
+      const result = parseNadPismem(SAMPLE_REVERSED, 2023, 11);
+
+      expect(result).not.toBeNull();
+      expect(result!.title).toBe("Setkání u studně");
+      expect(result!.biblical_refs_raw).toBe("Jan 4,3-42");
+      expect(result!.biblical_references).toEqual(["Jan 4,3-42"]);
+      expect(result!.author).toBe("Lucie Haltofová");
+      expect(result!.content).toMatch(/^Milé sestry a bratři/);
+      expect(result!.content).toContain("také uvěřili.");
+      expect(result!.content).not.toContain("Lucie Haltofová");
+      expect(result!.content).not.toContain("N AD");
+      expect(result!.liturgical_context).toMatch(/neděle postní/i);
+    });
+
+    it("zvládne obrácený layout s embedded autorem", () => {
+      const result = parseNadPismem(SAMPLE_REVERSED_EMBEDDED, 2023, 11);
+
+      expect(result).not.toBeNull();
+      expect(result!.title).toBe("Setkání u studně");
+      expect(result!.biblical_refs_raw).toBe("Jan 4,3-42");
+      expect(result!.author).toBe("Lucie Haltofová");
+      expect(result!.content).toContain("také uvěřili.");
+      expect(result!.content).not.toContain("Lucie Haltofová");
     });
 
     it("nezastaví se na slovu 'Zprávy' uvnitř věty", () => {

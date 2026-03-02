@@ -19,7 +19,7 @@ Webová aplikace pro Církev československou husitskou (CČSH). Zobrazuje nedě
 | Frontend | React 18 + TypeScript + Vite (port 8080) |
 | Styling | Tailwind CSS + shadcn/ui, fonty Literata (serif) + Playfair Display SC (nadpisy) |
 | Backend | Supabase — PostgreSQL, Edge Functions (Deno), pg_cron |
-| AI | Google Gemini 2.0 Flash (vlastní API klíč v Supabase secrets) |
+| AI | Google Gemini 2.5 Flash, free tier (5 RPM, 250K TPM). API klíč v Supabase secrets (`GEMINI_API_KEY`). Limity ověřuj v [AI Studio → Rate Limit](https://aistudio.google.com/rate-limit). |
 | Scraping | Firecrawl |
 | Testy | Vitest + Testing Library |
 | PWA | vite-plugin-pwa + Workbox |
@@ -120,6 +120,7 @@ scripts/
 - **CACHE_VERSION** v `src/lib/cache.ts` — při změně struktury cache zvýšit
 - **Lovable** se občas používá na prototypy — může přidat UI komponenty zpět do `src/components/ui/`, je to normální
 - Edge funkce běží v **Deno** (ne Node) — importy přes URL, ne npm. Bundle limit ~20 MB (Deno Deploy) — velké npm balíčky (pdfjs-dist, sharp…) způsobí deploy error. Těžká výpočetní zátěž (PDF parsing, zpracování obrázků) patří do prohlížeče, ne do edge funkce.
+- **Gemini API problémy** — při 429/400 chybách NEJDŘÍV zkontroluj [AI Studio → Rate Limit](https://aistudio.google.com/rate-limit) dashboard. Ukazuje aktuální RPM limity per model. Free tier modely mají nízké limity (5 RPM) a Google může kdykoli model vypnout (RPM → 0). Nehádej příčinu z kódu — dashboard řekne pravdu za 10 sekund.
 
 ## Supabase
 

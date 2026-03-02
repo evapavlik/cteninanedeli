@@ -1,8 +1,10 @@
-# CLAUDE.md — Čtení textů na neděli
+# CLAUDE.md
 
-## Projekt
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Čtení textů na neděli — webová aplikace pro Církev československou husitskou (CČSH). Zobrazuje nedělní biblická čtení s AI anotacemi, teologickým průvodcem a inspirací z postil Karla Farského.
+## Projekt — Čtení textů na neděli
+
+Webová aplikace pro Církev československou husitskou (CČSH). Zobrazuje nedělní biblická čtení s AI anotacemi, teologickým průvodcem a inspirací z postil Karla Farského.
 
 - **Autorka:** Eva Pavlíková
 - **Původně vytvořeno v:** [Lovable](https://lovable.dev), prošlo refaktoringem a migrací na vlastní infrastrukturu (Vercel + Supabase)
@@ -25,12 +27,19 @@
 ## Klíčové příkazy
 
 ```bash
-npm run dev       # Vývojový server (localhost:8080)
-npm run build     # Produkční build — spustit po každé změně pro kontrolu TS chyb
-npm run test      # Vitest testy
-npm run lint      # ESLint
+npm run dev          # Vývojový server (localhost:8080)
+npm run build        # Produkční build — spustit po každé změně pro kontrolu TS chyb
+npm run build:dev    # Development build (rychlejší, bez minifikace)
+npm run test         # Vitest testy (jednorázově)
+npm run test:watch   # Vitest ve watch režimu
+npm run lint         # ESLint
+
+# Spuštění jednoho testu:
+npx vitest run src/test/cache.test.ts
 ```
 
+- Testy žijí v `src/test/` a `supabase/functions/_shared/` (oba adresáře jsou zahrnuty v `vitest.config.ts`)
+- Test environment: jsdom (s `@testing-library/jest-dom` matchers)
 - TypeScript: loose mode (`noImplicitAny: false`, `strictNullChecks: false`)
 - Path alias: `@/` → `./src/`
 
@@ -45,7 +54,7 @@ Frontend → readings_cache → useReadings hook → useAIData hook → UI
                                           3 režimy: annotate | context | postily
 ```
 
-- **Cache:** ai_cache tabulka (server) + localStorage (klient, CACHE_VERSION = 4)
+- **Cache:** ai_cache tabulka (server) + localStorage (klient, CACHE_VERSION = 5)
 - **Invalidace:** useReadings detekuje změnu nedělního obsahu → zvýší `invalidationEpoch` → useAIData smaže stará AI data
 
 ## Konvence kódu

@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildTheologicalContext, buildContextPrompt, ANNOTATE_SYSTEM_PROMPT } from "../_shared/corpus.ts";
 import { findMatchingPostily, findMatchingCzechZapas } from "../_shared/postily.ts";
 import { buildPostilyPrompt, formatPostilyContext, buildCzechZapasPrompt, formatCzechZapasContext } from "../_shared/prompts.ts";
+import { fetchHtmlDirect, parseIndexFromHtml, extractReadingsFromHtml } from "../_shared/html-parser.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,6 +17,7 @@ const corsHeaders = {
  */
 
 const INDEX_URL = "https://cyklus.ccsh.cz/index.php?option=com_content&view=article&id=275&bck=1";
+const FALLBACK_INDEX_URL = "https://www.ccsh.cz/cyklus.html";
 
 /**
  * Parse the index page to find the next upcoming Sunday reading URL.
@@ -175,20 +177,45 @@ Deno.serve(async (req) => {
   const addLog = (msg: string) => { console.log(msg); log.push(msg); };
 
   try {
-    if (!FIRECRAWL_API_KEY) {
-      addLog("FIRECRAWL_API_KEY not set — aborting");
-      return new Response(JSON.stringify({ success: false, log }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // --- Step 1: Find next Sunday from index page ---
+    // Try Firecrawl first, then direct HTML fetch as fallback
+    let nextSunday: { url: string; title: string; date: string } | null = null;
+    let fallbackHtml: string | null = null; // Stored when fallback single-page has readings inline
+
+    if (FIRECRAWL_API_KEY) {
+      addLog("Scraping cyklus.ccsh.cz index via Firecrawl…");
+      const indexMarkdown = await scrapeUrl(INDEX_URL, FIRECRAWL_API_KEY);
+      if (indexMarkdown) {
+        nextSunday = findNextSundayUrl(indexMarkdown);
+        if (nextSunday) addLog(`Firecrawl index: found "${nextSunday.title}"`);
+        else addLog("Firecrawl index: scraped OK but no upcoming Sunday matched");
+      } else {
+        addLog("Firecrawl index: scrape failed");
+      }
+    } else {
+      addLog("FIRECRAWL_API_KEY not set — skipping Firecrawl");
     }
 
-    // --- Step 1: Scrape index page to find next Sunday ---
-    addLog("Scraping cyklus.ccsh.cz index…");
-    const indexMarkdown = await scrapeUrl(INDEX_URL, FIRECRAWL_API_KEY);
-    if (!indexMarkdown) {
-      // Index scraping failed — fall back to most recent cached reading
-      addLog("Failed to scrape index page — falling back to most recent cache");
+    // Fallback: direct fetch from ccsh.cz/cyklus.html
+    if (!nextSunday) {
+      addLog(`Trying fallback: direct fetch from ${FALLBACK_INDEX_URL}…`);
+      const indexHtml = await fetchHtmlDirect(FALLBACK_INDEX_URL);
+      if (indexHtml) {
+        nextSunday = parseIndexFromHtml(indexHtml);
+        if (nextSunday) {
+          fallbackHtml = indexHtml; // Store for reading extraction (single-page format)
+          addLog(`Fallback index: found "${nextSunday.title}" (url=${nextSunday.url || "inline"})`);
+        } else {
+          addLog(`Fallback index: could not parse HTML (${indexHtml.length} chars). First 300: ${indexHtml.substring(0, 300)}`);
+        }
+      } else {
+        addLog("Fallback index: fetch failed");
+      }
+    }
+
+    // Both sources failed — fall back to most recent cached reading
+    if (!nextSunday) {
+      addLog("All index sources failed — falling back to most recent cache");
       const { data: mostRecent } = await supabase
         .from("readings_cache")
         .select("markdown_content, sunday_title, notification_sentence")
@@ -234,15 +261,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    const nextSunday = findNextSundayUrl(indexMarkdown);
-    if (!nextSunday) {
-      addLog("No upcoming Sunday found in index");
-      return new Response(JSON.stringify({ success: false, log }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     addLog(`Next Sunday: "${nextSunday.title}" → ${nextSunday.url}`);
 
     // --- Step 2: Check if we already have this Sunday cached ---
@@ -268,13 +286,55 @@ Deno.serve(async (req) => {
       readingsMarkdown = fullCached!.markdown_content;
       sundayTitle = fullCached!.sunday_title;
     } else {
-      // Scrape the reading page
-      addLog(`Scraping reading page: ${nextSunday.url}`);
-      const rawMarkdown = await scrapeUrl(nextSunday.url, FIRECRAWL_API_KEY);
+      // Scrape the reading page — try Firecrawl, then direct fetch
+      let rawMarkdown: string | null = null;
+      let scrapeSource = "firecrawl";
+
+      if (FIRECRAWL_API_KEY && nextSunday.url) {
+        addLog(`Scraping reading page via Firecrawl: ${nextSunday.url}`);
+        rawMarkdown = await scrapeUrl(nextSunday.url, FIRECRAWL_API_KEY);
+        if (rawMarkdown) {
+          addLog(`Firecrawl reading page: ${rawMarkdown.length} chars`);
+        } else {
+          addLog("Firecrawl reading page: scrape failed");
+        }
+      }
+
+      // Fallback: direct fetch of a separate reading page URL
+      if (!rawMarkdown && nextSunday.url) {
+        addLog(`Trying fallback: direct fetch of reading page ${nextSunday.url}…`);
+        const readingHtml = await fetchHtmlDirect(nextSunday.url);
+        if (readingHtml) {
+          const htmlExtracted = extractReadingsFromHtml(readingHtml, nextSunday.title);
+          if (htmlExtracted.readings && htmlExtracted.readings.length >= 100) {
+            rawMarkdown = htmlExtracted.readings;
+            scrapeSource = "direct-fetch";
+            addLog(`Fallback reading page: extracted ${rawMarkdown.length} chars`);
+          } else {
+            addLog(`Fallback reading page: extraction too short (${htmlExtracted.readings?.length || 0} chars). HTML ${readingHtml.length} chars, first 300: ${readingHtml.substring(0, 300)}`);
+          }
+        } else {
+          addLog("Fallback reading page: fetch failed");
+        }
+      }
+
+      // Fallback: single-page format — readings are in the already-fetched HTML
+      if (!rawMarkdown && !nextSunday.url && fallbackHtml) {
+        addLog("Single-page fallback: extracting readings from cached HTML…");
+        const htmlExtracted = extractReadingsFromHtml(fallbackHtml, nextSunday.title);
+        if (htmlExtracted.readings && htmlExtracted.readings.length >= 100) {
+          rawMarkdown = htmlExtracted.readings;
+          scrapeSource = "direct-fetch";
+          addLog(`Single-page fallback: extracted ${rawMarkdown.length} chars`);
+        } else {
+          addLog(`Single-page fallback: extraction too short (${htmlExtracted.readings?.length || 0} chars)`);
+        }
+      }
+
       if (!rawMarkdown) {
-        // Scraping failed — fall back to stale cache if available
+        // All scraping failed — fall back to stale cache if available
         if (cached) {
-          addLog("Scraping failed — falling back to stale cache for notification sentence");
+          addLog("All scraping failed — falling back to stale cache");
           const { data: fullCached } = await supabase
             .from("readings_cache")
             .select("markdown_content, sunday_title, notification_sentence")
@@ -289,28 +349,17 @@ Deno.serve(async (req) => {
           readingsMarkdown = fullCached!.markdown_content;
           sundayTitle = fullCached!.sunday_title;
         } else {
-          addLog("Failed to scrape reading page — no cache available");
+          addLog("All scraping failed — no cache available");
           return new Response(JSON.stringify({ success: false, log }), {
             status: 500,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
-      } else {
-        const extracted = extractReadings(rawMarkdown, nextSunday.title);
+      } else if (scrapeSource === "direct-fetch") {
+        // Direct-fetch already produced ## formatted readings
+        readingsMarkdown = rawMarkdown;
+        sundayTitle = nextSunday.title.replace(/\\([.#*_~`])/g, "$1").trim();
 
-        // Validate: extracted readings must contain actual biblical text, not site navigation
-        if (!extracted.readings || extracted.readings.length < 100) {
-          addLog(`Extraction failed — readings too short (${extracted.readings?.length || 0} chars). Raw markdown starts with: ${rawMarkdown.substring(0, 100)}`);
-          return new Response(JSON.stringify({ success: false, log, error: "Extraction produced no valid readings" }), {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-
-        readingsMarkdown = extracted.readings;
-        sundayTitle = extracted.sundayTitle;
-
-        // Save to readings_cache — delete old entries first, then insert
         await supabase.from("readings_cache").delete().neq("sunday_title", sundayTitle);
         await supabase.from("readings_cache").upsert(
           {
@@ -322,7 +371,34 @@ Deno.serve(async (req) => {
           },
           { onConflict: "sunday_title" }
         );
-        addLog(`Saved readings to cache: "${sundayTitle}"`);
+        addLog(`Saved readings to cache (via ${scrapeSource}): "${sundayTitle}"`);
+      } else {
+        // Firecrawl succeeded — use existing extractReadings for markdown
+        const extracted = extractReadings(rawMarkdown, nextSunday.title);
+
+        if (!extracted.readings || extracted.readings.length < 100) {
+          addLog(`Extraction failed — readings too short (${extracted.readings?.length || 0} chars). Raw markdown starts with: ${rawMarkdown.substring(0, 100)}`);
+          return new Response(JSON.stringify({ success: false, log, error: "Extraction produced no valid readings" }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        readingsMarkdown = extracted.readings;
+        sundayTitle = extracted.sundayTitle;
+
+        await supabase.from("readings_cache").delete().neq("sunday_title", sundayTitle);
+        await supabase.from("readings_cache").upsert(
+          {
+            sunday_title: sundayTitle,
+            url: nextSunday.url,
+            markdown_content: readingsMarkdown,
+            scraped_at: new Date().toISOString(),
+            sunday_date: nextSunday.date,
+          },
+          { onConflict: "sunday_title" }
+        );
+        addLog(`Saved readings to cache (via ${scrapeSource}): "${sundayTitle}"`);
       }
     }
 

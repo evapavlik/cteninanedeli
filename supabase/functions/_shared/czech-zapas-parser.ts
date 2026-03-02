@@ -62,7 +62,7 @@ const SECTION_BOUNDARY_RE =
  * These can appear anywhere in a line (columns often merge in PDF extraction).
  */
 const PAGE_BOUNDARY_RE =
-  /ISSN\s+\d|MK\s+[ČC]\s*R\s+E\s+\d|[ČC]\s*eský\s+zápas\s+\d+\s*•|\d+\s*•\s*[ČC]\s*eský/i;
+  /ISSN\s+\d|MK\s+[ČC]\s*R\s+E\s+\d|[ČC]\s*eský\s+zápas\s+\d+\s*•|\d+\s*•\s*[ČC]\s*eský|\d+\s+[ČC]\s*eský\s+zápas\s+č/i;
 
 /**
  * Parses the reversed "Nad písmem" layout where the heading appears AFTER the sermon.
@@ -261,9 +261,17 @@ export function parseNadPismem(
     titleIdx = headerIdx;
     titleLine = restAfterHeader;
   } else {
-    // Header is alone; first non-empty line after it is the title
+    // Header is alone; first non-noise line after it is the title.
+    // Skip empty lines, TOC lines (containing •), and page boundary artifacts
+    // that appear at page breaks in PDF extraction.
     titleIdx = headerIdx + 1;
-    while (titleIdx < lines.length && lines[titleIdx].trim() === "") titleIdx++;
+    while (
+      titleIdx < lines.length &&
+      (lines[titleIdx].trim() === "" ||
+        isTocLine(lines[titleIdx]) ||
+        PAGE_BOUNDARY_RE.test(lines[titleIdx]))
+    )
+      titleIdx++;
     if (titleIdx >= lines.length) return null;
     titleLine = lines[titleIdx].trim();
   }
@@ -370,9 +378,65 @@ export function parseNadPismem(
   // Attempt to extract liturgical context (e.g. "2. neděle postní")
   // Use \S+ instead of \w+ because \w doesn't match Czech diacritics (á, í, etc.)
   const liturgicalMatch = content.match(
-    /\b(\d+\.\s+ned[eě]l[ei]\s+\w+|Hod\s+Bo[žz][íi]\s+\w+|[Vv]elikonoční\s+ned[eě]l[ai]|[Kk]větnou\s+ned[eě]l[ei]|[Ss]lavnost\s+\w+|[Pp]ůst[ní]*\s+ned[eě]l[ei])/,
+    /\b(\d+\.\s+ned[eě]l[ei]\s+\S+|Hod\s+Bo[žz][íi]\s+\S+|[Vv]elikonoční\s+ned[eě]l[ai]|[Kk]větnou\s+ned[eě]l[ei]|[Ss]lavnost\s+\S+|[Pp]ůst[ní]*\s+ned[eě]l[ei])/,
   );
-  const liturgical_context = liturgicalMatch ? liturgicalMatch[0].trim() : null;
+  let liturgical_context = liturgicalMatch ? liturgicalMatch[0].trim() : null;
+
+  // --- Check for title-after-author (variant D) ---
+  // In some PDFs (e.g. ČZ 10/2020), the article has no title before the body:
+  //   heading → [noise] → body → author → title
+  // The parser incorrectly used the first body line as the title.
+  // Detect: if the line after the author is short and clean, and our current
+  // "title" looks like body text (has dialogue markers, quotation marks, etc.),
+  // swap them.
+  if (author) {
+    const bodyStartLine = titleIdx + 1 + extraLinesConsumed;
+    const authorOrigIdx = bodyStartLine + bodyLines.length - 1;
+    let candidateTitleIdx = authorOrigIdx + 1;
+    while (
+      candidateTitleIdx < lines.length &&
+      lines[candidateTitleIdx].trim() === ""
+    )
+      candidateTitleIdx++;
+
+    if (candidateTitleIdx < lines.length) {
+      const candidateTitle = lines[candidateTitleIdx].trim();
+      const isCandidateValid =
+        candidateTitle.length > 3 &&
+        candidateTitle.length < 100 &&
+        !SECTION_BOUNDARY_RE.test(candidateTitle) &&
+        !PAGE_BOUNDARY_RE.test(candidateTitle) &&
+        !isTocLine(candidateTitle);
+
+      // Current "title" looks like body text if it has dialogue/quotation markers,
+      // is very long, or ends with continuation punctuation (titles don't end with ,;)
+      const currentTitleIsBody =
+        /[„"":]/.test(title) || title.length > 80 || /[,;]$/.test(title);
+
+      if (isCandidateValid && currentTitleIsBody) {
+        // The candidate is the real title; prepend old "title" back into content
+        const candidateRefs = parseBiblicalRefs(candidateTitle);
+        if (candidateRefs.length > 0) {
+          const firstRefPos = candidateTitle.indexOf(candidateRefs[0]);
+          title = candidateTitle
+            .substring(0, firstRefPos)
+            .trim()
+            .replace(/\s*[([\s]+$/, "");
+          biblical_refs_raw = candidateRefs.join("; ");
+          refsInTitle = candidateRefs;
+        } else {
+          title = candidateTitle;
+        }
+        content = titleLine + "\n" + content;
+
+        // Re-extract liturgical context from the expanded content
+        const litMatch2 = content.match(
+          /\b(\d+\.\s+ned[eě]l[ei]\s+\S+|Hod\s+Bo[žz][íi]\s+\S+|[Vv]elikonoční\s+ned[eě]l[ai]|[Kk]větnou\s+ned[eě]l[ei]|[Ss]lavnost\s+\S+|[Pp]ůst[ní]*\s+ned[eě]l[ei])/,
+        );
+        if (litMatch2) liturgical_context = litMatch2[0].trim();
+      }
+    }
+  }
 
   return {
     title,

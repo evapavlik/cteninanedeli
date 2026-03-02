@@ -211,6 +211,71 @@ Setkání u studně Jan 4,3-42
 N AD   P ÍSMEM
 3. neděle postní (Oculi)`;
 
+// Simulated text from ČZ 10/2020 — heading at page break with noise lines
+// (TOC, page footer) between heading and body, title at end after author.
+// Variant D: heading → [noise] → body → author → title
+// Note: The parser's hyphenation repair (e.g. "Mů-\nžeme" → "Můžeme") reduces
+// line count. We need 20+ body lines AFTER joins for standalone author detection.
+const SAMPLE_PAGE_BREAK_NOISE = `nové poodhalení tajemství tvé velkorysé a krásné lásky. amen
+N ad P íSMEM
+EdiTorial • ZE živoTa CírkvE • Nad PíSMEM • TéMa MěSíCE: ToMáš GarriGuE MaSaryk
+Pro děTi • TéMa MěSíCE • ZPrávy
+6 Český zápas č. 10 8. 3. 2020
+K. Č.: Každý může říci: „V nás žije veliký odkaz Husův," ale
+kdo z vás může říci: „Ve mně žije veliký odkaz Husův?"
+Můžeme být mravní ve světě, jehož jsme součástí?
+T. G. M.: Česká reformace byla mravní par excellence. Bránit
+pravdu až do smrti, to je velké naučení
+Husovo z jeho života.
+K. Č.: Myslel jsem na dobrého doktora, zatímco celý svět
+mluvil o hospodářské krizi, národních expanzích a budoucí válce.
+Nemohl jsem se plně ztotožnit se svým doktorem, protože i já
+jsem byl a jsem stále pln starostí o to, co hrozí lidskému světu.
+T. G. M.: Zakládám demokracii na
+lásce a na spravedlnosti, jež je
+matematikou lásky.
+K. Č.: Je potřeba tolerance mezi národy, zachování vlastní
+identity jako tvořivý prvek identity společné.
+T. G. M.: Tož demokracii bychom už
+měli, teď ještě nějaké ty demokraty.
+Mravnost je poměr člověka k člověku.
+K. Č.: Umělé bytosti podobné člověku se poprvé na světové
+scéně objevili roku 1921 v mé divadelní hře.
+T. G. M.: Život měříme příliš jednostranně, podle jeho délky
+a ne podle jeho velikosti.
+Bohumil Ždichynec
+T. G. Masaryk a K. Čapek k dnešku`;
+
+// Variant D with biblical reference in the trailing title.
+// Needs 20+ body lines between titleIdx+1 and author for standalone name detection.
+const SAMPLE_PAGE_BREAK_WITH_REF = `modlitba za pokoj. amen
+N ad P íSMEM
+EdiTorial • ZE živoTa CírkvE • Nad PíSMEM • TéMa MěSíCE
+6 Český zápas č. 5 3. 2. 2021
+Milé sestry a bratři,
+dnes se zamýšlíme nad textem, který nás
+vyzývá k lásce a odpuštění. Ježíš nám
+ukazuje cestu, jak žít v pravdě.
+Pokračování kázání s dalšími myšlenkami.
+Hluboké zamyšlení nad tématem.
+A ještě více textu, aby bylo dost řádků.
+Další odstavec s teologickými úvahami.
+Přemýšlení o smyslu odpuštění.
+Jak se odpuštění projevuje v životě.
+Co nám říká Ježíš o milosrdenství.
+Láska a spravedlnost jdou ruku v ruce.
+Naděje pro každého z nás.
+Víra nás vede k lepšímu životu.
+Společenství bratří a sester nás posiluje.
+Odpuštění je dar, který osvobozuje.
+Každý den je nová příležitost.
+Boží milost nás provází na cestě.
+Modlitba otevírá naše srdce.
+Služba druhým je projevem víry.
+Závěrečné slovo kázání s nadějí.
+Jan Novák
+Cesta k odpuštění Mt 5,1-12`;
+
 describe("parseBiblicalRefs", () => {
   it("najde referenci ve formátu 'J 3,1-17'", () => {
     expect(parseBiblicalRefs("J 3,1-17")).toEqual(["J 3,1-17"]);
@@ -481,6 +546,32 @@ Světluše Košíčková`;
       expect(result!.author).toBe("Lucie Haltofová");
       expect(result!.content).toContain("také uvěřili.");
       expect(result!.content).not.toContain("Lucie Haltofová");
+    });
+
+    it("přeskočí šum (TOC, zápatí) po headingu a najde kázání — varianta D (ČZ 10/2020)", () => {
+      const result = parseNadPismem(SAMPLE_PAGE_BREAK_NOISE, 2020, 10);
+
+      expect(result).not.toBeNull();
+      expect(result!.title).toBe("T. G. Masaryk a K. Čapek k dnešku");
+      expect(result!.author).toBe("Bohumil Ždichynec");
+      expect(result!.content).toContain("Každý může říci");
+      expect(result!.content).toContain("matematikou lásky");
+      expect(result!.content).not.toContain("EdiTorial");
+      expect(result!.content).not.toContain("Český zápas");
+      expect(result!.content).not.toContain("Bohumil Ždichynec");
+      expect(result!.biblical_references).toEqual([]);
+    });
+
+    it("varianta D s biblickou referencí v titulku za autorem", () => {
+      const result = parseNadPismem(SAMPLE_PAGE_BREAK_WITH_REF, 2021, 5);
+
+      expect(result).not.toBeNull();
+      expect(result!.title).toBe("Cesta k odpuštění");
+      expect(result!.biblical_refs_raw).toBe("Mt 5,1-12");
+      expect(result!.biblical_references).toEqual(["Mt 5,1-12"]);
+      expect(result!.author).toBe("Jan Novák");
+      expect(result!.content).toMatch(/^Milé sestry a bratři/);
+      expect(result!.content).not.toContain("Jan Novák");
     });
 
     it("nezastaví se na slovu 'Zprávy' uvnitř věty", () => {

@@ -81,8 +81,8 @@ All colors MUST be HSL.
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 95%;
 
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
     --ring: 0 0% 80%;
     --sidebar-background: 0 0% 5%;
     --sidebar-foreground: 0 0% 90%;

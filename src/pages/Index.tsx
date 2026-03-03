@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useReadings } from "@/hooks/useReadings";
 import { useAIData } from "@/hooks/useAIData";
 import { trackEvent } from "@/lib/analytics";
-import { Loader2, Moon, Sun } from "lucide-react";
+import { Loader2, Moon, Sun, Mail, Heart } from "lucide-react";
 import ccshChalice from "@/assets/ccsh-chalice.svg";
 import { NotificationButton } from "@/components/NotificationButton";
 
@@ -206,17 +206,13 @@ const Index = () => {
 
               {/* Legend for annotations */}
               {annotatedMarkdown && (
-                <div className="mb-8 space-y-2">
-                  <div className="flex flex-wrap justify-center gap-4 font-sans text-xs text-muted-foreground">
-                    <span><span className="text-amber-600 dark:text-amber-400 font-medium">‖</span> pauza</span>
-                    <span><span className="text-red-600 dark:text-red-400 font-medium">‖‖</span> dlouhá pauza</span>
-                    <span><span className="text-blue-600 dark:text-blue-400 font-medium">▼</span> pomalu</span>
-                    <span><span className="text-green-600 dark:text-green-400 font-medium">▲</span> normálně</span>
-                    <span><strong>tučně</strong> = důraz</span>
-                  </div>
-                  <p className="text-center font-sans text-[0.65rem] text-muted-foreground/60 italic">
-                    ✦ Značky byly vygenerovány pomocí AI – slouží jako vodítko, ne jako závazný předpis
-                  </p>
+                <div className="mb-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 font-sans text-[0.7rem] text-muted-foreground">
+                  <span><span className="text-amber-600 dark:text-amber-400 font-medium">‖</span> pauza</span>
+                  <span><span className="text-red-600 dark:text-red-400 font-medium">‖‖</span> dlouhá pauza</span>
+                  <span><span className="text-blue-600 dark:text-blue-400 font-medium">▼</span> pomalu</span>
+                  <span><span className="text-green-600 dark:text-green-400 font-medium">▲</span> normálně</span>
+                  <span><strong>tučně</strong> = důraz</span>
+                  <span className="basis-full text-center text-[0.6rem] text-muted-foreground/50 italic">AI vodítko, ne závazný předpis</span>
                 </div>
               )}
 
@@ -239,23 +235,27 @@ const Index = () => {
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-border mt-12 px-5 pt-8 pb-safe text-center font-serif text-sm text-muted-foreground">
-        <p>S láskou k poznání vytvořila Eva Pavlíková.</p>
-        <p className="mt-2 text-xs text-muted-foreground/60">
+      <footer className="border-t border-border mt-12 px-5 pt-8 pb-safe text-center font-serif text-xs text-muted-foreground/70 space-y-1.5">
+        {sundayTitle && (
+          <p className="mb-3 tracking-widest uppercase text-muted-foreground/50">{sundayTitle}</p>
+        )}
+        <p>
           Texty čtení z{" "}
           <a href="https://cyklus.ccsh.cz" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground transition-colors">cyklus.ccsh.cz</a>
           {" · "}postily Karla Farského z{" "}
           <a href="https://www.ccsh.cz" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground transition-colors">Českého zápasu</a>
           {" "}(1921–1924)
         </p>
-        <p className="mt-1">
-          Našli jste chybu? Napište mi na{" "}
+        <p className="inline-flex items-center justify-center gap-1.5">
+          <Heart className="h-3 w-3" /> Eva Pavlíková
+          <span className="text-muted-foreground/30">·</span>
           <a
             href="mailto:eva.pavlik@gmail.com?subject=%C4%8Cten%C3%AD%20na%20ned%C4%9Bli"
-            className="underline underline-offset-2 hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
           >
-            email
-          </a>.
+            <Mail className="h-3 w-3" />
+            Napište mi
+          </a>
         </p>
       </footer>
     </main>

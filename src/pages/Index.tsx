@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useReadings } from "@/hooks/useReadings";
 import { useAIData } from "@/hooks/useAIData";
 import { trackEvent } from "@/lib/analytics";
-import { Loader2, Moon, Sun, Mail, Heart } from "lucide-react";
+import { Loader2, Moon, Sun, Mail, Heart, Coffee } from "lucide-react";
 import ccshChalice from "@/assets/ccsh-chalice.svg";
 import { NotificationButton } from "@/components/NotificationButton";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -256,7 +256,7 @@ const Index = () => {
           <a href="https://www.ccsh.cz" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground transition-colors">Českého zápasu</a>
           {" "}(1921–1924)
         </p>
-        <p className="inline-flex items-center justify-center gap-1.5">
+        <p className="inline-flex items-center justify-center gap-1.5 flex-wrap">
           <Heart className="h-3 w-3" /> Eva Pavlíková
           <span className="text-muted-foreground/30">·</span>
           <a
@@ -265,6 +265,16 @@ const Index = () => {
           >
             <Mail className="h-3 w-3" />
             Napište mi
+          </a>
+          <span className="text-muted-foreground/30">·</span>
+          <a
+            href="https://buymeacoffee.com/evapavlikova"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+          >
+            <Coffee className="h-3 w-3" />
+            Podpořte projekt
           </a>
         </p>
       </footer>

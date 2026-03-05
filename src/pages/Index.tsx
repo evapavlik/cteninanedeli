@@ -6,14 +6,20 @@ import { trackEvent } from "@/lib/analytics";
 import { Loader2, Moon, Sun, Mail, Heart } from "lucide-react";
 import ccshChalice from "@/assets/ccsh-chalice.svg";
 import { NotificationButton } from "@/components/NotificationButton";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+
+// Retry wrapper for lazy imports — retries once on chunk load failure
+function lazyRetry<T extends { default: any }>(fn: () => Promise<T>): Promise<T> {
+  return fn().catch(() => fn());
+}
 
 // Lazy-load all heavy components to reduce initial JS
-const LectorGuide = lazy(() => import("@/components/LectorGuide").then(m => ({ default: m.LectorGuide })));
-const SectionProgress = lazy(() => import("@/components/SectionProgress").then(m => ({ default: m.SectionProgress })));
-const AnnotatedText = lazy(() => import("@/components/AnnotatedText").then(m => ({ default: m.AnnotatedText })));
-const ReadingToolbar = lazy(() => import("@/components/ReadingToolbar").then(m => ({ default: m.ReadingToolbar })));
-const ReadingContext = lazy(() => import("@/components/ReadingContext").then(m => ({ default: m.ReadingContext })));
-const PreachingInspiration = lazy(() => import("@/components/PreachingInspiration").then(m => ({ default: m.PreachingInspiration })));
+const LectorGuide = lazy(() => lazyRetry(() => import("@/components/LectorGuide").then(m => ({ default: m.LectorGuide }))));
+const SectionProgress = lazy(() => lazyRetry(() => import("@/components/SectionProgress").then(m => ({ default: m.SectionProgress }))));
+const AnnotatedText = lazy(() => lazyRetry(() => import("@/components/AnnotatedText").then(m => ({ default: m.AnnotatedText }))));
+const ReadingToolbar = lazy(() => lazyRetry(() => import("@/components/ReadingToolbar").then(m => ({ default: m.ReadingToolbar }))));
+const ReadingContext = lazy(() => lazyRetry(() => import("@/components/ReadingContext").then(m => ({ default: m.ReadingContext }))));
+const PreachingInspiration = lazy(() => lazyRetry(() => import("@/components/PreachingInspiration").then(m => ({ default: m.PreachingInspiration }))));
 
 const Index = () => {
   const { markdown, sundayTitle, sundayDate, loading, error, invalidationEpoch } = useReadings();
@@ -156,12 +162,15 @@ const Index = () => {
         )}
 
         {/* Lector guide */}
-        <Suspense fallback={null}>
-          <LectorGuide />
-        </Suspense>
+        <ErrorBoundary inline>
+          <Suspense fallback={null}>
+            <LectorGuide />
+          </Suspense>
+        </ErrorBoundary>
 
         {displayMarkdown && (
           <>
+            <ErrorBoundary inline>
             <Suspense fallback={null}>
               {contextData && (
                 <ReadingContext
@@ -223,6 +232,7 @@ const Index = () => {
               />
 
             </Suspense>
+            </ErrorBoundary>
 
             {/* Ending ornament */}
             <div className="mt-16 mb-8 flex items-center justify-center gap-3 text-muted-foreground/30">

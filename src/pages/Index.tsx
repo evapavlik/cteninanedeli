@@ -216,17 +216,15 @@ const Index = () => {
                   onToggleRecording={isRecording ? stopRecording : startRecording}
                   isRecording={isRecording}
                   recordingDuration={duration}
+                  audioSlot={audioUrl && !isRecording ? (
+                    <AudioPlayback
+                      audioUrl={audioUrl}
+                      duration={duration}
+                      onRecordAgain={startRecording}
+                      onDelete={clearRecording}
+                    />
+                  ) : undefined}
                 />
-
-                {/* Audio playback */}
-                {audioUrl && !isRecording && (
-                  <AudioPlayback
-                    audioUrl={audioUrl}
-                    duration={duration}
-                    onRecordAgain={startRecording}
-                    onDelete={clearRecording}
-                  />
-                )}
 
                 {/* Recording error */}
                 {recorderError && (

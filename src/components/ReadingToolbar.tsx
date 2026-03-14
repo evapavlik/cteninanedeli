@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { trackEvent } from "@/lib/analytics";
 import {
   Type,
@@ -31,6 +31,7 @@ interface ReadingToolbarProps {
   onToggleRecording?: () => void;
   isRecording?: boolean;
   recordingDuration?: number;
+  audioSlot?: ReactNode;
 }
 
 export function ReadingToolbar({
@@ -51,6 +52,7 @@ export function ReadingToolbar({
   onToggleRecording,
   isRecording,
   recordingDuration = 0,
+  audioSlot,
 }: ReadingToolbarProps) {
   const [showSettings, setShowSettings] = useState(false);
 
@@ -207,6 +209,9 @@ export function ReadingToolbar({
           </div>
         </div>
       )}
+
+      {/* Audio playback slot */}
+      {audioSlot}
     </div>
   );
 }

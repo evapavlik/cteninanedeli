@@ -7,6 +7,8 @@ import { Loader2, Moon, Sun, Mail, Heart, Coffee } from "lucide-react";
 import ccshChalice from "@/assets/ccsh-chalice.svg";
 import { NotificationButton } from "@/components/NotificationButton";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
+import { AudioPlayback } from "@/components/AudioPlayback";
 
 // Retry wrapper for lazy imports — retries once on chunk load failure
 function lazyRetry<T extends { default: any }>(fn: () => Promise<T>): Promise<T> {
@@ -29,6 +31,10 @@ const Index = () => {
     czData, isLoadingCz,
     annotatedMarkdown, isAnnotating, handleAnnotate,
   } = useAIData(markdown, sundayTitle, invalidationEpoch);
+  const {
+    isRecording, audioUrl, duration, error: recorderError,
+    startRecording, stopRecording, clearRecording,
+  } = useVoiceRecorder();
 
   // Theme
   const [theme, setTheme] = useState<"light" | "dark">(() => {
@@ -207,7 +213,25 @@ const Index = () => {
                   onOpenInspiration={() => { trackEvent("open_inspiration"); setIsInspirationOpen(true); }}
                   hasInspiration={!!postilyData || !!czData}
                   isLoadingInspiration={isLoadingPostily || isLoadingCz}
+                  onToggleRecording={isRecording ? stopRecording : startRecording}
+                  isRecording={isRecording}
+                  recordingDuration={duration}
                 />
+
+                {/* Audio playback */}
+                {audioUrl && !isRecording && (
+                  <AudioPlayback
+                    audioUrl={audioUrl}
+                    duration={duration}
+                    onRecordAgain={startRecording}
+                    onDelete={clearRecording}
+                  />
+                )}
+
+                {/* Recording error */}
+                {recorderError && (
+                  <p className="mt-2 text-center font-serif text-sm text-destructive">{recorderError}</p>
+                )}
 
                 {/* Section progress indicator */}
                 <SectionProgress activeIndex={activeReadingIndex} total={3} onSelect={setActiveReadingIndex} />

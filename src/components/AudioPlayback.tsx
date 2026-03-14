@@ -47,36 +47,36 @@ export function AudioPlayback({ audioUrl, duration, onRecordAgain, onDelete }: A
   }
 
   return (
-    <div className="mt-2 flex items-center gap-3 rounded-xl border border-border bg-card/95 px-4 py-2.5 backdrop-blur-sm shadow-sm">
+    <div className="mt-3 flex items-center gap-4 rounded-xl border border-border bg-card/95 px-5 py-3.5 backdrop-blur-sm shadow-sm">
       <audio ref={audioRef} src={audioUrl} preload="metadata" />
 
       <button
         onClick={togglePlay}
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+        className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
         aria-label={isPlaying ? "Pozastavit" : "Přehrát"}
       >
-        {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
+        {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
       </button>
 
-      <span className="font-mono text-sm text-muted-foreground tabular-nums">
+      <span className="font-serif text-base text-muted-foreground tabular-nums">
         {formatTime(currentTime)} / {formatTime(duration)}
       </span>
 
       <div className="ml-auto flex items-center gap-2">
         <button
           onClick={onRecordAgain}
-          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-serif text-xs text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+          className="flex items-center gap-1.5 rounded-lg px-4 py-2 font-serif text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
           aria-label="Nahrát znovu"
         >
-          <Mic className="h-3.5 w-3.5" />
+          <Mic className="h-4 w-4" />
           Znovu
         </button>
         <button
           onClick={onDelete}
-          className="flex items-center justify-center rounded-lg p-1.5 text-muted-foreground/50 hover:text-destructive hover:bg-accent transition-colors"
+          className="flex items-center justify-center rounded-lg p-2 text-muted-foreground/50 hover:text-destructive hover:bg-accent transition-colors"
           aria-label="Smazat nahrávku"
         >
-          <Trash2 className="h-3.5 w-3.5" />
+          <Trash2 className="h-4 w-4" />
         </button>
       </div>
     </div>

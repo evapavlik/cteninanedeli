@@ -9,6 +9,8 @@ import {
   BookOpen,
   Maximize,
   Feather,
+  Mic,
+  Square,
 } from "lucide-react";
 
 interface ReadingToolbarProps {
@@ -26,6 +28,9 @@ interface ReadingToolbarProps {
   onOpenInspiration?: () => void;
   hasInspiration?: boolean;
   isLoadingInspiration?: boolean;
+  onToggleRecording?: () => void;
+  isRecording?: boolean;
+  recordingDuration?: number;
 }
 
 export function ReadingToolbar({
@@ -43,6 +48,9 @@ export function ReadingToolbar({
   onOpenInspiration,
   hasInspiration,
   isLoadingInspiration,
+  onToggleRecording,
+  isRecording,
+  recordingDuration = 0,
 }: ReadingToolbarProps) {
   const [showSettings, setShowSettings] = useState(false);
 
@@ -114,6 +122,31 @@ export function ReadingToolbar({
               <Feather className="h-5 w-5 md:h-4 md:w-4" />
             )}
             Inspirace
+          </button>
+        )}
+
+        {/* Voice recording */}
+        {onToggleRecording && (
+          <button
+            onClick={() => { trackEvent(isRecording ? "voice_record_stop" : "voice_record_start"); onToggleRecording(); }}
+            className={`inline-flex items-center gap-2 rounded-lg px-5 py-3 font-serif text-base md:text-sm md:px-4 md:py-2.5 font-medium transition-colors border border-border ${
+              isRecording
+                ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900 text-red-700 dark:text-red-400"
+                : "bg-background text-foreground hover:bg-accent"
+            }`}
+          >
+            {isRecording ? (
+              <>
+                <Square className="h-4 w-4 md:h-3.5 md:w-3.5 fill-current" />
+                <span className="tabular-nums">{Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, "0")}</span>
+                Zastavit
+              </>
+            ) : (
+              <>
+                <Mic className="h-5 w-5 md:h-4 md:w-4" />
+                Nahrát
+              </>
+            )}
           </button>
         )}
       </div>

@@ -29,6 +29,7 @@ const Index = () => {
     contextData, isLoadingContext,
     postilyData, isLoadingPostily,
     czData, isLoadingCz,
+    ccshKazaniData, isLoadingCcshKazani,
     annotatedMarkdown, isAnnotating, handleAnnotate,
   } = useAIData(markdown, sundayTitle, invalidationEpoch);
   const {
@@ -185,14 +186,15 @@ const Index = () => {
                   onOpenChange={setIsGuideOpen}
                   initialIndex={activeReadingIndex}
                   onOpenInspiration={() => setIsInspirationOpen(true)}
-                  hasInspiration={!!postilyData || !!czData}
+                  hasInspiration={!!postilyData || !!czData || !!ccshKazaniData}
                 />
               )}
 
-              {(postilyData || czData) && (
+              {(postilyData || czData || ccshKazaniData) && (
                 <PreachingInspiration
                   data={postilyData}
                   czData={czData}
+                  ccshKazaniData={ccshKazaniData}
                   open={isInspirationOpen}
                   onOpenChange={setIsInspirationOpen}
                 />
@@ -211,8 +213,8 @@ const Index = () => {
                   hasGuide={!!contextData}
                   isLoadingGuide={isLoadingContext}
                   onOpenInspiration={() => { trackEvent("open_inspiration"); setIsInspirationOpen(true); }}
-                  hasInspiration={!!postilyData || !!czData}
-                  isLoadingInspiration={isLoadingPostily || isLoadingCz}
+                  hasInspiration={!!postilyData || !!czData || !!ccshKazaniData}
+                  isLoadingInspiration={isLoadingPostily || isLoadingCz || isLoadingCcshKazani}
                   onToggleRecording={isRecording ? stopRecording : startRecording}
                   isRecording={isRecording}
                   recordingDuration={duration}

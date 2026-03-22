@@ -29,7 +29,7 @@ const Index = () => {
     contextData, isLoadingContext,
     postilyData, isLoadingPostily,
     czData, isLoadingCz,
-    ccshKazaniData, isLoadingCcshKazani,
+    ccshSermonData, isLoadingCcshSermons,
     annotatedMarkdown, isAnnotating, handleAnnotate,
   } = useAIData(markdown, sundayTitle, invalidationEpoch);
   const {
@@ -186,15 +186,15 @@ const Index = () => {
                   onOpenChange={setIsGuideOpen}
                   initialIndex={activeReadingIndex}
                   onOpenInspiration={() => setIsInspirationOpen(true)}
-                  hasInspiration={!!postilyData || !!czData || !!ccshKazaniData}
+                  hasInspiration={!!postilyData || !!czData || !!ccshSermonData}
                 />
               )}
 
-              {(postilyData || czData || ccshKazaniData) && (
+              {(postilyData || czData || ccshSermonData) && (
                 <PreachingInspiration
                   data={postilyData}
                   czData={czData}
-                  ccshKazaniData={ccshKazaniData}
+                  ccshSermonData={ccshSermonData}
                   open={isInspirationOpen}
                   onOpenChange={setIsInspirationOpen}
                 />
@@ -213,8 +213,8 @@ const Index = () => {
                   hasGuide={!!contextData}
                   isLoadingGuide={isLoadingContext}
                   onOpenInspiration={() => { trackEvent("open_inspiration"); setIsInspirationOpen(true); }}
-                  hasInspiration={!!postilyData || !!czData || !!ccshKazaniData}
-                  isLoadingInspiration={isLoadingPostily || isLoadingCz || isLoadingCcshKazani}
+                  hasInspiration={!!postilyData || !!czData || !!ccshSermonData}
+                  isLoadingInspiration={isLoadingPostily || isLoadingCz || isLoadingCcshSermons}
                   onToggleRecording={isRecording ? stopRecording : startRecording}
                   isRecording={isRecording}
                   recordingDuration={duration}

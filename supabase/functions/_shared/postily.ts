@@ -69,7 +69,7 @@ export async function findMatchingCzechZapas(
   return [];
 }
 
-export interface CcshKazaniMatch {
+export interface CcshSermonMatch {
   id: string;
   sermon_number: number;
   title: string;
@@ -85,40 +85,40 @@ export interface CcshKazaniMatch {
 }
 
 /**
- * Find ccsh_kazani sermons matching the biblical references in the given Sunday readings markdown.
+ * Find ccsh_sermons matching the biblical references in the given Sunday readings markdown.
  * Uses the same GIN overlap strategy as findMatchingCzechZapas.
  * Falls back to liturgical_context match if no direct ref match.
  */
-export async function findMatchingCcshKazani(
+export async function findMatchingCcshSermons(
   supabase: any,
   markdownContent: string,
   liturgicalContext?: string,
-): Promise<CcshKazaniMatch[]> {
+): Promise<CcshSermonMatch[]> {
   const { allRefs } = extractAllRefsFromMarkdown(markdownContent);
 
   // Primary: match by biblical references
   if (allRefs.length > 0) {
     const arrayLiteral = `{${allRefs.map(r => `"${r}"`).join(",")}}`;
     const { data, error } = await supabase
-      .from("ccsh_kazani")
+      .from("ccsh_sermons")
       .select("id, sermon_number, title, author, biblical_references, liturgical_context, year, sermon_date, source_url, source_ref, content")
       .eq("is_active", true)
       .filter("biblical_references", "ov", arrayLiteral);
 
     if (!error && data && data.length > 0) {
-      console.log(`Found ${data.length} ccsh_kazani sermon(s) by biblical ref`);
+      console.log(`Found ${data.length} ccsh_sermons sermon(s) by biblical ref`);
       return (data as any[]).map((row) => {
         const matchedRef = (row.biblical_references as string[]).find((r: string) => allRefs.includes(r)) || allRefs[0];
-        return { ...row, matched_ref: matchedRef } as CcshKazaniMatch;
+        return { ...row, matched_ref: matchedRef } as CcshSermonMatch;
       });
     }
-    if (error) console.error("Error querying ccsh_kazani by refs:", error.message);
+    if (error) console.error("Error querying ccsh_sermons by refs:", error.message);
   }
 
   // Fallback: match by liturgical_context
   if (liturgicalContext) {
     const { data, error } = await supabase
-      .from("ccsh_kazani")
+      .from("ccsh_sermons")
       .select("id, sermon_number, title, author, biblical_references, liturgical_context, year, sermon_date, source_url, source_ref, content")
       .eq("is_active", true)
       .ilike("liturgical_context", `%${liturgicalContext}%`)
@@ -126,15 +126,15 @@ export async function findMatchingCcshKazani(
       .limit(2);
 
     if (!error && data && data.length > 0) {
-      console.log(`Found ${data.length} ccsh_kazani sermon(s) by liturgical context: ${liturgicalContext}`);
+      console.log(`Found ${data.length} ccsh_sermons sermon(s) by liturgical context: ${liturgicalContext}`);
       return (data as any[]).map((row) => ({
         ...row,
         matched_ref: row.biblical_references?.[0] || "",
-      } as CcshKazaniMatch));
+      } as CcshSermonMatch));
     }
   }
 
-  console.log("No matching ccsh_kazani sermons found");
+  console.log("No matching ccsh_sermons found");
   return [];
 }
 

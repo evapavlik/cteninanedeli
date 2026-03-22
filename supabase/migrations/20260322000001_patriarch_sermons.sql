@@ -2,7 +2,7 @@
 -- Třetí zdroj inspirace pro kazatele vedle Farského postil a Českého zápasu.
 -- Stejná architektura — matching přes GIN index na biblical_references.
 
-CREATE TABLE IF NOT EXISTS public.ccsh_kazani (
+CREATE TABLE IF NOT EXISTS public.ccsh_sermons (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   sermon_number INTEGER NOT NULL UNIQUE,              -- pořadové číslo (auto-increment při importu)
   title TEXT NOT NULL,                                -- název kázání (obsahuje i biblický odkaz)
@@ -20,32 +20,32 @@ CREATE TABLE IF NOT EXISTS public.ccsh_kazani (
 );
 
 -- GIN index pro dotazy s překryvem polí biblických odkazů
-CREATE INDEX IF NOT EXISTS idx_ccsh_kazani_biblical_refs
-  ON public.ccsh_kazani USING GIN (biblical_references);
+CREATE INDEX IF NOT EXISTS idx_ccsh_sermons_biblical_refs
+  ON public.ccsh_sermons USING GIN (biblical_references);
 
-CREATE INDEX IF NOT EXISTS idx_ccsh_kazani_active
-  ON public.ccsh_kazani (is_active) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_ccsh_sermons_active
+  ON public.ccsh_sermons (is_active) WHERE is_active = true;
 
-CREATE INDEX IF NOT EXISTS idx_ccsh_kazani_liturgical
-  ON public.ccsh_kazani (liturgical_context) WHERE liturgical_context IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_ccsh_sermons_liturgical
+  ON public.ccsh_sermons (liturgical_context) WHERE liturgical_context IS NOT NULL;
 
-ALTER TABLE public.ccsh_kazani ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ccsh_sermons ENABLE ROW LEVEL SECURITY;
 
 DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies
     WHERE schemaname = 'public'
-      AND tablename  = 'ccsh_kazani'
+      AND tablename  = 'ccsh_sermons'
       AND policyname = 'CCSH kazani are publicly readable'
   ) THEN
     CREATE POLICY "CCSH kazani are publicly readable"
-      ON public.ccsh_kazani FOR SELECT
+      ON public.ccsh_sermons FOR SELECT
       USING (true);
   END IF;
 END $$;
 
--- Rozšíření constraint na ai_cache.mode o nový mode 'ccsh_kazani'
+-- Rozšíření constraint na ai_cache.mode o nový mode 'ccsh_sermons'
 DO $$
 BEGIN
   IF EXISTS (
@@ -54,6 +54,7 @@ BEGIN
   ) THEN
     ALTER TABLE public.ai_cache DROP CONSTRAINT IF EXISTS ai_cache_mode_check;
     ALTER TABLE public.ai_cache ADD CONSTRAINT ai_cache_mode_check
-      CHECK (mode IN ('annotate', 'context', 'postily', 'czech_zapas', 'ccsh_kazani'));
+      CHECK (mode IN ('annotate', 'context', 'postily', 'czech_zapas', 'ccsh_sermons')
+-- Note: ai_cache mode is 'ccsh_sermons' (not 'ccsh_kazani'));
   END IF;
 END $$;

@@ -34,6 +34,20 @@ export interface CzechZapasInsight {
   full_text: string;
 }
 
+export interface CcshKazaniInsight {
+  sermon_number: number;
+  title: string;
+  author: string | null;
+  source_ref: string;
+  year: number;
+  matched_ref: string;
+  quotes: string[];
+  insight: string;
+  relevance: string;
+  preaching_angle: string;
+  full_text: string;
+}
+
 export interface PreachingInspirationData {
   postily: PostilaInsight[];
 }
@@ -41,18 +55,21 @@ export interface PreachingInspirationData {
 interface PreachingInspirationProps {
   data: PreachingInspirationData | null;
   czData?: { czech_zapas: CzechZapasInsight[]; cross_era_tension?: string | null } | null;
+  ccshKazaniData?: { ccsh_kazani: CcshKazaniInsight[]; cross_era_tension?: string | null } | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function PreachingInspiration({ data, czData, open, onOpenChange }: PreachingInspirationProps) {
+export function PreachingInspiration({ data, czData, ccshKazaniData, open, onOpenChange }: PreachingInspirationProps) {
   const [expandedFullText, setExpandedFullText] = useState<number | null>(null);
   const [expandedCzFullText, setExpandedCzFullText] = useState<number | null>(null);
+  const [expandedKazaniFullText, setExpandedPatriarchFullText] = useState<number | null>(null);
 
   const hasPostily = data?.postily && data.postily.length > 0;
   const hasCz = czData?.czech_zapas && czData.czech_zapas.length > 0;
+  const hasCcshKazani = ccshKazaniData?.ccsh_kazani && ccshKazaniData.ccsh_kazani.length > 0;
 
-  if (!hasPostily && !hasCz) return null;
+  if (!hasPostily && !hasCz && !hasCcshKazani) return null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -318,8 +335,145 @@ export function PreachingInspiration({ data, czData, open, onOpenChange }: Preac
           </div>
         )}
 
+        {/* ── Kázání z ccsh.cz ── */}
+        {hasCcshKazani && (
+          <div className={(hasPostily || hasCz) ? "mt-8 border-t pt-6" : ""}>
+            <p className="text-center font-sans text-sm text-muted-foreground italic mb-4">
+              Z kázání na ccsh.cz · zpracováno pomocí AI
+            </p>
+
+            {/* Cross-era tension s Farským (pokud oba matchují) */}
+            {hasPostily && ccshKazaniData!.cross_era_tension && (
+              <div className="mb-6 flex items-start gap-3 rounded-xl border border-border/60 bg-accent/10 px-4 py-3.5">
+                <Scale className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                <div className="min-w-0">
+                  <p className="font-sans text-sm font-bold uppercase tracking-wider text-foreground/80 mb-1">
+                    Napětí a kontinuita
+                  </p>
+                  <p className="text-foreground text-[1.05rem] leading-relaxed italic">
+                    {ccshKazaniData!.cross_era_tension}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-6">
+              {ccshKazaniData!.ccsh_kazani.map((sermon, idx) => (
+                <div
+                  key={idx}
+                  className="rounded-xl border border-border bg-card overflow-hidden"
+                >
+                  <div className="px-4 py-3.5 border-b border-border/50 bg-accent/20">
+                    <div className="flex items-start gap-2">
+                      <Newspaper className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                      <div className="min-w-0">
+                        <h3 className="font-serif text-base font-medium text-foreground">
+                          {sermon.title}
+                        </h3>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {sermon.author && `${sermon.author} · `}{sermon.source_ref} · {sermon.matched_ref}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="px-4 pb-5 pt-4 space-y-4 text-base leading-relaxed">
+                    {sermon.quotes && sermon.quotes.length > 0 && (
+                      <div className="flex gap-3">
+                        <Quote className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="font-sans text-sm font-bold uppercase tracking-wider text-foreground/80 mb-2">
+                            Citáty
+                          </p>
+                          <div className="space-y-2">
+                            {sermon.quotes.map((quote, qi) => (
+                              <blockquote
+                                key={qi}
+                                className="border-l-2 border-primary/30 pl-3"
+                              >
+                                <p className="font-serif italic text-foreground text-[1.05rem] leading-relaxed">
+                                  „{quote}"
+                                </p>
+                              </blockquote>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {sermon.insight && (
+                      <div className="flex gap-3">
+                        <Lightbulb className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="font-sans text-sm font-bold uppercase tracking-wider text-foreground/80 mb-1">
+                            Autorův pohled
+                          </p>
+                          <p className="text-foreground text-[1.05rem] leading-relaxed">
+                            {sermon.insight}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {sermon.relevance && (
+                      <div className="flex gap-3">
+                        <ArrowRight className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="font-sans text-sm font-bold uppercase tracking-wider text-foreground/80 mb-1">
+                            Aktuálnost pro dnešek
+                          </p>
+                          <p className="text-foreground text-[1.05rem] leading-relaxed">
+                            {sermon.relevance}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {sermon.preaching_angle && (
+                      <div className="flex gap-3">
+                        <Feather className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="font-sans text-sm font-bold uppercase tracking-wider text-foreground/80 mb-1">
+                            Podnět pro kázání
+                          </p>
+                          <p className="text-foreground font-medium text-[1.05rem] leading-relaxed">
+                            {sermon.preaching_angle}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {sermon.full_text && (
+                      <div className="pt-2 border-t border-border/50">
+                        <button
+                          onClick={() => setExpandedPatriarchFullText(expandedKazaniFullText === idx ? null : idx)}
+                          className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors font-medium"
+                        >
+                          <BookOpen className="h-4 w-4" />
+                          {expandedKazaniFullText === idx ? "Skrýt celý text kázání" : "Celý text kázání"}
+                          {expandedKazaniFullText === idx ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )}
+                        </button>
+
+                        {expandedKazaniFullText === idx && (
+                          <div className="mt-3 p-4 rounded-lg bg-accent/30 text-sm text-foreground/80 leading-relaxed whitespace-pre-line font-serif">
+                            {sermon.full_text}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Fallback: statické odkazy (zobrazí se jen pokud component dostane prázdná data — nemělo by nastat) */}
-        {!hasPostily && !hasCz && (
+        {!hasPostily && !hasCz && !hasCcshKazani && (
           <div className="text-center space-y-3 py-4">
             <p className="text-sm text-muted-foreground">
               Pro tato čtení zatím nemáme zpracované prameny.

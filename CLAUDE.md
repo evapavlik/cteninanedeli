@@ -51,10 +51,10 @@ cyklus.ccsh.cz → warm-cache (cron 4:00 UTC) → Supabase DB
 Frontend → readings_cache → useReadings hook → useAIData hook → UI
                                                     ↓
                                           annotate-reading (edge funkce)
-                                          3 režimy: annotate | context | postily
+                                          5 režimů: annotate | context | postily | czech_zapas | ccsh_kazani
 ```
 
-- **Cache:** ai_cache tabulka (server) + localStorage (klient, CACHE_VERSION = 5)
+- **Cache:** ai_cache tabulka (server) + localStorage (klient, CACHE_VERSION = 6)
 - **Invalidace:** useReadings detekuje změnu nedělního obsahu → zvýší `invalidationEpoch` → useAIData smaže stará AI data
 
 ## Konvence kódu
@@ -72,19 +72,24 @@ Frontend → readings_cache → useReadings hook → useAIData hook → UI
 src/
 ├── pages/
 │   ├── Index.tsx                # Hlavní stránka (orchestrace)
+│   ├── AdminImport.tsx          # Admin import rozhraní
 │   └── NotFound.tsx             # 404 stránka
 ├── hooks/
 │   ├── useReadings.ts           # Fetch čtení + invalidace cache
 │   ├── useAIData.ts             # AI data (context, postily, anotace)
+│   ├── useVoiceRecorder.ts      # Nahrávání hlasu pro nácvik přednesu
 │   ├── use-mobile.tsx           # Detekce mobilního breakpointu (768px)
 │   └── use-toast.ts             # Toast notifikace (stav)
 ├── components/
 │   ├── AnnotatedText.tsx        # Text se značkami pro přednes
 │   ├── ReadingToolbar.tsx       # Ovládací panel
+│   ├── AudioPlayback.tsx        # Mini přehrávač nahrávky
 │   ├── ReadingContext.tsx       # Teologický průvodce (bottom sheet)
 │   ├── PreachingInspiration.tsx # Farského postily (bottom sheet)
+│   ├── NotificationButton.tsx   # Push notifikace (subscribe/unsubscribe)
 │   ├── LectorGuide.tsx          # 7 tipů pro lektory
 │   ├── SectionProgress.tsx      # Indikátor aktuálního čtení
+│   ├── ErrorBoundary.tsx        # React error boundary
 │   ├── AmbonMode.tsx            # Auto-scroll režim pro ambon (zatím neintegrován)
 │   └── ui/                      # shadcn/ui (používá se jen 5: sheet, sonner, tooltip, toaster, toast)
 ├── lib/
@@ -101,11 +106,16 @@ supabase/
 │   ├── warm-cache/              # Cron: předgenerování pro příští neděli
 │   ├── import-corpus/           # Import teologických textů
 │   ├── import-postily/          # Import Farského postil
+│   ├── import-czech-zapas/      # Import článků z Českého zápasu
+│   ├── import-ccsh-kazani/ # Import kázání z ccsh.cz/kazani.html
+│   ├── send-monday-notifications/ # Push notifikace (pg_cron pondělí 6:00 UTC)
 │   └── _shared/
 │       ├── prompts.ts           # AI prompt šablony
 │       ├── corpus.ts            # Teologický kontext (Základy víry CČSH)
 │       ├── biblical-refs.ts     # Normalizace biblických odkazů (SINGLE SOURCE OF TRUTH)
-│       └── postily.ts           # Matching postil podle biblických referencí
+│       ├── postily.ts           # Matching postil + czech_zapas + ccsh_kazani podle bibl. referencí
+│       ├── ccsh-kazani-scraper.ts # Scraper kázání z ccsh.cz/kazani.html
+│       └── html-parser.ts       # Fallback HTML scraping (direct fetch bez Firecrawl)
 └── migrations/                  # 10 SQL migrací
 
 scripts/
@@ -125,7 +135,7 @@ scripts/
 ## Supabase
 
 - **Project ID:** `uedluysdwvcdrhjiotjc`
-- **Klíčové tabulky:** readings_cache, ai_cache, postily, corpus_documents, theological_profiles, push_subscriptions
+- **Klíčové tabulky:** readings_cache, ai_cache, postily, czech_zapas_articles, ccsh_kazani, corpus_documents, theological_profiles, push_subscriptions
 - **Postily matching:** GIN index na `biblical_references` + PostgreSQL overlap operator (`&&`)
 - **RLS:** všechny tabulky veřejně čitelné, zápis jen přes service role
 - **push_subscriptions RLS:** anon může INSERT a DELETE, SELECT jen service_role. Důsledek: pro zápis z frontendu použij prostý INSERT (ne upsert) — upsert potřebuje SELECT pro detekci konfliktu, jinak selže s 42501 → HTTP 401. Chybu 23505 (unique_violation) považuj za úspěch.
@@ -137,9 +147,9 @@ Projekt běží na vlastní infrastruktuře — **Vercel** (frontend) + **vlastn
 
 - **Hosting:** Vercel (napojeno na GitHub, automatický deploy)
 - **Supabase projekt:** `uedluysdwvcdrhjiotjc`
-- **Edge funkce:** annotate-reading, warm-cache, import-corpus, import-postily
+- **Edge funkce:** annotate-reading, warm-cache, import-corpus, import-postily, import-czech-zapas, import-ccsh-kazani, send-monday-notifications
 - **Secrets:** GEMINI_API_KEY, FIRECRAWL_API_KEY (v Supabase)
-- **pg_cron:** warm-cache běží denně v 4:00 UTC
+- **pg_cron:** warm-cache běží denně v 4:00 UTC, send-monday-notifications v pondělí 6:00 UTC
 - **Data:** migrace schématu (10 migrací), corpus, postily, readings_cache, ai_cache — vše importováno
 - **Analytics:** Vercel Web Analytics (`@vercel/analytics/react` v `src/App.tsx`)
 - **CI/CD:** GitHub Actions (`.github/workflows/deploy-edge-functions.yml`) — deploy edge funkcí při push do `main` (cesta `supabase/functions/**`), podporuje i ruční spuštění

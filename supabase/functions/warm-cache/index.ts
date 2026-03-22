@@ -1,7 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildTheologicalContext, buildContextPrompt, ANNOTATE_SYSTEM_PROMPT } from "../_shared/corpus.ts";
-import { findMatchingPostily, findMatchingCzechZapas } from "../_shared/postily.ts";
-import { buildPostilyPrompt, formatPostilyContext, buildCzechZapasPrompt, formatCzechZapasContext } from "../_shared/prompts.ts";
+import { findMatchingPostily, findMatchingCzechZapas, findMatchingCcshKazani } from "../_shared/postily.ts";
+import { buildPostilyPrompt, formatPostilyContext, buildCzechZapasPrompt, formatCzechZapasContext, buildCcshKazaniPrompt, formatCcshKazaniContext } from "../_shared/prompts.ts";
+import { scrapeSermonListing, scrapeSermonPage } from "../_shared/ccsh-kazani-scraper.ts";
 import { fetchHtmlDirect, parseIndexFromHtml, extractReadingsFromHtml } from "../_shared/html-parser.ts";
 
 const corsHeaders = {
@@ -445,7 +446,81 @@ Deno.serve(async (req) => {
       addLog(`Warning: could not load czech_zapas — ${(e as Error).message}`);
     }
 
-    async function generateAndCache(mode: "context" | "annotate" | "postily" | "czech_zapas") {
+    // Auto-import new ccsh_kazani sermons from ccsh.cz (incremental — first page only)
+    try {
+      addLog("Checking for new ccsh_kazani sermons on ccsh.cz…");
+      const listings = await scrapeSermonListing(0);
+      if (listings.length > 0) {
+        // Check which are already in DB
+        const { data: existing } = await supabase
+          .from("ccsh_kazani")
+          .select("source_url");
+        const existingUrls = new Set(
+          (existing || []).map((r: { source_url: string }) => r.source_url)
+        );
+
+        const newListings = listings.filter(
+          (l) => !existingUrls.has(`https://www.ccsh.cz${l.url}`)
+        );
+
+        if (newListings.length > 0) {
+          // Get next sermon_number
+          const { data: maxRow } = await supabase
+            .from("ccsh_kazani")
+            .select("sermon_number")
+            .order("sermon_number", { ascending: false })
+            .limit(1);
+          let nextNumber = (maxRow?.[0]?.sermon_number || 0) + 1;
+
+          // Import max 3 new sermons per run to stay within time budget
+          for (const item of newListings.slice(0, 3)) {
+            await new Promise((r) => setTimeout(r, 1000));
+            const sermonData = await scrapeSermonPage(item.url);
+            if (!sermonData) continue;
+
+            const { error: insertErr } = await supabase
+              .from("ccsh_kazani")
+              .insert({
+                sermon_number: nextNumber++,
+                title: sermonData.title,
+                author: sermonData.author,
+                biblical_references: sermonData.biblicalReferences,
+                biblical_refs_raw: sermonData.biblicalRefsRaw,
+                liturgical_context: sermonData.liturgicalContext,
+                year: sermonData.dateISO
+                  ? parseInt(sermonData.dateISO.substring(0, 4), 10)
+                  : new Date().getFullYear(),
+                sermon_date: sermonData.dateISO,
+                source_url: sermonData.sourceUrl,
+                source_ref: `ccsh.cz, ${sermonData.dateStr}`,
+                content: sermonData.content,
+                is_active: true,
+              });
+
+            if (!insertErr) {
+              addLog(`Imported ccsh kazani: ${sermonData.title}`);
+            } else if (insertErr.code !== "23505") {
+              addLog(`Warning: ccsh_kazani import failed — ${insertErr.message}`);
+            }
+          }
+        } else {
+          addLog("No new ccsh_kazani sermons found");
+        }
+      }
+    } catch (e) {
+      addLog(`Warning: ccsh_kazani auto-import failed — ${(e as Error).message}`);
+    }
+
+    // Try to find matching ccsh_kazani sermons
+    let kazaniMatches: Awaited<ReturnType<typeof findMatchingCcshKazani>> = [];
+    try {
+      kazaniMatches = await findMatchingCcshKazani(supabase, readingsMarkdown, sundayTitle);
+      addLog(`Found ${kazaniMatches.length} ccsh kazani(s)`);
+    } catch (e) {
+      addLog(`Warning: could not load ccsh_kazani — ${(e as Error).message}`);
+    }
+
+    async function generateAndCache(mode: "context" | "annotate" | "postily" | "czech_zapas" | "ccsh_kazani") {
       const { data: existing } = await supabase
         .from("ai_cache")
         .select("id")
@@ -488,6 +563,15 @@ Deno.serve(async (req) => {
         const topCzMatches = czMatches.slice(0, 2);
         const czContext = formatCzechZapasContext(topCzMatches);
         systemPrompt = buildCzechZapasPrompt(czContext, farskySnippet);
+        isJson = true;
+      } else if (mode === "ccsh_kazani") {
+        if (kazaniMatches.length === 0) {
+          addLog(`Skipping "${mode}" — no matching ccsh_kazani sermons`);
+          return;
+        }
+        const topKazaniMatches = kazaniMatches.slice(0, 2);
+        const kazaniContext = formatCcshKazaniContext(topKazaniMatches);
+        systemPrompt = buildCcshKazaniPrompt(kazaniContext, farskySnippet);
         isJson = true;
       } else {
         systemPrompt = ANNOTATE_SYSTEM_PROMPT;
@@ -562,7 +646,7 @@ Deno.serve(async (req) => {
 
     // Run AI generations sequentially with delays to avoid Gemini 429 rate limits
     // Gemini 2.5 Flash free tier: 5 RPM — 15s gap keeps us safely under the limit
-    for (const mode of ["context", "annotate", "postily", "czech_zapas"] as const) {
+    for (const mode of ["context", "annotate", "postily", "czech_zapas", "ccsh_kazani"] as const) {
       await generateAndCache(mode);
       await new Promise((resolve) => setTimeout(resolve, 15000));
     }

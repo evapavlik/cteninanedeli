@@ -47,7 +47,7 @@ export function AudioPlayback({ audioUrl, duration, onRecordAgain, onDelete }: A
   }
 
   return (
-    <div className="mt-3 flex items-center gap-4 rounded-xl border border-border bg-card/95 px-5 py-3.5 backdrop-blur-sm shadow-sm">
+    <div className="mt-3 flex items-center gap-4 border-t border-border pt-3">
       <audio ref={audioRef} src={audioUrl} preload="metadata" />
 
       <button

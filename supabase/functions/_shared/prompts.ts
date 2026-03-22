@@ -86,6 +86,65 @@ export function formatCzechZapasContext(
 }
 
 /**
+ * Prompt for generating preaching inspiration from ccsh.cz sermons (Tomáš Butta).
+ * Same structure as Czech Zápas.
+ */
+export function buildCcshKazaniPrompt(
+  kazaniContext: string,
+  farskyPostila?: string,
+): string {
+  const farskySection = farskyPostila
+    ? `\n\nPRO SROVNÁNÍ — POSTILA KARLA FARSKÉHO KE STEJNÉMU ČTENÍ:\n${farskyPostila}`
+    : "";
+
+  return `Jsi teolog Církve československé husitské. Níže je text nedělních čtení a k nim odpovídající kázání z webu ccsh.cz.
+${farskySection}
+
+Tvým úkolem je vytvořit inspiraci pro kázání. Vrať JSON objekt s těmito klíči:
+
+- "ccsh_kazani": pole objektů (jeden pro každé kázání), kde každý má:
+  - "sermon_number": číslo kázání
+  - "title": název kázání
+  - "author": autor (nebo null)
+  - "source_ref": odkaz na zdroj
+  - "year": rok vzniku
+  - "matched_ref": biblický odkaz, na který kázání reaguje
+  - "quotes": pole 1-3 nejsilnějších doslovných citátů z textu (každý max 2 věty)
+  - "insight": 3-4 věty shrnující autorův pohled — co je jádro jeho výkladu, čím je originální
+  - "relevance": 2-3 věty propojující autorovy myšlenky s dneškem — proč je aktuální, jak může inspirovat dnešní kázání
+  - "preaching_angle": 1 věta navrhující konkrétní úhel pro kázání inspirovaný tímto textem
+  - "full_text": celý text kázání (zkopíruj doslova z kontextu níže)
+- "cross_era_tension": ${farskyPostila ? '1 věta vystihující klíčové napětí nebo kontinuitu mezi Farského historickým pohledem (1921–1924) a pohledem moderního autora na stejné biblické čtení' : 'null'}
+
+Vrať POUZE validní JSON, žádný markdown ani komentáře.
+
+KÁZÁNÍ Z CCSH.CZ:
+${kazaniContext}`;
+}
+
+/**
+ * Format ccsh_kazani matches into context string for the prompt.
+ */
+export function formatCcshKazaniContext(
+  matches: Array<{
+    sermon_number: number;
+    title: string;
+    author: string | null;
+    source_ref: string;
+    matched_ref: string;
+    liturgical_context: string | null;
+    content: string;
+  }>,
+): string {
+  return matches
+    .map(
+      (m) =>
+        `---\nKÁZÁNÍ č. ${m.sermon_number}: „${m.title}"\n${m.author ? `Autor: ${m.author}\n` : ""}${m.source_ref}\nBiblický odkaz: ${m.matched_ref}\n${m.liturgical_context ? `Liturgický kontext: ${m.liturgical_context}\n` : ""}---\n${m.content}`,
+    )
+    .join("\n\n");
+}
+
+/**
  * Format postily matches into context string for the prompt.
  */
 export function formatPostilyContext(

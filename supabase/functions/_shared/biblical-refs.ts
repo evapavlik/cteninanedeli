@@ -253,3 +253,39 @@ export function extractAllRefsFromMarkdown(markdown: string): {
 
   return { readings, allRefs };
 }
+
+/**
+ * Parse a canonical reference into book + chapter + verse range.
+ * "Ř 8,8-11" → { book: "Ř", chapter: 8, verseStart: 8, verseEnd: 11 }
+ * "J 11,1-45" → { book: "J", chapter: 11, verseStart: 1, verseEnd: 45 }
+ * "Mt 4,1-11" → { book: "Mt", chapter: 4, verseStart: 1, verseEnd: 11 }
+ */
+export function parseRef(ref: string): {
+  book: string;
+  chapter: number;
+  verseStart: number;
+  verseEnd: number;
+} | null {
+  const m = ref.match(/^(\d?[A-ZŽŘČŠa-zžřčšůúýáéíóďťňě]+)\s+(\d+),(\d+)(?:-(\d+))?/);
+  if (!m) return null;
+  return {
+    book: m[1],
+    chapter: parseInt(m[2], 10),
+    verseStart: parseInt(m[3], 10),
+    verseEnd: m[4] ? parseInt(m[4], 10) : parseInt(m[3], 10),
+  };
+}
+
+/**
+ * Check if two biblical references overlap (same book, same chapter, overlapping verse ranges).
+ * "Ř 8,8-11" and "Ř 8,9-11" → true (verses 9-11 overlap)
+ * "Ř 8,8-11" and "Ř 8,12-17" → false (no overlap)
+ * "Ř 8,8-11" and "J 8,8-11" → false (different book)
+ */
+export function refsOverlap(refA: string, refB: string): boolean {
+  const a = parseRef(refA);
+  const b = parseRef(refB);
+  if (!a || !b) return false;
+  if (a.book !== b.book || a.chapter !== b.chapter) return false;
+  return a.verseStart <= b.verseEnd && b.verseStart <= a.verseEnd;
+}

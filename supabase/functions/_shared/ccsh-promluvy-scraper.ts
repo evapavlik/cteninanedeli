@@ -110,7 +110,7 @@ export async function scrapePromluvaListing(startOffset: number = 0): Promise<Pr
 
   const items: PromluvaListItem[] = [];
 
-  const articleRegex = /<article\s+class="default">([\s\S]*?)<\/article>/gi;
+  const articleRegex = /<article\s+class="[^"]*">([\s\S]*?)<\/article>/gi;
   let articleMatch;
 
   while ((articleMatch = articleRegex.exec(html)) !== null) {

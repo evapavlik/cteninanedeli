@@ -27,6 +27,7 @@ serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const action = body.action || "incremental";
+    const startPage = body.startPage || 0;
 
     // ── count ────────────────────────────────────────────────
     if (action === "count") {
@@ -83,10 +84,11 @@ serve(async (req) => {
       let pagesToScrape: number[];
       if (action === "bulk") {
         const totalPages = await getTotalPages();
-        const maxPages = 5;
-        const actualPages = Math.min(totalPages, maxPages);
-        pagesToScrape = Array.from({ length: actualPages }, (_, i) => i * 8);
-        log(`Bulk import: ${actualPages} pages to scrape (of ${totalPages} total, max ${maxPages} per run)`);
+        const MAX_PAGES_PER_RUN = 5;
+        const startIdx = startPage || 0;
+        const endIdx = Math.min(startIdx + MAX_PAGES_PER_RUN, totalPages);
+        pagesToScrape = Array.from({ length: endIdx - startIdx }, (_, i) => (startIdx + i) * 8);
+        log(`Bulk import: pages ${startIdx + 1}-${endIdx} of ${totalPages}`);
       } else {
         // Incremental: just first page (8 newest)
         pagesToScrape = [0];

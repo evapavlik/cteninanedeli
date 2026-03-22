@@ -1,8 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildTheologicalContext, buildContextPrompt, ANNOTATE_SYSTEM_PROMPT } from "../_shared/corpus.ts";
-import { findMatchingPostily, findMatchingCzechZapas, findMatchingCcshKazani } from "../_shared/postily.ts";
-import { buildPostilyPrompt, formatPostilyContext, buildCzechZapasPrompt, formatCzechZapasContext, buildCcshKazaniPrompt, formatCcshKazaniContext } from "../_shared/prompts.ts";
+import { findMatchingPostily, findMatchingCzechZapas, findMatchingCcshSermons } from "../_shared/postily.ts";
+import { buildPostilyPrompt, formatPostilyContext, buildCzechZapasPrompt, formatCzechZapasContext, buildCcshSermonsPrompt, formatCcshSermonsContext } from "../_shared/prompts.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -74,7 +74,7 @@ serve(async (req) => {
     }
 
     // Validate mode parameter
-    if (mode && !['annotate', 'context', 'postily', 'czech_zapas', 'ccsh_kazani'].includes(mode)) {
+    if (mode && !['annotate', 'context', 'postily', 'czech_zapas', 'ccsh_sermons'].includes(mode)) {
       return new Response(
         JSON.stringify({ error: 'Invalid mode parameter' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -123,12 +123,12 @@ serve(async (req) => {
     const isContext = mode === "context";
     const isPostily = mode === "postily";
     const isCzechZapas = mode === "czech_zapas";
-    const isCcshKazani = mode === "ccsh_kazani";
+    const isCcshSermons = mode === "ccsh_sermons";
     const profileSlug = "ccsh";
 
     // 1. Check AI cache first (before loading corpus — saves a DB call on cache hit)
     const textHash = await hashText(text);
-    const cacheMode = isPostily ? "postily" : isCzechZapas ? "czech_zapas" : isCcshKazani ? "ccsh_kazani" : isContext ? "context" : "annotate";
+    const cacheMode = isPostily ? "postily" : isCzechZapas ? "czech_zapas" : isCcshSermons ? "ccsh_sermons" : isContext ? "context" : "annotate";
 
     const { data: cached } = await supabase
       .from("ai_cache")
@@ -155,8 +155,8 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (isCcshKazani) {
-        return new Response(JSON.stringify({ ccsh_kazani: cached.result }), {
+      if (isCcshSermons) {
+        return new Response(JSON.stringify({ ccsh_sermons: cached.result }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
@@ -354,18 +354,18 @@ serve(async (req) => {
       }
     }
 
-    // Mode "ccsh_kazani": find matching ccsh_kazani sermons and generate AI insights
-    if (isCcshKazani) {
-      const kazaniMatches = await findMatchingCcshKazani(supabase, text, liturgicalContext);
+    // Mode "ccsh_sermons": find matching ccsh_sermons and generate AI insights
+    if (isCcshSermons) {
+      const kazaniMatches = await findMatchingCcshSermons(supabase, text, liturgicalContext);
 
       if (kazaniMatches.length === 0) {
-        return new Response(JSON.stringify({ ccsh_kazani: { ccsh_kazani: [] } }), {
+        return new Response(JSON.stringify({ ccsh_sermons: { ccsh_sermons: [] } }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
       const topMatches = kazaniMatches.slice(0, 2);
-      const kazaniContext = formatCcshKazaniContext(topMatches);
+      const kazaniContext = formatCcshSermonsContext(topMatches);
 
       // Optionally include a Farský postila for cross-era tension
       let farskySnippet: string | undefined;
@@ -377,11 +377,11 @@ serve(async (req) => {
           farskySnippet = `Postila č. ${m.postil_number}: „${m.title}"\n${m.source_ref}\n---\n${excerpt}`;
         }
       } catch (e) {
-        console.error("Failed to load postily for ccsh_kazani tension:", e);
+        console.error("Failed to load postily for ccsh_sermons tension:", e);
       }
 
       const kazaniMessages = [
-        { role: "system", content: buildCcshKazaniPrompt(kazaniContext, farskySnippet) },
+        { role: "system", content: buildCcshSermonsPrompt(kazaniContext, farskySnippet) },
         { role: "user", content: text },
       ];
 
@@ -393,9 +393,9 @@ serve(async (req) => {
 
       if (!kazaniResponse.ok) {
         const t = await kazaniResponse.text();
-        console.error("AI error for ccsh_kazani:", kazaniResponse.status, t);
+        console.error("AI error for ccsh_sermons:", kazaniResponse.status, t);
         const fallback = {
-          ccsh_kazani: topMatches.map((m) => ({
+          ccsh_sermons: topMatches.map((m) => ({
             sermon_number: m.sermon_number,
             title: m.title,
             author: m.author,
@@ -410,7 +410,7 @@ serve(async (req) => {
           })),
           cross_era_tension: null,
         };
-        return new Response(JSON.stringify({ ccsh_kazani: fallback }), {
+        return new Response(JSON.stringify({ ccsh_sermons: fallback }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
@@ -424,14 +424,14 @@ serve(async (req) => {
           { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: parsed, model_used: "gemini-2.5-flash" },
           { onConflict: "text_hash,mode,profile_slug" }
         );
-        console.log("Cached ccsh_kazani result");
-        return new Response(JSON.stringify({ ccsh_kazani: parsed }), {
+        console.log("Cached ccsh_sermons result");
+        return new Response(JSON.stringify({ ccsh_sermons: parsed }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       } catch {
-        console.error("Failed to parse ccsh_kazani JSON:", kazaniContent);
+        console.error("Failed to parse ccsh_sermons JSON:", kazaniContent);
         const fallback = {
-          ccsh_kazani: topMatches.map((m) => ({
+          ccsh_sermons: topMatches.map((m) => ({
             sermon_number: m.sermon_number,
             title: m.title,
             author: m.author,
@@ -446,7 +446,7 @@ serve(async (req) => {
           })),
           cross_era_tension: null,
         };
-        return new Response(JSON.stringify({ ccsh_kazani: fallback }), {
+        return new Response(JSON.stringify({ ccsh_sermons: fallback }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }

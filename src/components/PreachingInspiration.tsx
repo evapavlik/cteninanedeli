@@ -34,7 +34,7 @@ export interface CzechZapasInsight {
   full_text: string;
 }
 
-export interface CcshKazaniInsight {
+export interface CcshSermonInsight {
   sermon_number: number;
   title: string;
   author: string | null;
@@ -55,21 +55,21 @@ export interface PreachingInspirationData {
 interface PreachingInspirationProps {
   data: PreachingInspirationData | null;
   czData?: { czech_zapas: CzechZapasInsight[]; cross_era_tension?: string | null } | null;
-  ccshKazaniData?: { ccsh_kazani: CcshKazaniInsight[]; cross_era_tension?: string | null } | null;
+  ccshSermonData?: { ccsh_sermons: CcshSermonInsight[]; cross_era_tension?: string | null } | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function PreachingInspiration({ data, czData, ccshKazaniData, open, onOpenChange }: PreachingInspirationProps) {
+export function PreachingInspiration({ data, czData, ccshSermonData, open, onOpenChange }: PreachingInspirationProps) {
   const [expandedFullText, setExpandedFullText] = useState<number | null>(null);
   const [expandedCzFullText, setExpandedCzFullText] = useState<number | null>(null);
-  const [expandedKazaniFullText, setExpandedPatriarchFullText] = useState<number | null>(null);
+  const [expandedSermonFullText, setExpandedSermonFullText] = useState<number | null>(null);
 
   const hasPostily = data?.postily && data.postily.length > 0;
   const hasCz = czData?.czech_zapas && czData.czech_zapas.length > 0;
-  const hasCcshKazani = ccshKazaniData?.ccsh_kazani && ccshKazaniData.ccsh_kazani.length > 0;
+  const hasCcshSermons = ccshSermonData?.ccsh_sermons && ccshSermonData.ccsh_sermons.length > 0;
 
-  if (!hasPostily && !hasCz && !hasCcshKazani) return null;
+  if (!hasPostily && !hasCz && !hasCcshSermons) return null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -336,14 +336,14 @@ export function PreachingInspiration({ data, czData, ccshKazaniData, open, onOpe
         )}
 
         {/* ── Kázání z ccsh.cz ── */}
-        {hasCcshKazani && (
+        {hasCcshSermons && (
           <div className={(hasPostily || hasCz) ? "mt-8 border-t pt-6" : ""}>
             <p className="text-center font-sans text-sm text-muted-foreground italic mb-4">
               Z kázání na ccsh.cz · zpracováno pomocí AI
             </p>
 
             {/* Cross-era tension s Farským (pokud oba matchují) */}
-            {hasPostily && ccshKazaniData!.cross_era_tension && (
+            {hasPostily && ccshSermonData!.cross_era_tension && (
               <div className="mb-6 flex items-start gap-3 rounded-xl border border-border/60 bg-accent/10 px-4 py-3.5">
                 <Scale className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                 <div className="min-w-0">
@@ -351,14 +351,14 @@ export function PreachingInspiration({ data, czData, ccshKazaniData, open, onOpe
                     Napětí a kontinuita
                   </p>
                   <p className="text-foreground text-[1.05rem] leading-relaxed italic">
-                    {ccshKazaniData!.cross_era_tension}
+                    {ccshSermonData!.cross_era_tension}
                   </p>
                 </div>
               </div>
             )}
 
             <div className="space-y-6">
-              {ccshKazaniData!.ccsh_kazani.map((sermon, idx) => (
+              {ccshSermonData!.ccsh_sermons.map((sermon, idx) => (
                 <div
                   key={idx}
                   className="rounded-xl border border-border bg-card overflow-hidden"
@@ -446,19 +446,19 @@ export function PreachingInspiration({ data, czData, ccshKazaniData, open, onOpe
                     {sermon.full_text && (
                       <div className="pt-2 border-t border-border/50">
                         <button
-                          onClick={() => setExpandedPatriarchFullText(expandedKazaniFullText === idx ? null : idx)}
+                          onClick={() => setExpandedSermonFullText(expandedSermonFullText === idx ? null : idx)}
                           className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors font-medium"
                         >
                           <BookOpen className="h-4 w-4" />
-                          {expandedKazaniFullText === idx ? "Skrýt celý text kázání" : "Celý text kázání"}
-                          {expandedKazaniFullText === idx ? (
+                          {expandedSermonFullText === idx ? "Skrýt celý text kázání" : "Celý text kázání"}
+                          {expandedSermonFullText === idx ? (
                             <ChevronUp className="h-4 w-4" />
                           ) : (
                             <ChevronDown className="h-4 w-4" />
                           )}
                         </button>
 
-                        {expandedKazaniFullText === idx && (
+                        {expandedSermonFullText === idx && (
                           <div className="mt-3 p-4 rounded-lg bg-accent/30 text-sm text-foreground/80 leading-relaxed whitespace-pre-line font-serif">
                             {sermon.full_text}
                           </div>
@@ -473,7 +473,7 @@ export function PreachingInspiration({ data, czData, ccshKazaniData, open, onOpe
         )}
 
         {/* Fallback: statické odkazy (zobrazí se jen pokud component dostane prázdná data — nemělo by nastat) */}
-        {!hasPostily && !hasCz && !hasCcshKazani && (
+        {!hasPostily && !hasCz && !hasCcshSermons && (
           <div className="text-center space-y-3 py-4">
             <p className="text-sm text-muted-foreground">
               Pro tato čtení zatím nemáme zpracované prameny.

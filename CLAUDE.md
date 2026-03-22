@@ -51,7 +51,7 @@ cyklus.ccsh.cz → warm-cache (cron 4:00 UTC) → Supabase DB
 Frontend → readings_cache → useReadings hook → useAIData hook → UI
                                                     ↓
                                           annotate-reading (edge funkce)
-                                          5 režimů: annotate | context | postily | czech_zapas | ccsh_kazani
+                                          5 režimů: annotate | context | postily | czech_zapas | ccsh_sermons
 ```
 
 - **Cache:** ai_cache tabulka (server) + localStorage (klient, CACHE_VERSION = 6)
@@ -107,14 +107,14 @@ supabase/
 │   ├── import-corpus/           # Import teologických textů
 │   ├── import-postily/          # Import Farského postil
 │   ├── import-czech-zapas/      # Import článků z Českého zápasu
-│   ├── import-ccsh-kazani/ # Import kázání z ccsh.cz/kazani.html
+│   ├── import-ccsh-sermons/ # Import kázání z ccsh.cz/kazani.html
 │   ├── send-monday-notifications/ # Push notifikace (pg_cron pondělí 6:00 UTC)
 │   └── _shared/
 │       ├── prompts.ts           # AI prompt šablony
 │       ├── corpus.ts            # Teologický kontext (Základy víry CČSH)
 │       ├── biblical-refs.ts     # Normalizace biblických odkazů (SINGLE SOURCE OF TRUTH)
-│       ├── postily.ts           # Matching postil + czech_zapas + ccsh_kazani podle bibl. referencí
-│       ├── ccsh-kazani-scraper.ts # Scraper kázání z ccsh.cz/kazani.html
+│       ├── postily.ts           # Matching postil + czech_zapas + ccsh_sermons podle bibl. referencí
+│       ├── ccsh-sermons-scraper.ts # Scraper kázání z ccsh.cz/kazani.html
 │       └── html-parser.ts       # Fallback HTML scraping (direct fetch bez Firecrawl)
 └── migrations/                  # 10 SQL migrací
 
@@ -135,7 +135,7 @@ scripts/
 ## Supabase
 
 - **Project ID:** `uedluysdwvcdrhjiotjc`
-- **Klíčové tabulky:** readings_cache, ai_cache, postily, czech_zapas_articles, ccsh_kazani, corpus_documents, theological_profiles, push_subscriptions
+- **Klíčové tabulky:** readings_cache, ai_cache, postily, czech_zapas_articles, ccsh_sermons, corpus_documents, theological_profiles, push_subscriptions
 - **Postily matching:** GIN index na `biblical_references` + PostgreSQL overlap operator (`&&`)
 - **RLS:** všechny tabulky veřejně čitelné, zápis jen přes service role
 - **push_subscriptions RLS:** anon může INSERT a DELETE, SELECT jen service_role. Důsledek: pro zápis z frontendu použij prostý INSERT (ne upsert) — upsert potřebuje SELECT pro detekci konfliktu, jinak selže s 42501 → HTTP 401. Chybu 23505 (unique_violation) považuj za úspěch.
@@ -147,7 +147,7 @@ Projekt běží na vlastní infrastruktuře — **Vercel** (frontend) + **vlastn
 
 - **Hosting:** Vercel (napojeno na GitHub, automatický deploy)
 - **Supabase projekt:** `uedluysdwvcdrhjiotjc`
-- **Edge funkce:** annotate-reading, warm-cache, import-corpus, import-postily, import-czech-zapas, import-ccsh-kazani, send-monday-notifications
+- **Edge funkce:** annotate-reading, warm-cache, import-corpus, import-postily, import-czech-zapas, import-ccsh-sermons, send-monday-notifications
 - **Secrets:** GEMINI_API_KEY, FIRECRAWL_API_KEY (v Supabase)
 - **pg_cron:** warm-cache běží denně v 4:00 UTC, send-monday-notifications v pondělí 6:00 UTC
 - **Data:** migrace schématu (10 migrací), corpus, postily, readings_cache, ai_cache — vše importováno

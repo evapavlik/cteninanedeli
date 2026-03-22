@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { saveCache, loadCache } from "@/lib/cache";
 import type { ReadingContextEntry } from "@/components/ReadingContext";
-import type { PreachingInspirationData, CzechZapasInsight, CcshKazaniInsight } from "@/components/PreachingInspiration";
+import type { PreachingInspirationData, CzechZapasInsight, CcshSermonInsight } from "@/components/PreachingInspiration";
 
 const CONTEXT_CACHE_KEY = "ccsh-context-cache";
 const ANNOTATE_CACHE_KEY = "ccsh-annotate-cache";
 const POSTILY_CACHE_KEY = "ccsh-postily-cache";
 const CZ_CACHE_KEY = "ccsh-czech-zapas-cache";
-const CCSH_KAZANI_CACHE_KEY = "ccsh-kazani-cache";
+const CCSH_SERMONS_CACHE_KEY = "ccsh-sermons-cache";
 
 /**
  * Hook that manages AI-generated data (context, postily, annotations).
@@ -43,12 +43,12 @@ export function useAIData(
   });
   const [isLoadingCz, setIsLoadingCz] = useState(false);
 
-  // --- Patriarch ---
-  const [ccshKazaniData, setCcshKazaniData] = useState<{ ccsh_kazani: CcshKazaniInsight[]; cross_era_tension?: string | null } | null>(() => {
-    if (sundayTitle) return loadCache<{ ccsh_kazani: CcshKazaniInsight[]; cross_era_tension?: string | null }>(CCSH_KAZANI_CACHE_KEY, sundayTitle);
+  // --- CCSH Sermons ---
+  const [ccshSermonData, setCcshSermonData] = useState<{ ccsh_sermons: CcshSermonInsight[]; cross_era_tension?: string | null } | null>(() => {
+    if (sundayTitle) return loadCache<{ ccsh_sermons: CcshSermonInsight[]; cross_era_tension?: string | null }>(CCSH_SERMONS_CACHE_KEY, sundayTitle);
     return null;
   });
-  const [isLoadingCcshKazani, setIsLoadingPatriarch] = useState(false);
+  const [isLoadingCcshSermons, setIsLoadingCcshSermons] = useState(false);
 
   // --- Annotate ---
   const [annotatedMarkdown, setAnnotatedMarkdown] = useState<string | null>(() => {
@@ -63,7 +63,7 @@ export function useAIData(
     setContextData(null);
     setPostilyData(null);
     setCzData(null);
-    setCcshKazaniData(null);
+    setCcshSermonData(null);
     setAnnotatedMarkdown(null);
   }, [invalidationEpoch]);
 
@@ -189,46 +189,46 @@ export function useAIData(
     fetchCzechZapas();
   }, [markdown, sundayTitle, invalidationEpoch]);
 
-  // Fetch ccsh_kazani automatically
+  // Fetch ccsh_sermons automatically
   useEffect(() => {
-    if (!markdown || ccshKazaniData) return;
+    if (!markdown || ccshSermonData) return;
 
     if (sundayTitle) {
-      const cached = loadCache<{ ccsh_kazani: CcshKazaniInsight[] }>(CCSH_KAZANI_CACHE_KEY, sundayTitle);
+      const cached = loadCache<{ ccsh_sermons: CcshSermonInsight[] }>(CCSH_SERMONS_CACHE_KEY, sundayTitle);
       if (cached) {
-        setCcshKazaniData(cached);
+        setCcshSermonData(cached);
         return;
       }
     }
 
-    const fetchPatriarch = async () => {
-      setIsLoadingPatriarch(true);
+    const fetchCcshSermons = async () => {
+      setIsLoadingCcshSermons(true);
       try {
         const { supabase } = await import("@/integrations/supabase/client");
         const { data, error } = await supabase.functions.invoke("annotate-reading", {
-          body: { text: markdown, mode: "ccsh_kazani", liturgicalContext: sundayTitle },
+          body: { text: markdown, mode: "ccsh_sermons", liturgicalContext: sundayTitle },
         });
         if (error) throw error;
-        const pResult = data?.ccsh_kazani;
-        const pArray = Array.isArray(pResult) ? pResult : pResult?.ccsh_kazani;
+        const pResult = data?.ccsh_sermons;
+        const pArray = Array.isArray(pResult) ? pResult : pResult?.ccsh_sermons;
         const crossEraTension = Array.isArray(pResult) ? null : (pResult?.cross_era_tension ?? null);
         if (pArray && pArray.length > 0) {
           const withInsights = pArray.filter(
             (a: any) => a.insight || (a.quotes && a.quotes.length > 0),
           );
           if (withInsights.length > 0) {
-            const normalized = { ccsh_kazani: withInsights, cross_era_tension: crossEraTension };
-            setCcshKazaniData(normalized);
-            if (sundayTitle) saveCache(CCSH_KAZANI_CACHE_KEY, sundayTitle, normalized);
+            const normalized = { ccsh_sermons: withInsights, cross_era_tension: crossEraTension };
+            setCcshSermonData(normalized);
+            if (sundayTitle) saveCache(CCSH_SERMONS_CACHE_KEY, sundayTitle, normalized);
           }
         }
       } catch (e) {
-        console.error("CCSH kazani fetch error:", e);
+        console.error("CCSH sermon fetch error:", e);
       } finally {
-        setIsLoadingPatriarch(false);
+        setIsLoadingCcshSermons(false);
       }
     };
-    fetchPatriarch();
+    fetchCcshSermons();
   }, [markdown, sundayTitle, invalidationEpoch]);
 
   // Toggle annotations on demand
@@ -271,8 +271,8 @@ export function useAIData(
     isLoadingPostily,
     czData,
     isLoadingCz,
-    ccshKazaniData,
-    isLoadingCcshKazani,
+    ccshSermonData,
+    isLoadingCcshSermons,
     annotatedMarkdown,
     isAnnotating,
     handleAnnotate,

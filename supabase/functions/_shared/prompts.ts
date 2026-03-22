@@ -89,7 +89,7 @@ export function formatCzechZapasContext(
  * Prompt for generating preaching inspiration from ccsh.cz sermons (Tomáš Butta).
  * Same structure as Czech Zápas.
  */
-export function buildCcshKazaniPrompt(
+export function buildCcshSermonsPrompt(
   kazaniContext: string,
   farskyPostila?: string,
 ): string {
@@ -102,7 +102,7 @@ ${farskySection}
 
 Tvým úkolem je vytvořit inspiraci pro kázání. Vrať JSON objekt s těmito klíči:
 
-- "ccsh_kazani": pole objektů (jeden pro každé kázání), kde každý má:
+- "ccsh_sermons": pole objektů (jeden pro každé kázání), kde každý má:
   - "sermon_number": číslo kázání
   - "title": název kázání
   - "author": autor (nebo null)
@@ -123,9 +123,9 @@ ${kazaniContext}`;
 }
 
 /**
- * Format ccsh_kazani matches into context string for the prompt.
+ * Format ccsh_sermons matches into context string for the prompt.
  */
-export function formatCcshKazaniContext(
+export function formatCcshSermonsContext(
   matches: Array<{
     sermon_number: number;
     title: string;

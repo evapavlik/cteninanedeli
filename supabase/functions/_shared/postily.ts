@@ -1,4 +1,25 @@
-import { extractAllRefsFromMarkdown } from "./biblical-refs.ts";
+import { extractAllRefsFromMarkdown, refsOverlap } from "./biblical-refs.ts";
+
+/**
+ * Find rows where any biblical_references overlap with any of the target refs.
+ * Used as a fuzzy fallback when exact GIN match fails (e.g. Ř 8,9-11 vs Ř 8,8-11).
+ */
+function filterByOverlap<T extends { biblical_references: string[] }>(
+  rows: T[],
+  targetRefs: string[],
+): { row: T; matchedRef: string }[] {
+  const results: { row: T; matchedRef: string }[] = [];
+  for (const row of rows) {
+    for (const rowRef of row.biblical_references) {
+      const overlapping = targetRefs.find((t) => refsOverlap(t, rowRef));
+      if (overlapping) {
+        results.push({ row, matchedRef: overlapping });
+        break; // one match per row is enough
+      }
+    }
+  }
+  return results;
+}
 
 export interface CzechZapasMatch {
   id: string;
@@ -44,6 +65,22 @@ export async function findMatchingCzechZapas(
       });
     }
     if (error) console.error("Error querying czech_zapas_articles by refs:", error.message);
+
+    // Fuzzy fallback: overlapping verse ranges
+    if (allRefs.length > 0) {
+      const { data: allRows } = await supabase
+        .from("czech_zapas_articles")
+        .select("id, article_number, title, author, biblical_references, liturgical_context, content_type, year, issue_number, source_ref, content")
+        .eq("is_active", true);
+
+      if (allRows && allRows.length > 0) {
+        const fuzzy = filterByOverlap(allRows, allRefs);
+        if (fuzzy.length > 0) {
+          console.log(`Found ${fuzzy.length} Czech zápas article(s) by fuzzy ref overlap`);
+          return fuzzy.map(({ row, matchedRef }) => ({ ...row, matched_ref: matchedRef } as CzechZapasMatch));
+        }
+      }
+    }
   }
 
   // Fallback: match by liturgical_context (same Sunday name from previous years)
@@ -113,6 +150,22 @@ export async function findMatchingCcshSermons(
       });
     }
     if (error) console.error("Error querying ccsh_sermons by refs:", error.message);
+
+    // Fuzzy fallback: overlapping verse ranges (e.g. Ř 8,9-11 matches Ř 8,8-11)
+    if (allRefs.length > 0) {
+      const { data: allRows } = await supabase
+        .from("ccsh_sermons")
+        .select("id, sermon_number, title, author, biblical_references, liturgical_context, year, sermon_date, source_url, source_ref, content")
+        .eq("is_active", true);
+
+      if (allRows && allRows.length > 0) {
+        const fuzzy = filterByOverlap(allRows, allRefs);
+        if (fuzzy.length > 0) {
+          console.log(`Found ${fuzzy.length} ccsh_sermons sermon(s) by fuzzy ref overlap`);
+          return fuzzy.map(({ row, matchedRef }) => ({ ...row, matched_ref: matchedRef } as CcshSermonMatch));
+        }
+      }
+    }
   }
 
   // Fallback: match by liturgical_context
@@ -184,6 +237,20 @@ export async function findMatchingPostily(
   }
 
   if (!data || data.length === 0) {
+    // Fuzzy fallback: overlapping verse ranges
+    const { data: allRows } = await supabase
+      .from("postily")
+      .select("id, postil_number, title, biblical_references, liturgical_context, year, issue_number, source_ref, biblical_text, content")
+      .eq("is_active", true);
+
+    if (allRows && allRows.length > 0) {
+      const fuzzy = filterByOverlap(allRows, allRefs);
+      if (fuzzy.length > 0) {
+        console.log(`Found ${fuzzy.length} postil(s) by fuzzy ref overlap`);
+        return fuzzy.map(({ row, matchedRef }) => ({ ...row, matched_ref: matchedRef } as PostilaMatch));
+      }
+    }
+
     console.log("No matching postily found");
     return [];
   }

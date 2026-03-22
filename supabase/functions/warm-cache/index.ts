@@ -3,6 +3,7 @@ import { buildTheologicalContext, buildContextPrompt, ANNOTATE_SYSTEM_PROMPT } f
 import { findMatchingPostily, findMatchingCzechZapas, findMatchingCcshSermons } from "../_shared/postily.ts";
 import { buildPostilyPrompt, formatPostilyContext, buildCzechZapasPrompt, formatCzechZapasContext, buildCcshSermonsPrompt, formatCcshSermonsContext } from "../_shared/prompts.ts";
 import { scrapeSermonListing, scrapeSermonPage } from "../_shared/ccsh-sermons-scraper.ts";
+import { scrapePromluvaListing, scrapePromluvaPage } from "../_shared/ccsh-promluvy-scraper.ts";
 import { fetchHtmlDirect, parseIndexFromHtml, extractReadingsFromHtml } from "../_shared/html-parser.ts";
 
 const corsHeaders = {
@@ -509,6 +510,73 @@ Deno.serve(async (req) => {
       }
     } catch (e) {
       addLog(`Warning: ccsh_sermons auto-import failed — ${(e as Error).message}`);
+    }
+
+    // Auto-import new promluvy (czech_zapas) from ccsh.cz (incremental — first page only)
+    try {
+      addLog("Checking for new promluvy on ccsh.cz…");
+      const promluvaListings = await scrapePromluvaListing(0);
+      if (promluvaListings.length > 0) {
+        const { data: existingCz } = await supabase
+          .from("czech_zapas_articles")
+          .select("source_url")
+          .not("source_url", "is", null);
+        const existingCzUrls = new Set(
+          (existingCz || []).map((r: { source_url: string }) => r.source_url)
+        );
+
+        const newPromluvy = promluvaListings.filter(
+          (l) => !existingCzUrls.has(`https://www.ccsh.cz${l.url}`)
+        );
+
+        if (newPromluvy.length > 0) {
+          const { data: maxCzRow } = await supabase
+            .from("czech_zapas_articles")
+            .select("article_number")
+            .order("article_number", { ascending: false })
+            .limit(1);
+          let nextCzNumber = (maxCzRow?.[0]?.article_number || 0) + 1;
+
+          for (const item of newPromluvy.slice(0, 3)) {
+            await new Promise((r) => setTimeout(r, 1000));
+            const pageData = await scrapePromluvaPage(item.url);
+            if (!pageData) continue;
+
+            const year = pageData.czYear
+              || (pageData.dateISO ? parseInt(pageData.dateISO.substring(0, 4), 10) : new Date().getFullYear());
+
+            const { error: insertErr } = await supabase
+              .from("czech_zapas_articles")
+              .insert({
+                article_number: nextCzNumber++,
+                title: pageData.title,
+                author: pageData.author,
+                biblical_references: pageData.biblicalReferences,
+                biblical_refs_raw: pageData.biblicalRefsRaw,
+                liturgical_context: pageData.liturgicalContext,
+                content_type: "kazani",
+                year,
+                issue_number: pageData.czIssueNumber || 0,
+                source_ref: pageData.czIssueNumber
+                  ? `Český zápas č. ${pageData.czIssueNumber}/${year}`
+                  : `ccsh.cz, ${pageData.dateStr}`,
+                content: pageData.content,
+                source_url: pageData.sourceUrl,
+                is_active: true,
+              });
+
+            if (!insertErr) {
+              addLog(`Imported promluva: ${pageData.title} (${pageData.author})`);
+            } else if (insertErr.code !== "23505") {
+              addLog(`Warning: promluva import failed — ${insertErr.message}`);
+            }
+          }
+        } else {
+          addLog("No new promluvy found");
+        }
+      }
+    } catch (e) {
+      addLog(`Warning: promluvy auto-import failed — ${(e as Error).message}`);
     }
 
     // Try to find matching ccsh_sermons

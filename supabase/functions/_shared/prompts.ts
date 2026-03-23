@@ -17,7 +17,8 @@ Tvým úkolem je vytvořit inspiraci pro kázání. Vrať JSON objekt s těmito 
   - "insight": 3-4 věty shrnující Farského pohled — co je jádro jeho výkladu, čím je originální
   - "relevance": 2-3 věty propojující Farského myšlenky s dneškem — proč je aktuální, jak může inspirovat dnešní kázání
   - "preaching_angle": 1 věta navrhující konkrétní úhel/háček pro kázání inspirovaný Farským
-  - "full_text": celý text postily (zkopíruj doslova z kontextu níže)
+
+(Pole "full_text" NEGENERUJ — bude doplněno automaticky ze zdrojových dat.)
 
 Vrať POUZE validní JSON, žádný markdown ani komentáře.
 
@@ -54,8 +55,9 @@ Tvým úkolem je vytvořit inspiraci pro kázání. Vrať JSON objekt s těmito 
   - "insight": 3-4 věty shrnující autorův pohled — co je jádro jeho výkladu, čím je originální
   - "relevance": 2-3 věty propojující autorovy myšlenky s dneškem — proč je aktuální, jak může inspirovat dnešní kázání
   - "preaching_angle": 1 věta navrhující konkrétní úhel pro kázání inspirovaný tímto textem
-  - "full_text": celý text článku (zkopíruj doslova z kontextu níže)
 - "cross_era_tension": ${farskyPostila ? '1 věta vystihující klíčové napětí nebo kontinuitu mezi Farského historickým pohledem (1921–1924) a pohledem tohoto moderního autora na stejné biblické čtení' : 'null'}
+
+(Pole "full_text" NEGENERUJ — bude doplněno automaticky ze zdrojových dat.)
 
 Vrať POUZE validní JSON, žádný markdown ani komentáře.
 
@@ -113,8 +115,9 @@ Tvým úkolem je vytvořit inspiraci pro kázání. Vrať JSON objekt s těmito 
   - "insight": 3-4 věty shrnující autorův pohled — co je jádro jeho výkladu, čím je originální
   - "relevance": 2-3 věty propojující autorovy myšlenky s dneškem — proč je aktuální, jak může inspirovat dnešní kázání
   - "preaching_angle": 1 věta navrhující konkrétní úhel pro kázání inspirovaný tímto textem
-  - "full_text": celý text kázání (zkopíruj doslova z kontextu níže)
 - "cross_era_tension": ${farskyPostila ? '1 věta vystihující klíčové napětí nebo kontinuitu mezi Farského historickým pohledem (1921–1924) a pohledem moderního autora na stejné biblické čtení' : 'null'}
+
+(Pole "full_text" NEGENERUJ — bude doplněno automaticky ze zdrojových dat.)
 
 Vrať POUZE validní JSON, žádný markdown ani komentáře.
 

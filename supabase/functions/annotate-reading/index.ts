@@ -221,6 +221,14 @@ serve(async (req) => {
       try {
         const parsed = JSON.parse(postilyContent);
 
+        // Inject full_text from DB matches (not from AI — AI may reformat the text)
+        if (parsed.postily && Array.isArray(parsed.postily)) {
+          for (const p of parsed.postily) {
+            const match = topMatches.find((m) => m.postil_number === p.postil_number);
+            p.full_text = match ? match.content : "";
+          }
+        }
+
         // Cache the result
         await supabase.from("ai_cache").upsert(
           { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: parsed, model_used: "gemini-2.5-flash" },
@@ -321,6 +329,15 @@ serve(async (req) => {
 
       try {
         const parsed = JSON.parse(czContent);
+
+        // Inject full_text from DB matches (not from AI)
+        if (parsed.czech_zapas && Array.isArray(parsed.czech_zapas)) {
+          for (const a of parsed.czech_zapas) {
+            const match = topCzMatches.find((m) => m.article_number === a.article_number);
+            a.full_text = match ? match.content : "";
+          }
+        }
+
         await supabase.from("ai_cache").upsert(
           { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: parsed, model_used: "gemini-2.5-flash" },
           { onConflict: "text_hash,mode,profile_slug" }
@@ -420,6 +437,15 @@ serve(async (req) => {
 
       try {
         const parsed = JSON.parse(kazaniContent);
+
+        // Inject full_text from DB matches (not from AI)
+        if (parsed.ccsh_sermons && Array.isArray(parsed.ccsh_sermons)) {
+          for (const s of parsed.ccsh_sermons) {
+            const match = topMatches.find((m) => m.sermon_number === s.sermon_number);
+            s.full_text = match ? match.content : "";
+          }
+        }
+
         await supabase.from("ai_cache").upsert(
           { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: parsed, model_used: "gemini-2.5-flash" },
           { onConflict: "text_hash,mode,profile_slug" }

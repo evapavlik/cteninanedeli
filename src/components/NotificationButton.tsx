@@ -1,25 +1,19 @@
 import { useState, useEffect } from "react";
 import { Bell, BellOff } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { detectPushSupport, subscribePush, unsubscribePush } from "@/lib/push";
+import { trackEvent } from "@/lib/analytics";
 
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string;
 const LS_KEY = "ccsh-push-subscribed";
 
 type NotifState = "unsupported" | "default" | "subscribed" | "denied" | "loading";
-
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padded = base64String + "==".substring(0, (4 - (base64String.length % 4)) % 4);
-  const raw = atob(padded.replace(/-/g, "+").replace(/_/g, "/"));
-  const bytes = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
-  return bytes;
-}
 
 export function NotificationButton() {
   const [state, setState] = useState<NotifState>("default");
 
   useEffect(() => {
-    if (!("Notification" in window) || !("serviceWorker" in navigator) || !VAPID_PUBLIC_KEY) {
+    const support = detectPushSupport();
+    if (support.kind === "missing-vapid-key" || support.kind === "no-notification-api" || support.kind === "no-service-worker") {
       setState("unsupported");
       return;
     }
@@ -34,62 +28,56 @@ export function NotificationButton() {
 
   if (state === "unsupported") return null;
 
-  async function subscribe() {
+  async function handleSubscribe() {
     setState("loading");
-    try {
-      const permission = await Notification.requestPermission();
-      if (permission === "denied") {
+    trackEvent("push_subscribe_attempt");
+
+    const result = await subscribePush();
+    trackEvent(`push_subscribe_${result.kind}`, "code" in result ? { code: result.code } : "name" in result ? { name: result.name } : undefined);
+
+    switch (result.kind) {
+      case "success":
+        localStorage.setItem(LS_KEY, "1");
+        setState("subscribed");
+        toast.success("Notifikace zapnuty. Ozveme se v pondělí ráno.");
+        return;
+      case "permission-denied":
         setState("denied");
+        toast.error("Notifikace jsou zakázané v nastavení prohlížeče.");
         return;
-      }
-      if (permission !== "granted") {
-        // dialog was dismissed without choice — allow retry
+      case "permission-dismissed":
         setState("default");
         return;
-      }
-
-      const reg = await navigator.serviceWorker.ready;
-
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-      });
-
-      const json = sub.toJSON();
-      const { error } = await supabase.from("push_subscriptions").insert({
-        endpoint: json.endpoint!,
-        p256dh: json.keys!.p256dh,
-        auth: json.keys!.auth,
-      });
-      // 23505 = unique_violation: endpoint already saved, treat as success
-      if (error && error.code !== "23505") {
-        console.error("[Push] Supabase insert error:", error);
+      case "ios-needs-pwa-install":
         setState("default");
+        toast.message("Pro pondělní upozornění je potřeba aplikaci přidat na plochu (Sdílet → Přidat na plochu).");
         return;
-      }
-      localStorage.setItem(LS_KEY, "1");
-      setState("subscribed");
-    } catch (e) {
-      console.error("[Push] Subscribe error:", e);
-      setState("default");
+      case "pushmanager-error":
+        setState("default");
+        console.error("[Push] pushManager.subscribe:", result);
+        toast.error("Nepodařilo se zapnout notifikace. Zkus to prosím znovu.");
+        return;
+      case "supabase-error":
+        setState("default");
+        console.error("[Push] Supabase insert:", result);
+        toast.error("Notifikace se nepodařilo uložit. Zkus to prosím znovu.");
+        return;
+      case "unsupported":
+        setState("unsupported");
+        return;
     }
   }
 
-  async function unsubscribe() {
+  async function handleUnsubscribe() {
     setState("loading");
-    try {
-      const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.getSubscription();
-      if (sub) {
-        await supabase
-          .from("push_subscriptions")
-          .delete()
-          .eq("endpoint", sub.endpoint);
-        await sub.unsubscribe();
-      }
+    trackEvent("push_unsubscribe_attempt");
+    const result = await unsubscribePush();
+    trackEvent(`push_unsubscribe_${result.kind}`);
+    if (result.kind === "success") {
       localStorage.removeItem(LS_KEY);
       setState("default");
-    } catch {
+    } else {
+      console.error("[Push] Unsubscribe:", result);
       setState("subscribed");
     }
   }
@@ -99,7 +87,7 @@ export function NotificationButton() {
 
   return (
     <button
-      onClick={isSubscribed ? unsubscribe : subscribe}
+      onClick={isSubscribed ? handleUnsubscribe : handleSubscribe}
       disabled={isLoading || state === "denied"}
       className="p-2.5 rounded-full text-foreground/60 hover:text-foreground transition-colors disabled:opacity-40"
       aria-label={

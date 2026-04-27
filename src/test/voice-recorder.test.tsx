@@ -376,4 +376,119 @@ describe("useVoiceRecorder", () => {
 
     expect(blobType).toBe("audio/mp4");
   });
+
+  describe("outcome state (for analytics bridge)", () => {
+    it("emits a success outcome with durationSec and mimeType after a non-empty stop", async () => {
+      const { FakeMediaRecorder, created } = makeMediaRecorderMock(["audio/mp4"]);
+      (globalThis as any).MediaRecorder = FakeMediaRecorder;
+      const { stream } = makeMediaStreamMock();
+      (navigator.mediaDevices as any).getUserMedia = vi.fn().mockResolvedValue(stream);
+
+      const { result } = renderHook(() => useVoiceRecorder());
+      expect(result.current.outcome).toBeNull();
+
+      await act(async () => {
+        await result.current.startRecording();
+      });
+      // Outcome shouldn't fire just from starting
+      expect(result.current.outcome).toBeNull();
+
+      act(() => {
+        created[0].__emitChunk(2048);
+        result.current.stopRecording();
+      });
+
+      expect(result.current.outcome).not.toBeNull();
+      expect(result.current.outcome?.type).toBe("success");
+      if (result.current.outcome?.type === "success") {
+        expect(result.current.outcome.mimeType).toBe("audio/mp4");
+        expect(result.current.outcome.durationSec).toBeGreaterThanOrEqual(0);
+      }
+    });
+
+    it("emits an empty_blob outcome when no chunks arrived (validates iOS fix in prod)", async () => {
+      const { FakeMediaRecorder } = makeMediaRecorderMock();
+      (globalThis as any).MediaRecorder = FakeMediaRecorder;
+      const { stream } = makeMediaStreamMock();
+      (navigator.mediaDevices as any).getUserMedia = vi.fn().mockResolvedValue(stream);
+
+      const { result } = renderHook(() => useVoiceRecorder());
+
+      await act(async () => {
+        await result.current.startRecording();
+      });
+      act(() => {
+        result.current.stopRecording();
+      });
+
+      expect(result.current.outcome?.type).toBe("empty_blob");
+    });
+
+    it("emits an error outcome with NotAllowedError code when permission denied", async () => {
+      const { FakeMediaRecorder } = makeMediaRecorderMock();
+      (globalThis as any).MediaRecorder = FakeMediaRecorder;
+      (navigator.mediaDevices as any).getUserMedia = vi
+        .fn()
+        .mockRejectedValue(new DOMException("denied", "NotAllowedError"));
+
+      const { result } = renderHook(() => useVoiceRecorder());
+
+      await act(async () => {
+        await result.current.startRecording();
+      });
+
+      expect(result.current.outcome?.type).toBe("error");
+      if (result.current.outcome?.type === "error") {
+        expect(result.current.outcome.code).toBe("NotAllowedError");
+      }
+    });
+
+    it("emits an error outcome with 'other' code when getUserMedia fails generically", async () => {
+      const { FakeMediaRecorder } = makeMediaRecorderMock();
+      (globalThis as any).MediaRecorder = FakeMediaRecorder;
+      (navigator.mediaDevices as any).getUserMedia = vi.fn().mockRejectedValue(new Error("boom"));
+
+      const { result } = renderHook(() => useVoiceRecorder());
+
+      await act(async () => {
+        await result.current.startRecording();
+      });
+
+      expect(result.current.outcome?.type).toBe("error");
+      if (result.current.outcome?.type === "error") {
+        expect(result.current.outcome.code).toBe("other");
+      }
+    });
+
+    it("assigns a fresh outcome.id for each attempt so consumers can debounce side effects", async () => {
+      const { FakeMediaRecorder, created } = makeMediaRecorderMock();
+      (globalThis as any).MediaRecorder = FakeMediaRecorder;
+      const { stream } = makeMediaStreamMock();
+      (navigator.mediaDevices as any).getUserMedia = vi.fn().mockResolvedValue(stream);
+
+      const { result } = renderHook(() => useVoiceRecorder());
+
+      await act(async () => {
+        await result.current.startRecording();
+      });
+      act(() => {
+        created[0].__emitChunk(256);
+        result.current.stopRecording();
+      });
+      const firstId = result.current.outcome?.id;
+      expect(firstId).toBeDefined();
+
+      // Second recording should produce a different id
+      await act(async () => {
+        await result.current.startRecording();
+      });
+      act(() => {
+        created[1].__emitChunk(256);
+        result.current.stopRecording();
+      });
+      const secondId = result.current.outcome?.id;
+      expect(secondId).toBeDefined();
+      expect(secondId).not.toBe(firstId);
+    });
+  });
 });

@@ -32,6 +32,9 @@ interface ReadingToolbarProps {
   isRecording?: boolean;
   recordingDuration?: number;
   audioSlot?: ReactNode;
+  // Attached to every analytics event fired from this toolbar so we can
+  // segment usage per Sunday / per liturgical period.
+  analyticsContext?: Record<string, unknown>;
 }
 
 export function ReadingToolbar({
@@ -53,7 +56,9 @@ export function ReadingToolbar({
   isRecording,
   recordingDuration = 0,
   audioSlot,
+  analyticsContext,
 }: ReadingToolbarProps) {
+  const ctx = analyticsContext ?? {};
   const [showSettings, setShowSettings] = useState(false);
 
   return (
@@ -62,7 +67,7 @@ export function ReadingToolbar({
       <div className="flex flex-wrap items-center justify-center gap-3">
         {/* Annotate */}
         <button
-          onClick={() => { trackEvent("annotate_click", { isAnnotated }); onAnnotate(); }}
+          onClick={() => { trackEvent("annotate_click", { ...ctx, isAnnotated }); onAnnotate(); }}
           disabled={isAnnotating}
           className={`inline-flex items-center gap-2 rounded-lg px-5 py-3 font-serif text-base md:text-sm md:px-4 md:py-2.5 font-medium transition-colors ${
             isAnnotated
@@ -84,7 +89,7 @@ export function ReadingToolbar({
 
         {/* Typography settings toggle */}
         <button
-          onClick={() => { trackEvent("toggle_settings", { open: !showSettings }); setShowSettings(!showSettings); }}
+          onClick={() => { trackEvent("toggle_settings", { ...ctx, open: !showSettings }); setShowSettings(!showSettings); }}
           className={`inline-flex items-center gap-2 rounded-lg px-5 py-3 font-serif text-base md:text-sm md:px-4 md:py-2.5 font-medium transition-colors border border-border ${
             showSettings
               ? "bg-accent text-accent-foreground"
@@ -130,7 +135,7 @@ export function ReadingToolbar({
         {/* Voice recording */}
         {onToggleRecording && (
           <button
-            onClick={() => { trackEvent(isRecording ? "voice_record_stop" : "voice_record_start"); onToggleRecording(); }}
+            onClick={() => { trackEvent(isRecording ? "voice_record_stop" : "voice_record_start", ctx); onToggleRecording(); }}
             className={`inline-flex items-center gap-2 rounded-lg px-5 py-3 font-serif text-base md:text-sm md:px-4 md:py-2.5 font-medium transition-colors border border-border ${
               isRecording
                 ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900 text-red-700 dark:text-red-400"

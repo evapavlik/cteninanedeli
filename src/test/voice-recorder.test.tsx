@@ -73,8 +73,16 @@ function makeMediaStreamMock() {
 
 let originalMediaRecorder: typeof MediaRecorder | undefined;
 let originalGetUserMedia: typeof navigator.mediaDevices.getUserMedia | undefined;
+let originalCanPlayType: HTMLAudioElement["canPlayType"] | undefined;
 let createdUrls: string[] = [];
 let revokedUrls: string[] = [];
+
+function setCanPlayType(verdicts: Record<string, "" | "maybe" | "probably">) {
+  HTMLAudioElement.prototype.canPlayType = function (type: string) {
+    if (type in verdicts) return verdicts[type];
+    return "maybe";
+  } as HTMLAudioElement["canPlayType"];
+}
 
 beforeEach(() => {
   originalMediaRecorder = (globalThis as any).MediaRecorder;
@@ -83,6 +91,12 @@ beforeEach(() => {
     Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: {} });
   }
   originalGetUserMedia = navigator.mediaDevices.getUserMedia?.bind(navigator.mediaDevices);
+
+  // jsdom returns "" for every canPlayType call, which would filter out all
+  // candidates. Default to "maybe" so existing tests keep working; individual
+  // tests can override via setCanPlayType.
+  originalCanPlayType = HTMLAudioElement.prototype.canPlayType;
+  setCanPlayType({});
 
   createdUrls = [];
   revokedUrls = [];
@@ -104,35 +118,56 @@ afterEach(() => {
   } else {
     delete (navigator.mediaDevices as any).getUserMedia;
   }
+  if (originalCanPlayType) {
+    HTMLAudioElement.prototype.canPlayType = originalCanPlayType;
+  }
 });
 
 // ---------- Tests ----------
 
 describe("pickSupportedMimeType", () => {
-  it("returns the highest-priority supported type", () => {
+  it("returns the highest-priority supported type (mp4 before webm)", () => {
     const { FakeMediaRecorder } = makeMediaRecorderMock(["audio/mp4", "audio/webm"]);
     (globalThis as any).MediaRecorder = FakeMediaRecorder;
-    // Both are supported but webm is preferred (earlier in the list)
-    expect(pickSupportedMimeType()).toBe("audio/webm");
+    // Both are supported; mp4 wins because it's universally playable.
+    expect(pickSupportedMimeType()).toBe("audio/mp4");
   });
 
-  it("falls back to mp4 when webm is unsupported (iOS Safari)", () => {
+  it("falls back to webm when mp4 is unsupported", () => {
+    const { FakeMediaRecorder } = makeMediaRecorderMock([
+      "audio/webm;codecs=opus",
+      "audio/webm",
+    ]);
+    (globalThis as any).MediaRecorder = FakeMediaRecorder;
+    expect(pickSupportedMimeType()).toBe("audio/webm;codecs=opus");
+  });
+
+  it("prefers the codec-qualified mp4 over the bare type", () => {
     const { FakeMediaRecorder } = makeMediaRecorderMock([
       "audio/mp4;codecs=mp4a.40.2",
       "audio/mp4",
+      "audio/webm",
     ]);
     (globalThis as any).MediaRecorder = FakeMediaRecorder;
     expect(pickSupportedMimeType()).toBe("audio/mp4;codecs=mp4a.40.2");
   });
 
-  it("prefers the codec-qualified webm over the bare type", () => {
+  it("skips webm when MediaRecorder supports it but <audio> can't play it (Safari)", () => {
+    // Safari 17+: MediaRecorder reports webm support, but the <audio> element
+    // refuses to decode it. Without canPlayType filtering we'd record a silent
+    // file the user can never play back.
     const { FakeMediaRecorder } = makeMediaRecorderMock([
       "audio/webm;codecs=opus",
       "audio/webm",
       "audio/mp4",
     ]);
     (globalThis as any).MediaRecorder = FakeMediaRecorder;
-    expect(pickSupportedMimeType()).toBe("audio/webm;codecs=opus");
+    setCanPlayType({
+      "audio/webm;codecs=opus": "",
+      "audio/webm": "",
+      "audio/mp4": "maybe",
+    });
+    expect(pickSupportedMimeType()).toBe("audio/mp4");
   });
 
   it("returns undefined when MediaRecorder is missing", () => {
@@ -143,6 +178,19 @@ describe("pickSupportedMimeType", () => {
   it("returns undefined when no candidate is supported", () => {
     const { FakeMediaRecorder } = makeMediaRecorderMock([]);
     (globalThis as any).MediaRecorder = FakeMediaRecorder;
+    expect(pickSupportedMimeType()).toBeUndefined();
+  });
+
+  it("returns undefined when no candidate is playable by <audio>", () => {
+    const { FakeMediaRecorder } = makeMediaRecorderMock([
+      "audio/webm;codecs=opus",
+      "audio/webm",
+    ]);
+    (globalThis as any).MediaRecorder = FakeMediaRecorder;
+    setCanPlayType({
+      "audio/webm;codecs=opus": "",
+      "audio/webm": "",
+    });
     expect(pickSupportedMimeType()).toBeUndefined();
   });
 });

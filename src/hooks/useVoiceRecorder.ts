@@ -5,7 +5,21 @@ interface VoiceRecorderState {
   audioUrl: string | null;
   duration: number;
   error: string | null;
+  outcome: RecordingOutcome | null;
 }
+
+/**
+ * Result of the most recent recording attempt. Each outcome carries an `id`
+ * so consumers can fire side effects (analytics, toasts) only when a *new*
+ * outcome appears, not on every re-render.
+ *  - success: a non-empty blob was produced
+ *  - empty_blob: recorder fired onstop with zero chunks (iOS race condition)
+ *  - error: getUserMedia / recorder construction failed before any data
+ */
+export type RecordingOutcome =
+  | { id: number; type: "success"; durationSec: number; mimeType: string }
+  | { id: number; type: "empty_blob" }
+  | { id: number; type: "error"; code: "NotAllowedError" | "other" };
 
 // MIME types in preference order. On iOS Safari `audio/webm` is unsupported, so
 // the mp4/AAC variants matter. Variants with explicit codecs are listed first
@@ -38,6 +52,7 @@ export function useVoiceRecorder() {
     audioUrl: null,
     duration: 0,
     error: null,
+    outcome: null,
   });
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -45,6 +60,8 @@ export function useVoiceRecorder() {
   const streamRef = useRef<MediaStream | null>(null);
   const startTimeRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval>>();
+  const outcomeIdRef = useRef(0);
+  const nextOutcomeId = () => ++outcomeIdRef.current;
 
   // Cleanup on unmount
   useEffect(() => {
@@ -98,6 +115,7 @@ export function useVoiceRecorder() {
             isRecording: false,
             duration: 0,
             error: "Nahrávka je prázdná. Zkuste to prosím znovu.",
+            outcome: { id: nextOutcomeId(), type: "empty_blob" },
           }));
           releaseStream();
           stopTimer();
@@ -111,6 +129,12 @@ export function useVoiceRecorder() {
           isRecording: false,
           audioUrl: url,
           duration: elapsed,
+          outcome: {
+            id: nextOutcomeId(),
+            type: "success",
+            durationSec: elapsed,
+            mimeType: blobType,
+          },
         }));
         releaseStream();
         stopTimer();
@@ -128,11 +152,20 @@ export function useVoiceRecorder() {
         }));
       }, 1000);
     } catch (err) {
-      const msg =
-        err instanceof DOMException && err.name === "NotAllowedError"
-          ? "Přístup k mikrofonu byl zamítnut. Povolte mikrofon v nastavení prohlížeče."
-          : "Nepodařilo se spustit nahrávání.";
-      setState((s) => ({ ...s, error: msg }));
+      const isPermissionDenied =
+        err instanceof DOMException && err.name === "NotAllowedError";
+      const msg = isPermissionDenied
+        ? "Přístup k mikrofonu byl zamítnut. Povolte mikrofon v nastavení prohlížeče."
+        : "Nepodařilo se spustit nahrávání.";
+      setState((s) => ({
+        ...s,
+        error: msg,
+        outcome: {
+          id: nextOutcomeId(),
+          type: "error",
+          code: isPermissionDenied ? "NotAllowedError" : "other",
+        },
+      }));
     }
   }, []);
 
@@ -154,6 +187,7 @@ export function useVoiceRecorder() {
     audioUrl: state.audioUrl,
     duration: state.duration,
     error: state.error,
+    outcome: state.outcome,
     startRecording,
     stopRecording,
     clearRecording,

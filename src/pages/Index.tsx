@@ -8,6 +8,7 @@ import ccshChalice from "@/assets/ccsh-chalice.svg";
 import { NotificationButton } from "@/components/NotificationButton";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
+import { useTypography } from "@/hooks/useTypography";
 import { AudioPlayback } from "@/components/AudioPlayback";
 
 // Retry wrapper for lazy imports — retries once on chunk load failure
@@ -33,9 +34,12 @@ const Index = () => {
     annotatedMarkdown, isAnnotating, handleAnnotate,
   } = useAIData(markdown, sundayTitle, invalidationEpoch);
   const {
-    isRecording, audioUrl, duration, error: recorderError,
+    isRecording, audioUrl, duration, error: recorderError, outcome: recordingOutcome,
     startRecording, stopRecording, clearRecording,
   } = useVoiceRecorder();
+
+  // Attached to every analytics event so we can segment usage per Sunday.
+  const analyticsContext = { sunday_title: sundayTitle, sunday_date: sundayDate };
 
   // Theme
   const [theme, setTheme] = useState<"light" | "dark">(() => {
@@ -50,13 +54,30 @@ const Index = () => {
   const [isInspirationOpen, setIsInspirationOpen] = useState(false);
   const [activeReadingIndex, setActiveReadingIndex] = useState(0);
 
-  // Typography
-  const [fontSize, setFontSize] = useState(24);
-  const [lineHeight, setLineHeight] = useState(2.0);
+  // Typography — persisted to localStorage via useTypography so the lector's
+  // preferred sizing survives across opens.
+  const { fontSize, setFontSize, lineHeight, setLineHeight } = useTypography();
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { trackEvent("page_view"); }, []);
+  useEffect(() => { trackEvent("page_view", analyticsContext); }, []);
+
+  // Bridge recorder outcomes into analytics. Each outcome carries a unique id
+  // so this only fires once per recording attempt, not on every re-render.
+  useEffect(() => {
+    if (!recordingOutcome) return;
+    if (recordingOutcome.type === "success") {
+      trackEvent("voice_record_success", {
+        ...analyticsContext,
+        duration_seconds: recordingOutcome.durationSec,
+        mime_type: recordingOutcome.mimeType,
+      });
+    } else if (recordingOutcome.type === "empty_blob") {
+      trackEvent("voice_record_empty_blob", analyticsContext);
+    } else {
+      trackEvent("voice_record_error", { ...analyticsContext, code: recordingOutcome.code });
+    }
+  }, [recordingOutcome?.id]);
 
   useEffect(() => {
     document.documentElement.classList.remove("dark");
@@ -67,7 +88,7 @@ const Index = () => {
   const toggleTheme = () => {
     setTheme((t) => {
       const next = t === "light" ? "dark" : "light";
-      trackEvent("theme_toggle", { to: next });
+      trackEvent("theme_toggle", { ...analyticsContext, to: next });
       return next;
     });
   };
@@ -209,10 +230,10 @@ const Index = () => {
                   onFontSizeChange={setFontSize}
                   lineHeight={lineHeight}
                   onLineHeightChange={setLineHeight}
-                  onOpenGuide={() => { trackEvent("open_guide"); setIsGuideOpen(true); }}
+                  onOpenGuide={() => { trackEvent("open_guide", analyticsContext); setIsGuideOpen(true); }}
                   hasGuide={!!contextData}
                   isLoadingGuide={isLoadingContext}
-                  onOpenInspiration={() => { trackEvent("open_inspiration"); setIsInspirationOpen(true); }}
+                  onOpenInspiration={() => { trackEvent("open_inspiration", analyticsContext); setIsInspirationOpen(true); }}
                   hasInspiration={!!postilyData || !!czData || !!ccshSermonData}
                   isLoadingInspiration={isLoadingPostily || isLoadingCz || isLoadingCcshSermons}
                   onToggleRecording={isRecording ? stopRecording : startRecording}
@@ -226,6 +247,7 @@ const Index = () => {
                       onDelete={clearRecording}
                     />
                   ) : undefined}
+                  analyticsContext={analyticsContext}
                 />
 
                 {/* Recording error */}

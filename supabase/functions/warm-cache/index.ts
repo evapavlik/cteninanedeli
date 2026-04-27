@@ -5,6 +5,7 @@ import { buildPostilyPrompt, formatPostilyContext, buildCzechZapasPrompt, format
 import { scrapeSermonListing, scrapeSermonPage } from "../_shared/ccsh-sermons-scraper.ts";
 import { scrapePromluvaListing, scrapePromluvaPage } from "../_shared/ccsh-promluvy-scraper.ts";
 import { fetchHtmlDirect, parseIndexFromHtml, extractReadingsFromHtml } from "../_shared/html-parser.ts";
+import { parseJsonLoose } from "../_shared/parse-json-loose.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -693,15 +694,15 @@ Deno.serve(async (req) => {
       if (content === null) return;
 
       if (isJson) {
-        try {
-          const parsed = JSON.parse(content);
+        const parsed = parseJsonLoose(content);
+        if (parsed) {
           await supabase.from("ai_cache").upsert(
             { text_hash: textHash, mode, profile_slug: profileSlug, result: parsed, model_used: "gemini-2.5-flash" },
             { onConflict: "text_hash,mode,profile_slug" }
           );
           addLog(`Cached AI ${mode}`);
-        } catch {
-          addLog(`Failed to parse ${mode} JSON`);
+        } else {
+          addLog(`Failed to parse ${mode} JSON (${content.length} chars, first 200: ${content.slice(0, 200)})`);
         }
       } else {
         await supabase.from("ai_cache").upsert(

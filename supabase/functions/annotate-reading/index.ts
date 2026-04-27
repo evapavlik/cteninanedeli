@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildTheologicalContext, buildContextPrompt, ANNOTATE_SYSTEM_PROMPT } from "../_shared/corpus.ts";
 import { findMatchingPostily, findMatchingCzechZapas, findMatchingCcshSermons } from "../_shared/postily.ts";
 import { buildPostilyPrompt, formatPostilyContext, buildCzechZapasPrompt, formatCzechZapasContext, buildCcshSermonsPrompt, formatCcshSermonsContext } from "../_shared/prompts.ts";
+import { parseJsonLoose } from "../_shared/parse-json-loose.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -217,13 +218,12 @@ serve(async (req) => {
 
       const postilyData = await postilyResponse.json();
       const postilyContent = postilyData.choices?.[0]?.message?.content || "";
+      const parsed = parseJsonLoose(postilyContent) as { postily?: unknown[] } | null;
 
-      try {
-        const parsed = JSON.parse(postilyContent);
-
+      if (parsed) {
         // Inject full_text from DB matches (not from AI — AI may reformat the text)
         if (parsed.postily && Array.isArray(parsed.postily)) {
-          for (const p of parsed.postily) {
+          for (const p of parsed.postily as Array<{ postil_number?: number; full_text?: string }>) {
             const match = topMatches.find((m) => m.postil_number === p.postil_number);
             p.full_text = match ? match.content : "";
           }
@@ -239,27 +239,27 @@ serve(async (req) => {
         return new Response(JSON.stringify({ postily: parsed }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
-      } catch {
-        console.error("Failed to parse postily JSON:", postilyContent);
-        // Fallback with raw data
-        const fallback = {
-          postily: topMatches.map((m) => ({
-            postil_number: m.postil_number,
-            title: m.title,
-            source_ref: m.source_ref,
-            year: m.year,
-            matched_ref: m.matched_ref,
-            quotes: [],
-            insight: "",
-            relevance: "",
-            preaching_angle: "",
-            full_text: m.content,
-          })),
-        };
-        return new Response(JSON.stringify({ postily: fallback }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
       }
+
+      console.error("Failed to parse postily JSON:", postilyContent.slice(0, 300));
+      // Fallback with raw data
+      const fallback = {
+        postily: topMatches.map((m) => ({
+          postil_number: m.postil_number,
+          title: m.title,
+          source_ref: m.source_ref,
+          year: m.year,
+          matched_ref: m.matched_ref,
+          quotes: [],
+          insight: "",
+          relevance: "",
+          preaching_angle: "",
+          full_text: m.content,
+        })),
+      };
+      return new Response(JSON.stringify({ postily: fallback }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Mode "czech_zapas": find matching modern articles and generate AI insights (with optional Farský tension)
@@ -326,49 +326,48 @@ serve(async (req) => {
 
       const czData = await czResponse.json();
       const czContent = czData.choices?.[0]?.message?.content || "";
+      const parsedCz = parseJsonLoose(czContent) as { czech_zapas?: unknown[] } | null;
 
-      try {
-        const parsed = JSON.parse(czContent);
-
+      if (parsedCz) {
         // Inject full_text from DB matches (not from AI)
-        if (parsed.czech_zapas && Array.isArray(parsed.czech_zapas)) {
-          for (const a of parsed.czech_zapas) {
+        if (parsedCz.czech_zapas && Array.isArray(parsedCz.czech_zapas)) {
+          for (const a of parsedCz.czech_zapas as Array<{ article_number?: number; full_text?: string }>) {
             const match = topCzMatches.find((m) => m.article_number === a.article_number);
             a.full_text = match ? match.content : "";
           }
         }
 
         await supabase.from("ai_cache").upsert(
-          { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: parsed, model_used: "gemini-2.5-flash" },
+          { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: parsedCz, model_used: "gemini-2.5-flash" },
           { onConflict: "text_hash,mode,profile_slug" }
         );
         console.log("Cached czech_zapas result");
-        return new Response(JSON.stringify({ czech_zapas: parsed }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      } catch {
-        console.error("Failed to parse czech_zapas JSON:", czContent);
-        // Fallback with raw data instead of 500
-        const fallback = {
-          czech_zapas: topCzMatches.map((m) => ({
-            article_number: m.article_number,
-            title: m.title,
-            author: m.author,
-            source_ref: m.source_ref,
-            year: m.year,
-            matched_ref: m.matched_ref,
-            quotes: [],
-            insight: "",
-            relevance: "",
-            preaching_angle: "",
-            full_text: m.content,
-          })),
-          cross_era_tension: null,
-        };
-        return new Response(JSON.stringify({ czech_zapas: fallback }), {
+        return new Response(JSON.stringify({ czech_zapas: parsedCz }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
+      console.error("Failed to parse czech_zapas JSON:", czContent.slice(0, 300));
+      // Fallback with raw data instead of 500
+      const czFallback = {
+        czech_zapas: topCzMatches.map((m) => ({
+          article_number: m.article_number,
+          title: m.title,
+          author: m.author,
+          source_ref: m.source_ref,
+          year: m.year,
+          matched_ref: m.matched_ref,
+          quotes: [],
+          insight: "",
+          relevance: "",
+          preaching_angle: "",
+          full_text: m.content,
+        })),
+        cross_era_tension: null,
+      };
+      return new Response(JSON.stringify({ czech_zapas: czFallback }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Mode "ccsh_sermons": find matching ccsh_sermons and generate AI insights
@@ -434,48 +433,47 @@ serve(async (req) => {
 
       const kazaniData = await kazaniResponse.json();
       const kazaniContent = kazaniData.choices?.[0]?.message?.content || "";
+      const parsedKazani = parseJsonLoose(kazaniContent) as { ccsh_sermons?: unknown[] } | null;
 
-      try {
-        const parsed = JSON.parse(kazaniContent);
-
+      if (parsedKazani) {
         // Inject full_text from DB matches (not from AI)
-        if (parsed.ccsh_sermons && Array.isArray(parsed.ccsh_sermons)) {
-          for (const s of parsed.ccsh_sermons) {
+        if (parsedKazani.ccsh_sermons && Array.isArray(parsedKazani.ccsh_sermons)) {
+          for (const s of parsedKazani.ccsh_sermons as Array<{ sermon_number?: number; full_text?: string }>) {
             const match = topMatches.find((m) => m.sermon_number === s.sermon_number);
             s.full_text = match ? match.content : "";
           }
         }
 
         await supabase.from("ai_cache").upsert(
-          { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: parsed, model_used: "gemini-2.5-flash" },
+          { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: parsedKazani, model_used: "gemini-2.5-flash" },
           { onConflict: "text_hash,mode,profile_slug" }
         );
         console.log("Cached ccsh_sermons result");
-        return new Response(JSON.stringify({ ccsh_sermons: parsed }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      } catch {
-        console.error("Failed to parse ccsh_sermons JSON:", kazaniContent);
-        const fallback = {
-          ccsh_sermons: topMatches.map((m) => ({
-            sermon_number: m.sermon_number,
-            title: m.title,
-            author: m.author,
-            source_ref: m.source_ref,
-            year: m.year,
-            matched_ref: m.matched_ref,
-            quotes: [],
-            insight: "",
-            relevance: "",
-            preaching_angle: "",
-            full_text: m.content,
-          })),
-          cross_era_tension: null,
-        };
-        return new Response(JSON.stringify({ ccsh_sermons: fallback }), {
+        return new Response(JSON.stringify({ ccsh_sermons: parsedKazani }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
+      console.error("Failed to parse ccsh_sermons JSON:", kazaniContent.slice(0, 300));
+      const kazaniFallback = {
+        ccsh_sermons: topMatches.map((m) => ({
+          sermon_number: m.sermon_number,
+          title: m.title,
+          author: m.author,
+          source_ref: m.source_ref,
+          year: m.year,
+          matched_ref: m.matched_ref,
+          quotes: [],
+          insight: "",
+          relevance: "",
+          preaching_angle: "",
+          full_text: m.content,
+        })),
+        cross_era_tension: null,
+      };
+      return new Response(JSON.stringify({ ccsh_sermons: kazaniFallback }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // 2. Build system prompt — only load corpus for context mode
@@ -545,26 +543,25 @@ serve(async (req) => {
     const content = data.choices?.[0]?.message?.content || "";
 
     if (isContext) {
-      try {
-        const parsed = JSON.parse(content);
-
-        // Save to AI cache
-        await supabase.from("ai_cache").upsert(
-          { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: parsed, model_used: "gemini-2.5-flash" },
-          { onConflict: "text_hash,mode,profile_slug" }
-        );
-        console.log("Cached context result");
-
-        return new Response(JSON.stringify({ context: parsed }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      } catch {
-        console.error("Failed to parse context JSON:", content);
+      const parsed = parseJsonLoose(content);
+      if (!parsed) {
+        console.error("Failed to parse context JSON:", content.slice(0, 300));
         return new Response(
           JSON.stringify({ error: "Nepodařilo se zpracovat kontext" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
+      // Save to AI cache
+      await supabase.from("ai_cache").upsert(
+        { text_hash: textHash, mode: cacheMode, profile_slug: profileSlug, result: parsed, model_used: "gemini-2.5-flash" },
+        { onConflict: "text_hash,mode,profile_slug" }
+      );
+      console.log("Cached context result");
+
+      return new Response(JSON.stringify({ context: parsed }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Save annotate result to AI cache

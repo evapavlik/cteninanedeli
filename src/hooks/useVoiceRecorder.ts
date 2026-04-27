@@ -7,6 +7,31 @@ interface VoiceRecorderState {
   error: string | null;
 }
 
+// MIME types in preference order. On iOS Safari `audio/webm` is unsupported, so
+// the mp4/AAC variants matter. Variants with explicit codecs are listed first
+// because some browsers report the bare type as supported but then produce a
+// container the <audio> element can't decode.
+const MIME_PREFERENCES = [
+  "audio/webm;codecs=opus",
+  "audio/webm",
+  "audio/mp4;codecs=mp4a.40.2",
+  "audio/mp4",
+  "audio/ogg;codecs=opus",
+  "audio/ogg",
+];
+
+// Forces MediaRecorder to flush a chunk every TIMESLICE_MS via `ondataavailable`.
+// Without a timeslice, iOS Safari sometimes dispatches `onstop` before the final
+// `ondataavailable`, leaving the blob empty (recording appears made, playback is
+// silent). With a timeslice, chunks accumulate during recording so the blob is
+// always populated by the time stop fires.
+const TIMESLICE_MS = 1000;
+
+export function pickSupportedMimeType(): string | undefined {
+  if (typeof MediaRecorder === "undefined") return undefined;
+  return MIME_PREFERENCES.find((t) => MediaRecorder.isTypeSupported(t));
+}
+
 export function useVoiceRecorder() {
   const [state, setState] = useState<VoiceRecorderState>({
     isRecording: false,
@@ -53,13 +78,7 @@ export function useVoiceRecorder() {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
 
-      // Pick a supported MIME type
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm")
-        ? "audio/webm"
-        : MediaRecorder.isTypeSupported("audio/mp4")
-          ? "audio/mp4"
-          : undefined;
-
+      const mimeType = pickSupportedMimeType();
       const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
       mediaRecorderRef.current = recorder;
       chunksRef.current = [];
@@ -69,11 +88,24 @@ export function useVoiceRecorder() {
       };
 
       recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, {
-          type: recorder.mimeType || "audio/webm",
-        });
-        const url = URL.createObjectURL(blob);
         const elapsed = Math.round((Date.now() - startTimeRef.current) / 1000);
+        const blobType = recorder.mimeType || mimeType || "audio/webm";
+
+        if (chunksRef.current.length === 0) {
+          // No data was captured — surface to user instead of producing a silent file
+          setState((s) => ({
+            ...s,
+            isRecording: false,
+            duration: 0,
+            error: "Nahrávka je prázdná. Zkuste to prosím znovu.",
+          }));
+          releaseStream();
+          stopTimer();
+          return;
+        }
+
+        const blob = new Blob(chunksRef.current, { type: blobType });
+        const url = URL.createObjectURL(blob);
         setState((s) => ({
           ...s,
           isRecording: false,
@@ -84,7 +116,7 @@ export function useVoiceRecorder() {
         stopTimer();
       };
 
-      recorder.start();
+      recorder.start(TIMESLICE_MS);
       startTimeRef.current = Date.now();
       setState((s) => ({ ...s, isRecording: true }));
 

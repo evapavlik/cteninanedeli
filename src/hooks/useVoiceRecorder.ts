@@ -21,15 +21,17 @@ export type RecordingOutcome =
   | { id: number; type: "empty_blob" }
   | { id: number; type: "error"; code: "NotAllowedError" | "other" };
 
-// MIME types in preference order. On iOS Safari `audio/webm` is unsupported, so
-// the mp4/AAC variants matter. Variants with explicit codecs are listed first
-// because some browsers report the bare type as supported but then produce a
-// container the <audio> element can't decode.
+// MIME types in preference order. mp4/AAC is universally playable in <audio>
+// across Chrome and Safari, so it's listed first. Safari 17+ can record WebM
+// but can't always play it back via <audio>, which would produce a silent file.
+// Variants with explicit codecs are listed first because some browsers report
+// the bare type as supported but then produce a container the <audio> element
+// can't decode.
 const MIME_PREFERENCES = [
-  "audio/webm;codecs=opus",
-  "audio/webm",
   "audio/mp4;codecs=mp4a.40.2",
   "audio/mp4",
+  "audio/webm;codecs=opus",
+  "audio/webm",
   "audio/ogg;codecs=opus",
   "audio/ogg",
 ];
@@ -41,9 +43,25 @@ const MIME_PREFERENCES = [
 // always populated by the time stop fires.
 const TIMESLICE_MS = 1000;
 
+// Returns true if the MIME type can be both recorded and played back. Some
+// browsers (notably Safari 17+) report a type as supported by MediaRecorder
+// but the <audio> element can't decode the resulting container.
+function canPlayBack(type: string): boolean {
+  if (typeof document === "undefined") return true;
+  try {
+    const probe = document.createElement("audio");
+    const verdict = probe.canPlayType(type);
+    return verdict === "probably" || verdict === "maybe";
+  } catch {
+    return true;
+  }
+}
+
 export function pickSupportedMimeType(): string | undefined {
   if (typeof MediaRecorder === "undefined") return undefined;
-  return MIME_PREFERENCES.find((t) => MediaRecorder.isTypeSupported(t));
+  return MIME_PREFERENCES.find(
+    (t) => MediaRecorder.isTypeSupported(t) && canPlayBack(t),
+  );
 }
 
 export function useVoiceRecorder() {

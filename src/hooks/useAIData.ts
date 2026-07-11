@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { saveCache, loadCache } from "@/lib/cache";
+import {
+  CONTEXT_CACHE_KEY,
+  ANNOTATE_CACHE_KEY,
+  POSTILY_CACHE_KEY,
+  CZ_CACHE_KEY,
+  CCSH_SERMONS_CACHE_KEY,
+} from "@/lib/ai-cache-keys";
 import type { ReadingContextEntry } from "@/components/ReadingContext";
 import type { PreachingInspirationData, CzechZapasInsight, CcshSermonInsight } from "@/components/PreachingInspiration";
-
-const CONTEXT_CACHE_KEY = "ccsh-context-cache";
-const ANNOTATE_CACHE_KEY = "ccsh-annotate-cache";
-const POSTILY_CACHE_KEY = "ccsh-postily-cache";
-const CZ_CACHE_KEY = "ccsh-czech-zapas-cache";
-const CCSH_SERMONS_CACHE_KEY = "ccsh-sermons-cache";
 
 /**
  * Hook that manages AI-generated data (context, postily, annotations).
@@ -79,6 +80,9 @@ export function useAIData(
       }
     }
 
+    // `ignore` drops responses that finish after the deps changed (e.g. new
+    // Sunday content arrived) so stale data never overwrites fresh state.
+    let ignore = false;
     const fetchContext = async () => {
       setIsLoadingContext(true);
       try {
@@ -90,7 +94,7 @@ export function useAIData(
         if (data?.context) {
           // Gemini 2.5 may return plain array or {readings: [...]}
           const readings = Array.isArray(data.context) ? data.context : data.context.readings;
-          if (readings) {
+          if (readings && !ignore) {
             setContextData(readings);
             if (sundayTitle) saveCache(CONTEXT_CACHE_KEY, sundayTitle, readings);
           }
@@ -102,7 +106,10 @@ export function useAIData(
       }
     };
     fetchContext();
-  }, [markdown, sundayTitle, invalidationEpoch]);
+    return () => { ignore = true; };
+    // contextData in deps: after the epoch reset nulls it, the effect re-runs
+    // and re-fetches — without it the panels would stay blank until reload.
+  }, [markdown, sundayTitle, invalidationEpoch, contextData]);
 
   // Fetch postily automatically
   useEffect(() => {
@@ -116,6 +123,7 @@ export function useAIData(
       }
     }
 
+    let ignore = false;
     const fetchPostily = async () => {
       setIsLoadingPostily(true);
       try {
@@ -131,7 +139,7 @@ export function useAIData(
           const withInsights = postilyArray.filter(
             (p: any) => p.insight || (p.quotes && p.quotes.length > 0),
           );
-          if (withInsights.length > 0) {
+          if (withInsights.length > 0 && !ignore) {
             const normalized: PreachingInspirationData = { postily: withInsights };
             setPostilyData(normalized);
             if (sundayTitle) saveCache(POSTILY_CACHE_KEY, sundayTitle, normalized);
@@ -144,7 +152,8 @@ export function useAIData(
       }
     };
     fetchPostily();
-  }, [markdown, sundayTitle, invalidationEpoch]);
+    return () => { ignore = true; };
+  }, [markdown, sundayTitle, invalidationEpoch, postilyData]);
 
   // Fetch czech_zapas automatically
   useEffect(() => {
@@ -158,6 +167,7 @@ export function useAIData(
       }
     }
 
+    let ignore = false;
     const fetchCzechZapas = async () => {
       setIsLoadingCz(true);
       try {
@@ -174,7 +184,7 @@ export function useAIData(
           const withInsights = czArray.filter(
             (a: any) => a.insight || (a.quotes && a.quotes.length > 0),
           );
-          if (withInsights.length > 0) {
+          if (withInsights.length > 0 && !ignore) {
             const normalized = { czech_zapas: withInsights, cross_era_tension: crossEraTension };
             setCzData(normalized);
             if (sundayTitle) saveCache(CZ_CACHE_KEY, sundayTitle, normalized);
@@ -187,7 +197,8 @@ export function useAIData(
       }
     };
     fetchCzechZapas();
-  }, [markdown, sundayTitle, invalidationEpoch]);
+    return () => { ignore = true; };
+  }, [markdown, sundayTitle, invalidationEpoch, czData]);
 
   // Fetch ccsh_sermons automatically
   useEffect(() => {
@@ -201,6 +212,7 @@ export function useAIData(
       }
     }
 
+    let ignore = false;
     const fetchCcshSermons = async () => {
       setIsLoadingCcshSermons(true);
       try {
@@ -216,7 +228,7 @@ export function useAIData(
           const withInsights = pArray.filter(
             (a: any) => a.insight || (a.quotes && a.quotes.length > 0),
           );
-          if (withInsights.length > 0) {
+          if (withInsights.length > 0 && !ignore) {
             const normalized = { ccsh_sermons: withInsights, cross_era_tension: crossEraTension };
             setCcshSermonData(normalized);
             if (sundayTitle) saveCache(CCSH_SERMONS_CACHE_KEY, sundayTitle, normalized);
@@ -229,7 +241,8 @@ export function useAIData(
       }
     };
     fetchCcshSermons();
-  }, [markdown, sundayTitle, invalidationEpoch]);
+    return () => { ignore = true; };
+  }, [markdown, sundayTitle, invalidationEpoch, ccshSermonData]);
 
   // Toggle annotations on demand
   const handleAnnotate = useCallback(async () => {
@@ -238,6 +251,16 @@ export function useAIData(
     if (annotatedMarkdown) {
       setAnnotatedMarkdown(null);
       return;
+    }
+
+    // Re-enabling annotations: reuse the cached result instead of burning
+    // another Gemini call (free tier is 5 requests per minute).
+    if (sundayTitle) {
+      const cached = loadCache<string>(ANNOTATE_CACHE_KEY, sundayTitle);
+      if (cached) {
+        setAnnotatedMarkdown(cached);
+        return;
+      }
     }
 
     setIsAnnotating(true);

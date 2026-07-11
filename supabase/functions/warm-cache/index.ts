@@ -6,11 +6,12 @@ import { scrapeSermonListing, scrapeSermonPage } from "../_shared/ccsh-sermons-s
 import { scrapePromluvaListing, scrapePromluvaPage } from "../_shared/ccsh-promluvy-scraper.ts";
 import { fetchHtmlDirect, parseIndexFromHtml, extractReadingsFromHtml } from "../_shared/html-parser.ts";
 import { parseJsonLoose } from "../_shared/parse-json-loose.ts";
+import { isAuthorized, unauthorizedResponse } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-admin-secret",
 };
 
 /**
@@ -165,9 +166,46 @@ async function scrapeUrl(url: string, apiKey: string): Promise<string | null> {
   return data?.data?.markdown || data?.markdown || null;
 }
 
+/**
+ * Save the new Sunday row first, remove stale rows only after it is safely
+ * written — the reverse order could leave readings_cache empty until the
+ * next cron run if the upsert fails.
+ */
+async function saveReadingsCache(
+  supabase: ReturnType<typeof createClient>,
+  row: {
+    sunday_title: string;
+    url: string;
+    markdown_content: string;
+    scraped_at: string;
+    sunday_date: string;
+  },
+  addLog: (msg: string) => void,
+): Promise<boolean> {
+  const { error: upsertError } = await supabase
+    .from("readings_cache")
+    .upsert(row, { onConflict: "sunday_title" });
+  if (upsertError) {
+    addLog(`readings_cache upsert failed: ${upsertError.message}`);
+    return false;
+  }
+  const { error: deleteError } = await supabase
+    .from("readings_cache")
+    .delete()
+    .neq("sunday_title", row.sunday_title);
+  if (deleteError) {
+    addLog(`readings_cache stale-row cleanup failed: ${deleteError.message}`);
+  }
+  return true;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  if (!isAuthorized(req)) {
+    return unauthorizedResponse(corsHeaders);
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -363,17 +401,19 @@ Deno.serve(async (req) => {
         readingsMarkdown = rawMarkdown;
         sundayTitle = nextSunday.title.replace(/\\([.#*_~`])/g, "$1").trim();
 
-        await supabase.from("readings_cache").delete().neq("sunday_title", sundayTitle);
-        await supabase.from("readings_cache").upsert(
-          {
-            sunday_title: sundayTitle,
-            url: nextSunday.url,
-            markdown_content: readingsMarkdown,
-            scraped_at: new Date().toISOString(),
-            sunday_date: nextSunday.date,
-          },
-          { onConflict: "sunday_title" }
-        );
+        const saved = await saveReadingsCache(supabase, {
+          sunday_title: sundayTitle,
+          url: nextSunday.url,
+          markdown_content: readingsMarkdown,
+          scraped_at: new Date().toISOString(),
+          sunday_date: nextSunday.date,
+        }, addLog);
+        if (!saved) {
+          return new Response(JSON.stringify({ success: false, log }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
         addLog(`Saved readings to cache (via ${scrapeSource}): "${sundayTitle}"`);
       } else {
         // Firecrawl succeeded — use existing extractReadings for markdown
@@ -390,17 +430,19 @@ Deno.serve(async (req) => {
         readingsMarkdown = extracted.readings;
         sundayTitle = extracted.sundayTitle;
 
-        await supabase.from("readings_cache").delete().neq("sunday_title", sundayTitle);
-        await supabase.from("readings_cache").upsert(
-          {
-            sunday_title: sundayTitle,
-            url: nextSunday.url,
-            markdown_content: readingsMarkdown,
-            scraped_at: new Date().toISOString(),
-            sunday_date: nextSunday.date,
-          },
-          { onConflict: "sunday_title" }
-        );
+        const saved = await saveReadingsCache(supabase, {
+          sunday_title: sundayTitle,
+          url: nextSunday.url,
+          markdown_content: readingsMarkdown,
+          scraped_at: new Date().toISOString(),
+          sunday_date: nextSunday.date,
+        }, addLog);
+        if (!saved) {
+          return new Response(JSON.stringify({ success: false, log }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
         addLog(`Saved readings to cache (via ${scrapeSource}): "${sundayTitle}"`);
       }
     }

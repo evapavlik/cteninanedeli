@@ -1,12 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { fetchCyklus, getCachedCyklus } from "@/lib/api/firecrawl";
 import { clearCaches } from "@/lib/cache";
-
-const ANNOTATE_CACHE_KEY = "ccsh-annotate-cache";
-const CONTEXT_CACHE_KEY = "ccsh-context-cache";
-const POSTILY_CACHE_KEY = "ccsh-postily-cache";
-
-const AI_CACHE_KEYS = [ANNOTATE_CACHE_KEY, CONTEXT_CACHE_KEY, POSTILY_CACHE_KEY];
+import { AI_CACHE_KEYS } from "@/lib/ai-cache-keys";
 
 /**
  * Hook that manages fetching Sunday readings and detecting content changes.

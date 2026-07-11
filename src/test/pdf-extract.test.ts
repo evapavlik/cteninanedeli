@@ -56,7 +56,7 @@ describe("extractPdfText", () => {
     vi.clearAllMocks();
   });
 
-  function makeMockPdf(pages: Array<Array<{ str: string }>>) {
+  function makeMockPdf(pages: Array<Array<{ str: string; hasEOL?: boolean }>>) {
     return {
       numPages: pages.length,
       getPage: vi.fn().mockImplementation(async (n: number) => ({

@@ -15,15 +15,20 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { parseNadPismem } from "../_shared/czech-zapas-parser.ts";
+import { isAuthorized, unauthorizedResponse } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-admin-secret",
 };
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  if (!isAuthorized(req)) {
+    return unauthorizedResponse(corsHeaders);
   }
 
   const supabase = createClient(

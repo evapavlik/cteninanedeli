@@ -17,10 +17,19 @@ interface ImportResult {
   message?: string;
 }
 
+const ADMIN_SECRET_STORAGE_KEY = "ccsh-admin-secret";
+
 export default function AdminImport() {
   const [file, setFile] = useState<File | null>(null);
   const [year, setYear] = useState("");
   const [issue, setIssue] = useState("");
+  const [adminSecret, setAdminSecret] = useState(() => {
+    try {
+      return localStorage.getItem(ADMIN_SECRET_STORAGE_KEY) ?? "";
+    } catch {
+      return "";
+    }
+  });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +58,10 @@ export default function AdminImport() {
     const yearNum = parseInt(year);
     const issueNum = parseInt(issue);
 
+    if (!adminSecret.trim()) {
+      setError("Zadejte prosím admin klíč.");
+      return;
+    }
     if (!yearNum || !issueNum) {
       setError("Zadejte prosím ročník a číslo.");
       return;
@@ -56,6 +69,11 @@ export default function AdminImport() {
     if (!file) {
       setError("Vyberte prosím PDF soubor.");
       return;
+    }
+    try {
+      localStorage.setItem(ADMIN_SECRET_STORAGE_KEY, adminSecret.trim());
+    } catch {
+      /* localStorage unavailable — the key just won't be remembered */
     }
 
     setDebugText(null);
@@ -85,6 +103,7 @@ export default function AdminImport() {
 
       const { data, error: fnError } = await supabase.functions.invoke("import-czech-zapas", {
         body: { pdfText, year: yearNum, issueNumber: issueNum },
+        headers: { "x-admin-secret": adminSecret.trim() },
       });
 
       if (fnError) {
@@ -145,6 +164,19 @@ export default function AdminImport() {
               accept=".pdf,application/pdf"
               onChange={handleFileChange}
               className="hidden"
+            />
+          </div>
+
+          {/* Admin secret */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Admin klíč</label>
+            <input
+              type="password"
+              value={adminSecret}
+              onChange={(e) => setAdminSecret(e.target.value)}
+              placeholder="Tajný klíč pro import (ADMIN_SECRET)"
+              autoComplete="off"
+              className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-foreground/20"
             />
           </div>
 

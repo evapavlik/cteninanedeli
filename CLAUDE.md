@@ -28,7 +28,8 @@ Webová aplikace pro Církev československou husitskou (CČSH). Zobrazuje nedě
 
 ```bash
 npm run dev          # Vývojový server (localhost:8080)
-npm run build        # Produkční build — spustit po každé změně pro kontrolu TS chyb
+npm run build        # Produkční build (POZOR: nekontroluje typy — SWC je jen odstraňuje)
+npm run typecheck    # Kontrola TS chyb (tsc --noEmit) — spustit po každé změně
 npm run build:dev    # Development build (rychlejší, bez minifikace)
 npm run test         # Vitest testy (jednorázově)
 npm run test:watch   # Vitest ve watch režimu
@@ -40,6 +41,7 @@ npx vitest run src/test/cache.test.ts
 
 - Testy žijí v `src/test/` a `supabase/functions/_shared/` (oba adresáře jsou zahrnuty v `vitest.config.ts`)
 - Test environment: jsdom (s `@testing-library/jest-dom` matchers)
+- **Testy pouštěj na Node 20** (stejně jako CI v `.github/workflows/ci.yml`) — Node 25+ má vlastní `globalThis.localStorage` bez `clear()`, který přebije jsdom a rozbije cache testy
 - TypeScript: loose mode (`noImplicitAny: false`, `strictNullChecks: false`)
 - Path alias: `@/` → `./src/`
 
@@ -147,12 +149,13 @@ Projekt běží na vlastní infrastruktuře — **Vercel** (frontend) + **vlastn
 
 - **Hosting:** Vercel (napojeno na GitHub, automatický deploy)
 - **Supabase projekt:** `uedluysdwvcdrhjiotjc`
-- **Edge funkce:** annotate-reading, warm-cache, import-corpus, import-postily, import-czech-zapas, import-ccsh-sermons, send-monday-notifications
-- **Secrets:** GEMINI_API_KEY, FIRECRAWL_API_KEY (v Supabase)
+- **Edge funkce:** annotate-reading, warm-cache, import-corpus, import-postily, import-czech-zapas, import-ccsh-promluvy, import-ccsh-sermons, send-monday-notifications
+- **Autorizace edge funkcí:** veřejná je jen annotate-reading. Všechny ostatní vyžadují hlavičku `x-admin-secret` (= secret `ADMIN_SECRET`) nebo service-role Bearer token — viz `_shared/auth.ts`. Cron joby posílají `x-admin-secret` (nastavení: `scripts/secure-cron-jobs.sql`), stránka `/admin/import` má pole pro klíč.
+- **Secrets:** GEMINI_API_KEY, FIRECRAWL_API_KEY, ADMIN_SECRET, VAPID_* (v Supabase)
 - **pg_cron:** warm-cache běží denně v 4:00 UTC, send-monday-notifications v pondělí 6:00 UTC
 - **Data:** migrace schématu (10 migrací), corpus, postily, readings_cache, ai_cache — vše importováno
 - **Analytics:** Vercel Web Analytics (`@vercel/analytics/react` v `src/App.tsx`)
-- **CI/CD:** GitHub Actions (`.github/workflows/deploy-edge-functions.yml`) — deploy edge funkcí při push do `main` (cesta `supabase/functions/**`), podporuje i ruční spuštění
+- **CI/CD:** GitHub Actions — `ci.yml` (typecheck + testy + build na každý PR a push do main, Node 20) a `deploy-edge-functions.yml` (deploy edge funkcí při push do `main`, cesta `supabase/functions/**`, podporuje i ruční spuštění)
 
 ## Spolupráce s Evou
 

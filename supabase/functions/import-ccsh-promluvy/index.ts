@@ -5,11 +5,12 @@ import {
   scrapePromluvaPage,
   getPromluvaPageCount,
 } from "../_shared/ccsh-promluvy-scraper.ts";
+import { isAuthorized, unauthorizedResponse } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-admin-secret",
 };
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -18,6 +19,10 @@ const ITEMS_PER_PAGE = 6;
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  if (!isAuthorized(req)) {
+    return unauthorizedResponse(corsHeaders);
   }
 
   try {
